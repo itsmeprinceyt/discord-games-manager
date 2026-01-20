@@ -5,4 +5,4 @@ export const ONE_HOUR: number = 60 * ONE_MINUTE;
 export const ONE_DAY: number = 24 * ONE_HOUR;
 export const ONE_WEEK: number = 7 * ONE_DAY;
 
-export const GOOGLEAUTH_SESSION_TTL: number = ONE_WEEK * 2;
+export const CREDENTIALS_SESSION_TTL = 24 * 60 * 60;

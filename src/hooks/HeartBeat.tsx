@@ -15,7 +15,7 @@ const HeartbeatContent = () => {
 
   const triggerHeartbeat = async () => {
     try {
-      const response = await axios.get("/api/public/heartbeat");
+      const response = await axios.get("/api/heartbeat");
       if (response.data.success) {
         sessionStorage.setItem(heartBeatSessionKey(), "true");
         sessionStorage.setItem(

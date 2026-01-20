@@ -1,0 +1,8 @@
+{
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "typescript.preferences.importModuleSpecifierPreference": "relative",
+  "javascript.preferences.importModuleSpecifierPreference": "relative",
+  "typescript.suggest.paths": true,
+  "typescript.preferences.autoImportPathPreference": "relative"
+}

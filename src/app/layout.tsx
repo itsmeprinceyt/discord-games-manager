@@ -1,19 +1,11 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Toaster } from "react-hot-toast";
-import HomePageHeartbeat from "@/hooks/HeartBeat";
+import { SessionProviderNextAuth } from "./(components)/SessionProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import HomePageHeartbeat from "../hooks/HeartBeat";
 
 export const metadata: Metadata = {
   title: "DC Games Manager | ItsMe Prince",
@@ -27,23 +19,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Suspense fallback={<div>loading ...</div>}>
-          <HomePageHeartbeat />
-          {children}
-          <Toaster
-            position="bottom-left"
-            toastOptions={{
-              style: {
-                fontSize: "14px",
-                background: "black",
-                color: "white",
-              },
-            }}
-          />
-        </Suspense>
+      <body>
+        <SessionProviderNextAuth>
+          <Suspense fallback={<div>loading ...</div>}>
+            <HomePageHeartbeat />
+            {children}
+            <Toaster
+              position="bottom-left"
+              toastOptions={{
+                style: {
+                  fontSize: "14px",
+                  background: "black",
+                  color: "white",
+                },
+              }}
+            />
+          </Suspense>
+        </SessionProviderNextAuth>
       </body>
     </html>
   );

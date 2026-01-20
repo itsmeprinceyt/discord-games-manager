@@ -3,6 +3,7 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(120) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NULL
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at VARCHAR(30) NOT NULL,
+    updated_at VARCHAR(30) NULL
 );
