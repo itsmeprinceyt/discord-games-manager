@@ -12,6 +12,8 @@ export default function MinimalHero() {
             <span className="text-blue-800 font-extralight">Pro</span>
           </h1>
 
+          <p className="text-stone-500 mb-6 animate-pulse text-[10px]">Work in progress...</p>
+
           <Link
             href="/register"
             className="inline-block px-6 py-3 text-sm font-medium text-white bg-blue-900 hover:bg-blue-950 rounded-full transition-colors"
