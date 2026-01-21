@@ -191,8 +191,15 @@ const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      if (url.startsWith(baseUrl)) return url;
-      return baseUrl + "/dashboard";
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+
+      return `${baseUrl}/dashboard`;
     },
   },
 
