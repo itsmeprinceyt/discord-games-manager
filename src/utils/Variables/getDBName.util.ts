@@ -5,10 +5,10 @@ export function getDBName(): string {
     } else if (process.env.LOCAL_DB_NAME) {
       return process.env.LOCAL_DB_NAME;
     } else {
-      return "TipstorWorm";
+      return "discord_games";
     }
   } catch (error: unknown) {
     console.error("Failed to determine DB name,", error);
-    return "DualLeaf";
+    return "discord_games";
   }
 }
