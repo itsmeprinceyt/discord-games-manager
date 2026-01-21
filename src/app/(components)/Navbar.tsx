@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
 import { MyJWT } from "../../types/User/JWT.type";
@@ -23,7 +23,7 @@ export default function Navbar() {
 
   const isAuthenticated = !!session;
   const user = session?.user as MyJWT | undefined;
-  const isAdmin = user?.is_admin === true;
+  const isAdmin = user?.is_admin === 1;
 
   const getDashboardRoute = () => {
     return isAdmin ? "/admin" : "/dashboard";
@@ -90,12 +90,12 @@ export default function Navbar() {
                     <>
                       {/* User Info */}
                       <div className="px-4 py-3 border-b border-stone-800">
-                        <p className="text-sm font-medium text-white truncate">
-                          {user?.username ||
+                        <p className="text-sm font-medium text-white truncate select-text">
+                          @{user?.username ||
                             user?.email?.split("@")[0] ||
                             "User"}
                         </p>
-                        <p className="text-xs text-stone-400 truncate">
+                        <p className="text-xs text-stone-400 truncate select-text">
                           {user?.email}
                         </p>
                         {isAdmin && (
@@ -116,16 +116,6 @@ export default function Navbar() {
                         {isAdmin ? "Admin Panel" : "Dashboard"}
                       </Link>
 
-                      {/* Profile */}
-                      <Link
-                        href="/profile"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
-                      >
-                        <User className="h-4 w-4 mr-3" />
-                        Profile
-                      </Link>
-
                       {/* Settings */}
                       <Link
                         href="/settings"
@@ -138,14 +128,16 @@ export default function Navbar() {
 
                       {/* Sign Out */}
                       <div className="border-t border-stone-800">
-                        <Link
-                          href="/api/auth/signout"
-                          onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+                        <button
+                          onClick={async () => {
+                            setIsUserMenuOpen(false);
+                            await signOut({ callbackUrl: "/login" });
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors cursor-pointer"
                         >
                           <LogOut className="h-4 w-4 mr-3" />
                           Sign out
-                        </Link>
+                        </button>
                       </div>
                     </>
                   ) : (
@@ -198,12 +190,12 @@ export default function Navbar() {
               <>
                 {/* User Info */}
                 <div className="px-4 py-3 border-b border-stone-800">
-                  <p className="text-sm font-medium text-white">
-                    {user?.username || user?.email?.split("@")[0] || "User"}
+                  <p className="text-sm font-medium text-white select-text">
+                    @{user?.username || user?.email?.split("@")[0] || "User"}
                   </p>
-                  <p className="text-xs text-stone-400">{user?.email}</p>
+                  <p className="text-xs text-stone-400 select-text">{user?.email}</p>
                   {isAdmin && (
-                    <div className="mt-2 flex items-center space-x-1">
+                    <div className="mt-2 flex items-center space-x-1 ">
                       <Shield className="h-3 w-3 text-blue-400" />
                       <span className="text-xs text-blue-400">Admin</span>
                     </div>
@@ -220,16 +212,6 @@ export default function Navbar() {
                   {isAdmin ? "Admin Panel" : "Dashboard"}
                 </Link>
 
-                {/* Profile */}
-                <Link
-                  href="/profile"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center px-4 py-3 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
-                >
-                  <User className="h-4 w-4 mr-3" />
-                  Profile
-                </Link>
-
                 {/* Settings */}
                 <Link
                   href="/settings"
@@ -242,14 +224,16 @@ export default function Navbar() {
 
                 {/* Sign Out */}
                 <div className="border-t border-stone-800">
-                  <Link
-                    href="/api/auth/signout"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center px-4 py-3 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+                  <button
+                    onClick={async () => {
+                      setIsUserMenuOpen(false);
+                      await signOut({ callbackUrl: "/login" });
+                    }}
+                    className="w-full flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors cursor-pointer"
                   >
                     <LogOut className="h-4 w-4 mr-3" />
                     Sign out
-                  </Link>
+                  </button>
                 </div>
               </>
             ) : (

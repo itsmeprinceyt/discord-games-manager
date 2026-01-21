@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
@@ -47,7 +48,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md w-full p-8 bg-black/30 border border-gray-800 rounded-lg">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-medium text-white mb-2">Sign In</h2>
+            <h2 className="text-2xl font-medium text-white mb-2">Login</h2>
             <p className="text-gray-400 text-sm">
               Enter your credentials to continue
             </p>
@@ -107,12 +108,21 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-400">
+            Forgot your password?{" "}
+            <Link
+              href="/forgot-password"
+              className="text-blue-700 hover:text-blue-800"
+            >
+              Click here
+            </Link>
+          </div>
+          <div className="mt-3 text-center text-sm text-gray-400">
             Don&apos;t have an account?{" "}
             <Link
               href="/register"
               className="text-blue-700 hover:text-blue-800"
             >
-              Sign up
+              Register now
             </Link>
           </div>
         </div>

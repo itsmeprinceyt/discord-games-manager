@@ -9,7 +9,10 @@ import { initServer, db } from "../../../../lib/initServer";
 import type { Pool } from "mysql2/promise";
 import { getCurrentDateTime } from "../../../../utils/Variables/getDateTime.util";
 import bcrypt from "bcryptjs";
-import { isEmail, sanitizeString } from "../../../../utils/Validator/NextAuth";
+import {
+  isEmail,
+  sanitizeString,
+} from "../../../../utils/Validator/NextAuth.util";
 import { CREDENTIALS_SESSION_TTL } from "../../../../utils/TTL";
 
 let pool: Pool | null = null;
@@ -74,9 +77,7 @@ const authOptions: NextAuthOptions = {
           const pool = await getPool();
           let user = null;
 
-          // Determine if identifier is email or username
           if (isEmail(identifier)) {
-            // Login with email
             const [rowsByEmail] = await pool.execute<any[]>(
               "SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE email = ?",
               [identifier]
@@ -86,7 +87,6 @@ const authOptions: NextAuthOptions = {
               user = rowsByEmail[0];
             }
           } else {
-            // Login with username
             const [rowsByUsername] = await pool.execute<any[]>(
               "SELECT id, username, email, password_hash, is_admin, created_at, updated_at FROM users WHERE username = ?",
               [identifier]
@@ -97,12 +97,10 @@ const authOptions: NextAuthOptions = {
             }
           }
 
-          // If user not found with either method
           if (!user) {
             throw new Error("Invalid credentials");
           }
 
-          // Verify password
           const isValidPassword = await bcrypt.compare(
             password,
             user.password_hash
@@ -111,7 +109,6 @@ const authOptions: NextAuthOptions = {
             throw new Error("Invalid credentials");
           }
 
-          // Update last login time (optional)
           const now = getCurrentDateTime();
           await pool.execute("UPDATE users SET updated_at = ? WHERE id = ?", [
             now,
@@ -147,7 +144,6 @@ const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger }) {
       const t = token as any;
 
-      // When user signs in
       if (user) {
         t.id = user.id;
         t.username = user.username;
@@ -157,7 +153,6 @@ const authOptions: NextAuthOptions = {
         t.updated_at = user.updated_at;
       }
 
-      // Update session when profile is updated
       if (trigger === "update") {
         try {
           const pool = await getPool();
@@ -201,7 +196,6 @@ const authOptions: NextAuthOptions = {
     },
   },
 
-  // Security settings
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
 };

@@ -25,8 +25,13 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  /* ---------------- LOGIN PAGE ---------------- */
-  if (path === "/login" || path.startsWith("/login/")) {
+  /* ---------------- LOGIN/REGISTER PAGE ---------------- */
+  if (
+    path === "/login" ||
+    path.startsWith("/login/") ||
+    path === "/register" ||
+    path.startsWith("/register/")
+  ) {
     if (isLoggedIn) {
       const redirectPath = isAdmin ? "/admin" : "/dashboard";
       url.pathname = redirectPath;
@@ -41,7 +46,7 @@ export async function proxy(req: NextRequest) {
       if (path.startsWith("/api/")) {
         return NextResponse.json(
           { error: "Authentication required" },
-          { status: 401 },
+          { status: 401 }
         );
       }
 
@@ -64,7 +69,7 @@ export async function proxy(req: NextRequest) {
       if (path.startsWith("/api/")) {
         return NextResponse.json(
           { error: "Authentication required" },
-          { status: 401 },
+          { status: 401 }
         );
       }
 
@@ -77,7 +82,7 @@ export async function proxy(req: NextRequest) {
       if (path.startsWith("/api/")) {
         return NextResponse.json(
           { error: "Admin access required" },
-          { status: 403 },
+          { status: 403 }
         );
       }
 
@@ -93,6 +98,7 @@ export async function proxy(req: NextRequest) {
 export const config = {
   matcher: [
     "/login",
+    "/register",
     "/dashboard/:path*",
     "/admin/:path*",
     "/api/dashboard/:path*",

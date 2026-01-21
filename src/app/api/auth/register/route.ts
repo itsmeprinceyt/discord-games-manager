@@ -1,27 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { initServer, db } from "../../../../lib/initServer";
-import type { Pool } from "mysql2/promise";
 import bcrypt from "bcryptjs";
 import { getCurrentDateTime } from "../../../../utils/Variables/getDateTime.util";
 import { generateHexId } from "../../../../utils/Variables/generateHexID.util";
-import { isValidEmail } from "../../../../utils/Validator/NextAuth";
-
-let pool: Pool | null = null;
-async function getPool(): Promise<Pool> {
-  if (!pool) {
-    await initServer();
-    pool = db();
-  }
-  return pool;
-}
+import { isValidEmail } from "../../../../utils/Validator/NextAuth.util";
+import prepareUsername from "../../../../utils/Validator/PrepareUsername.util";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, email, password } = body;
 
-    // Validation
     if (!username || !email || !password) {
       return NextResponse.json(
         { error: "All fields are required" },
@@ -29,34 +19,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isValidEmail(email)) {
+    const trimmedUsername = username.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedUsername || !trimmedEmail || !trimmedPassword) {
+      return NextResponse.json(
+        { error: "All fields are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
       return NextResponse.json(
         { error: "Invalid email format" },
         { status: 400 }
       );
     }
 
-    if (password.length < 8) {
+    if (trimmedPassword.length < 8) {
       return NextResponse.json(
         { error: "Password must be at least 8 characters long" },
         { status: 400 }
       );
     }
 
-    if (username.length < 3 || username.length > 50) {
+    const preparedUsername = prepareUsername(trimmedUsername);
+
+    if (preparedUsername.length < 3 || preparedUsername.length > 50) {
       return NextResponse.json(
         { error: "Username must be between 3 and 50 characters" },
         { status: 400 }
       );
     }
 
-    const pool = await getPool();
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
+    if (!passwordRegex.test(trimmedPassword)) {
+      return NextResponse.json(
+        { error: "Password must contain at least one letter and one number" },
+        { status: 400 }
+      );
+    }
+
+    await initServer();
+    const pool = db();
     const now = getCurrentDateTime();
 
-    // Check if user already exists
     const [existingUsers] = await pool.execute<any[]>(
       "SELECT id FROM users WHERE email = ? OR username = ?",
-      [email, username]
+      [trimmedEmail, preparedUsername]
     );
 
     if (Array.isArray(existingUsers) && existingUsers.length > 0) {
@@ -66,31 +77,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password
     const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    const passwordHash = await bcrypt.hash(trimmedPassword, saltRounds);
+    const id = generateHexId(12);
 
-    // Generate user ID
-    const id = generateHexId(12); // Adjust based on your ID generation logic
-
-    // Insert new user
     await pool.execute(
       "INSERT INTO users (id, username, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)",
-      [id, username, email, passwordHash, now]
+      [id, preparedUsername, trimmedEmail, passwordHash, now]
     );
 
     return NextResponse.json(
       {
         success: true,
         message: "User registered successfully",
-        user: { id, username, email },
+        userId: id
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Registration error:", error);
     return NextResponse.json(
-      { error: "Registration failed. Please try again." },
+      { error: error },
       { status: 500 }
     );
   }

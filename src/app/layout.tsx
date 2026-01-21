@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className="select-none">
         <SessionProviderNextAuth>
           <Suspense fallback={<div>loading ...</div>}>
             <HomePageHeartbeat />
