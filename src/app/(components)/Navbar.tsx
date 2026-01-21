@@ -39,7 +39,7 @@ export default function Navbar() {
 
   if (status === "loading") {
     return (
-      <nav className="sticky top-0 z-50 border-b border-stone-800 bg-black/50 backdrop-blur-sm">
+      <nav className="sticky top-0 z-50 border-b border-stone-800 bg-black backdrop-blur-sm">
         <div className="mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -54,10 +54,10 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-stone-800 bg-black backdrop-blur-sm">
-      <div className="mx-auto px-4">
+      <div className="mx-auto">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center px-4">
             <Link href="/" className="flex items-center space-x-2">
               <span className="text-xl font-semibold text-white">GMP</span>
             </Link>
@@ -65,10 +65,10 @@ export default function Navbar() {
 
           {/* Desktop - User Profile Dropdown */}
           <div className="hidden md:block">
-            <div className="relative">
+            <div className="relative px-4">
               <button
                 onClick={toggleUserMenu}
-                className="flex items-center space-x-2 rounded-full p-1 hover:bg-stone-800/50 transition-colors focus:outline-none cursor-pointer"
+                className="flex items-center space-x-2 rounded-full p-1 hover:bg-stone-950 transition-colors focus:outline-none cursor-pointer"
               >
                 <div className="h-8 w-8 rounded-full bg-stone-800 flex items-center justify-center text-stone-300">
                   {isAuthenticated ? (
@@ -85,7 +85,7 @@ export default function Navbar() {
 
               {/* User Dropdown Menu */}
               {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-stone-950 rounded-md shadow-lg border border-stone-800 py-1 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-stone-950 rounded-md shadow-lg border border-stone-800 z-50 mx-4">
                   {isAuthenticated ? (
                     <>
                       {/* User Info */}
@@ -95,7 +95,7 @@ export default function Navbar() {
                             user?.email?.split("@")[0] ||
                             "User"}
                         </p>
-                        <p className="text-xs text-stone-400 truncate mt-1">
+                        <p className="text-xs text-stone-400 truncate">
                           {user?.email}
                         </p>
                         {isAdmin && (
@@ -177,7 +177,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden px-4">
             <button
               onClick={toggleMobileMenu}
               className="p-2 rounded-md text-stone-400 hover:text-white hover:bg-stone-800/50 transition-colors focus:outline-none cursor-pointer"
@@ -193,7 +193,7 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-stone-800 py-2">
+          <div className="md:hidden border-t border-stone-800">
             {isAuthenticated ? (
               <>
                 {/* User Info */}
@@ -201,7 +201,7 @@ export default function Navbar() {
                   <p className="text-sm font-medium text-white">
                     {user?.username || user?.email?.split("@")[0] || "User"}
                   </p>
-                  <p className="text-xs text-stone-400 mt-1">{user?.email}</p>
+                  <p className="text-xs text-stone-400">{user?.email}</p>
                   {isAdmin && (
                     <div className="mt-2 flex items-center space-x-1">
                       <Shield className="h-3 w-3 text-blue-400" />
@@ -241,7 +241,7 @@ export default function Navbar() {
                 </Link>
 
                 {/* Sign Out */}
-                <div className="border-t border-stone-800 mt-2">
+                <div className="border-t border-stone-800">
                   <Link
                     href="/api/auth/signout"
                     onClick={() => setIsMobileMenuOpen(false)}
