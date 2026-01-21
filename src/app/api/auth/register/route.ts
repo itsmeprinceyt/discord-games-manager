@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { initServer, db } from "../../../../lib/initServer";
 import type { Pool } from "mysql2/promise";
 import bcrypt from "bcryptjs";
 import { getCurrentDateTime } from "../../../../utils/Variables/getDateTime.util";
 import { generateHexId } from "../../../../utils/Variables/generateHexID.util";
+import { isValidEmail } from "../../../../utils/Validator/NextAuth";
 
 let pool: Pool | null = null;
 async function getPool(): Promise<Pool> {
@@ -12,15 +14,6 @@ async function getPool(): Promise<Pool> {
     pool = db();
   }
   return pool;
-}
-
-function isValidEmail(email: string): boolean {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
-}
-
-function sanitizeString(value: string, maxLen: number): string {
-  return value.trim().slice(0, maxLen);
 }
 
 export async function POST(request: NextRequest) {

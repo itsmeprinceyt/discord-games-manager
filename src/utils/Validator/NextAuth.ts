@@ -36,4 +36,4 @@ function isEmail(identifier: string): boolean {
   return isValidEmail(identifier);
 }
 
-export { sanitizeString, isEmail };
+export { sanitizeString, isEmail, isValidEmail };

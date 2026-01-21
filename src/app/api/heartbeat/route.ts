@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { initServer, db } from "../../../../lib/initServer";
-import { getRedis } from "../../../../lib/Redis/redis";
-import { getCurrentDateTime } from "../../../../utils/Variables/getDateTime.util";
-import getHeartbeatRedisKey from "../../../../utils/Redis/getHeartbeatRedisKey";
-import { REDIS_HEARTBEAT_TTL } from "../../../../utils/Redis/redisTTL";
-import { HeartbeatResponseDTO } from "../../../../types/DTO/Heartbeat.DTO";
+import { initServer, db } from "../../../lib/initServer";
+import { getRedis } from "../../../lib/Redis/redis";
+import { getCurrentDateTime } from "../../../utils/Variables/getDateTime.util";
+import getHeartbeatRedisKey from "../../../utils/Redis/getHeartbeatRedisKey";
+import { REDIS_HEARTBEAT_TTL } from "../../../utils/Redis/redisTTL";
+import { HeartbeatResponseDTO } from "../../../types/DTO/Heartbeat.DTO";
 
 /**
  * @brief Health check endpoint to keep MySQL and Redis connections active
