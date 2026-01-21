@@ -15,7 +15,12 @@ export default function LoginPage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const rawCallbackUrl = searchParams.get("callbackUrl");
+
+  const callbackUrl =
+    rawCallbackUrl && rawCallbackUrl.startsWith("/")
+      ? rawCallbackUrl
+      : "/dashboard";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
