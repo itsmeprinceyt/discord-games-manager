@@ -22,11 +22,11 @@ export default function ContactPage() {
 
           {/* Description */}
           <div className="text-center max-w-lg">
-            <p className="text-gray-400 text-sm mb-4">
+            <p className="text-stone-400 text-sm mb-4">
               Have questions about Games Manager Pro? We&apos;re here to help!
               Reach out to us through any of the platforms below.
             </p>
-            <p className="text-gray-500 text-xs">
+            <p className="text-stone-500 text-xs">
               Follow us for updates, support, and community discussions.
             </p>
           </div>
