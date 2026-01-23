@@ -7,6 +7,7 @@ import { SessionProviderNextAuth } from "./(components)/SessionProvider";
 
 import HomePageHeartbeat from "../hooks/HeartBeat";
 import Navbar from "./(components)/Navbar";
+import Footer from "./(components)/Footer";
 
 export const metadata: Metadata = {
   title: "Games Manager Pro | ItsMe Prince",
@@ -37,6 +38,7 @@ export default function RootLayout({
                 },
               }}
             />
+            <Footer />
           </Suspense>
         </SessionProviderNextAuth>
       </body>

@@ -9,6 +9,11 @@ import getAxiosErrorMessage from "../../utils/Variables/getAxiosError.util";
 import prepareUsername from "../../utils/Validator/PrepareUsername.util";
 import { isValidEmail } from "../../utils/Validator/NextAuth.util";
 import { useRouter } from "next/navigation";
+import {
+  BLUE_Button,
+  BLUE_Text,
+  BLUE_Text_Hover,
+} from "../../utils/CSS/Button.util";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState<string>("");
@@ -373,7 +378,7 @@ export default function RegisterPage() {
       ) : error ? (
         <AlertCircle className="h-3 w-3 text-yellow-500" />
       ) : (
-        <X className="h-3 w-3 text-gray-500" />
+        <X className="h-3 w-3 text-stone-500" />
       )}
       <span
         className={
@@ -381,7 +386,7 @@ export default function RegisterPage() {
             ? "text-green-400"
             : error
             ? "text-yellow-400"
-            : "text-gray-400"
+            : "text-stone-400"
         }
       >
         {label}
@@ -392,12 +397,12 @@ export default function RegisterPage() {
   return (
     <PageWrapper>
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full p-8 bg-black/30 border border-gray-800 rounded-lg">
+        <div className="max-w-md w-full p-8 bg-black/30 border border-stone-800 rounded-lg">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-medium text-white mb-2">
               Register Now
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-stone-400 text-sm">
               Join Games Manager Pro to manage and organize your games
               effortlessly.
             </p>
@@ -411,13 +416,13 @@ export default function RegisterPage() {
                   type="text"
                   value={username}
                   onChange={handleUsernameChange}
-                  className={`w-full p-3 bg-gray-900/50 border ${
+                  className={`w-full p-3 bg-stone-900/50 border ${
                     usernameError || usernameValidation.available === false
                       ? "border-red-600"
                       : usernameValidation.available === true
                       ? "border-green-600"
-                      : "border-gray-700"
-                  } rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-600`}
+                      : "border-stone-700"
+                  } rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600`}
                   placeholder="Username"
                 />
                 {usernameValidation.checking && (
@@ -440,7 +445,7 @@ export default function RegisterPage() {
               </div>
 
               {usernameValidation.available === true && (
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-stone-400">
                   Username will be saved as:{" "}
                   <span className="text-blue-400 font-mono">
                     {usernameValidation.prepared}
@@ -456,7 +461,7 @@ export default function RegisterPage() {
                       ? "text-green-500"
                       : usernameValidation.available === false
                       ? "text-red-500"
-                      : "text-gray-400"
+                      : "text-stone-400"
                   }`}
                 >
                   {usernameValidation.message}
@@ -470,8 +475,8 @@ export default function RegisterPage() {
 
               {/* Username Requirements Checklist */}
               {username.trim() && (
-                <div className="mt-2 p-3 bg-gray-900/30 rounded space-y-1">
-                  <p className="text-xs text-gray-400 mb-2">
+                <div className="mt-2 p-3 bg-stone-900/30 rounded space-y-1">
+                  <p className="text-xs text-stone-400 mb-2">
                     Username requirements:
                   </p>
                   <div className="grid grid-cols-1 gap-1">
@@ -518,9 +523,9 @@ export default function RegisterPage() {
                 type="email"
                 value={email}
                 onChange={handleEmailChange}
-                className={`w-full p-3 bg-gray-900/50 border ${
-                  emailError ? "border-red-600" : "border-gray-700"
-                } rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-600`}
+                className={`w-full p-3 bg-stone-900/50 border ${
+                  emailError ? "border-red-600" : "border-stone-700"
+                } rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600`}
                 placeholder="Email"
               />
               {emailError && (
@@ -533,15 +538,15 @@ export default function RegisterPage() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={handlePasswordChange}
-                className={`w-full p-3 bg-gray-900/50 border ${
-                  passwordError ? "border-red-600" : "border-gray-700"
-                } rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-600 pr-10`}
+                className={`w-full p-3 bg-stone-900/50 border ${
+                  passwordError ? "border-red-600" : "border-stone-700"
+                } rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 pr-10`}
                 placeholder="Password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 cursor-pointer"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-300 cursor-pointer"
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -559,15 +564,15 @@ export default function RegisterPage() {
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={handleConfirmPasswordChange}
-                className={`w-full p-3 bg-gray-900/50 border ${
-                  confirmPasswordError ? "border-red-600" : "border-gray-700"
-                } rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-600 pr-10`}
+                className={`w-full p-3 bg-stone-900/50 border ${
+                  confirmPasswordError ? "border-red-600" : "border-stone-700"
+                } rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 pr-10`}
                 placeholder="Confirm Password"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 cursor-pointer"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-400 hover:text-stone-300 cursor-pointer"
               >
                 {showConfirmPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -594,15 +599,15 @@ export default function RegisterPage() {
               className={`w-full p-3 ${
                 loading || !isFormValid()
                   ? "bg-blue-900/50 cursor-not-allowed"
-                  : "bg-blue-800 hover:bg-blue-900 cursor-pointer"
+                  : `${BLUE_Button} cursor-pointer`
               } text-white rounded font-medium`}
             >
               {loading ? "Creating Account..." : "Sign Up"}
             </button>
 
-            <div className="text-center text-sm text-gray-400 mt-3">
+            <div className="text-center text-sm text-stone-400 mt-3">
               Already have an account?{" "}
-              <Link href="/login" className="text-blue-700 hover:text-blue-800">
+              <Link href="/login" className={`${BLUE_Text} ${BLUE_Text_Hover}`}>
                 Login
               </Link>
             </div>

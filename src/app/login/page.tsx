@@ -5,6 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageWrapper from "../(components)/PageWrapper";
 import { Eye, EyeOff } from "lucide-react";
+import {
+  BLUE_Button,
+  BLUE_Text,
+  BLUE_Text_Hover,
+} from "../../utils/CSS/Button.util";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState<string>("");
@@ -51,10 +56,10 @@ export default function LoginPage() {
   return (
     <PageWrapper>
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full p-8 bg-black/30 border border-gray-800 rounded-lg">
+        <div className="max-w-md w-full p-8 bg-black/30 border border-stone-800 rounded-lg">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-medium text-white mb-2">Login</h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-stone-400 text-sm">
               Enter your credentials to continue
             </p>
           </div>
@@ -74,7 +79,7 @@ export default function LoginPage() {
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full p-3 bg-gray-900/50 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-600"
+                  className="w-full p-3 bg-stone-900/50 border border-stone-700 rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600"
                   placeholder="Email or username"
                 />
               </div>
@@ -86,13 +91,13 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-3 bg-gray-900/50 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-600 pr-10 cursor-text"
+                  className="w-full p-3 bg-stone-900/50 border border-stone-700 rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 pr-10 cursor-text"
                   placeholder="Password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-700 cursor-pointer"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-600 hover:text-stone-700 cursor-pointer"
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -106,26 +111,26 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full p-3 bg-blue-800 hover:bg-blue-900 text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className={`w-full p-3 ${BLUE_Button} text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-400">
+          <div className="mt-6 text-center text-sm text-stone-400">
             Forgot your password?{" "}
             <Link
               href="/forgot-password"
-              className="text-blue-700 hover:text-blue-800"
+              className={`${BLUE_Text} ${BLUE_Text_Hover}`}
             >
               Click here
             </Link>
           </div>
-          <div className="mt-3 text-center text-sm text-gray-400">
+          <div className="mt-3 text-center text-sm text-stone-400">
             Don&apos;t have an account?{" "}
             <Link
               href="/register"
-              className="text-blue-700 hover:text-blue-800"
+              className={`${BLUE_Text} ${BLUE_Text_Hover}`}
             >
               Register now
             </Link>

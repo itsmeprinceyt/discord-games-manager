@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import PageWrapper from "./(components)/PageWrapper";
+import { BLUE_Button, BLUE_Text } from "../utils/CSS/Button.util";
 
 export default function MinimalHero() {
   return (
@@ -9,14 +10,16 @@ export default function MinimalHero() {
         <div className="text-center">
           <h1 className="text-5xl md:text-7xl text-white mb-6">
             Games Manager{" "}
-            <span className="text-blue-800 font-extralight">Pro</span>
+            <span className={`${BLUE_Text} font-extralight`}>Pro</span>
           </h1>
 
-          <p className="text-stone-500 mb-6 animate-pulse text-[10px]">Work in progress...</p>
+          <p className="text-stone-500 mb-6 animate-pulse text-[10px]">
+            Work in progress...
+          </p>
 
           <Link
             href="/login"
-            className="inline-block px-6 py-3 text-sm font-medium text-white bg-blue-900 hover:bg-blue-950 rounded-full transition-colors"
+            className={`inline-block px-6 py-3 text-sm font-medium text-white ${BLUE_Button} rounded-full transition-colors`}
           >
             Get Started
           </Link>
