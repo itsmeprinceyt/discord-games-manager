@@ -76,7 +76,10 @@ export default function UserSidebar() {
         <nav className="space-y-1">
           {userNavItems.map((item) => {
             const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+              item.href === "/dashboard"
+                ? pathname === "/dashboard/"
+                : pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
 
             return (
               <Link
