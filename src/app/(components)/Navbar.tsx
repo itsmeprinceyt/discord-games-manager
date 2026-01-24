@@ -25,10 +25,6 @@ export default function Navbar() {
   const user = session?.user as MyJWT | undefined;
   const isAdmin = user?.is_admin === 1;
 
-  const getDashboardRoute = () => {
-    return isAdmin ? "/admin" : "/dashboard";
-  };
-
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -91,7 +87,8 @@ export default function Navbar() {
                       {/* User Info */}
                       <div className="px-4 py-3 border-b border-stone-800">
                         <p className="text-sm font-medium text-white truncate select-text">
-                          @{user?.username ||
+                          @
+                          {user?.username ||
                             user?.email?.split("@")[0] ||
                             "User"}
                         </p>
@@ -107,14 +104,35 @@ export default function Navbar() {
                       </div>
 
                       {/* Dashboard/Admin Panel */}
-                      <Link
-                        href={getDashboardRoute()}
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
-                      >
-                        <LayoutDashboard className="h-4 w-4 mr-3" />
-                        {isAdmin ? "Admin Panel" : "Dashboard"}
-                      </Link>
+                      {isAdmin ? (
+                        <>
+                          <Link
+                            href={"/admin"}
+                            onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+                          >
+                            <LayoutDashboard className="h-4 w-4 mr-3" />
+                            Admin
+                          </Link>
+                          <Link
+                            href={"/dashboard"}
+                            onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+                          >
+                            <LayoutDashboard className="h-4 w-4 mr-3" />
+                            Dashboard
+                          </Link>
+                        </>
+                      ) : (
+                        <Link
+                          href={"/dashboard"}
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+                        >
+                          <LayoutDashboard className="h-4 w-4 mr-3" />
+                          Dashboard
+                        </Link>
+                      )}
 
                       {/* Settings */}
                       <Link
@@ -193,7 +211,9 @@ export default function Navbar() {
                   <p className="text-sm font-medium text-white select-text">
                     @{user?.username || user?.email?.split("@")[0] || "User"}
                   </p>
-                  <p className="text-xs text-stone-400 select-text">{user?.email}</p>
+                  <p className="text-xs text-stone-400 select-text">
+                    {user?.email}
+                  </p>
                   {isAdmin && (
                     <div className="mt-2 flex items-center space-x-1 ">
                       <Shield className="h-3 w-3 text-blue-400" />
@@ -203,14 +223,35 @@ export default function Navbar() {
                 </div>
 
                 {/* Dashboard/Admin Panel */}
-                <Link
-                  href={getDashboardRoute()}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center px-4 py-3 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
-                >
-                  <LayoutDashboard className="h-4 w-4 mr-3" />
-                  {isAdmin ? "Admin Panel" : "Dashboard"}
-                </Link>
+                {isAdmin ? (
+                  <>
+                    <Link
+                      href={"/admin"}
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+                    >
+                      <LayoutDashboard className="h-4 w-4 mr-3" />
+                      Admin
+                    </Link>
+                    <Link
+                      href={"/dashboard"}
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+                    >
+                      <LayoutDashboard className="h-4 w-4 mr-3" />
+                      Dashboard
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    href={"/dashboard"}
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+                  >
+                    <LayoutDashboard className="h-4 w-4 mr-3" />
+                    Dashboard
+                  </Link>
+                )}
 
                 {/* Settings */}
                 <Link

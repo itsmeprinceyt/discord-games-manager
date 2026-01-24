@@ -34,7 +34,7 @@ const adminNavItems = [
   },
   {
     title: "Bot Management",
-    href: "/admin/bots",
+    href: "/admin/bot-manager",
     icon: <Bot className="h-5 w-5" />,
   },
   {
@@ -94,7 +94,10 @@ export default function AdminSidebar() {
         <nav className="space-y-1">
           {adminNavItems.map((item) => {
             const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+              item.href === "/admin"
+                ? pathname === "/admin/"
+                : pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
 
             return (
               <Link

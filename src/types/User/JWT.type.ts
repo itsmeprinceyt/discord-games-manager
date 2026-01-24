@@ -1,7 +1,7 @@
 export interface MyJWT {
-  id?: string;
-  username?: string | null;
-  email?: string;
+  id: string;
+  username: string;
+  email: string;
   is_admin?: boolean | number;
   created_at?: Date;
   updated_at?: Date | null;

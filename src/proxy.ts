@@ -55,11 +55,6 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (isAdmin && !path.startsWith("/api/")) {
-      url.pathname = "/admin";
-      return NextResponse.redirect(url);
-    }
-
     return NextResponse.next();
   }
 

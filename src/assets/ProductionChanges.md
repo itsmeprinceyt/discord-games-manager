@@ -24,3 +24,14 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
     performed_at VARCHAR(30) DEFAULT NULL
 );
+
+CREATE TABLE IF NOT EXISTS bots (
+    id CHAR(12) PRIMARY KEY,
+    name VARCHAR(30) NOT NULL,
+    currency_name VARCHAR(30) NOT NULL,
+    vote_link VARCHAR(100) DEFAULT NULL,
+    normal_days TINYINT UNSIGNED NOT NULL,
+    weekend_days TINYINT UNSIGNED NOT NULL,
+    created_at VARCHAR(30) NOT NULL,
+    updated_at VARCHAR(30) NOT NULL
+);

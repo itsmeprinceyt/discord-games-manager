@@ -1,12 +1,11 @@
 import "./globals.css";
-
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Toaster } from "react-hot-toast";
 import { SessionProviderNextAuth } from "./(components)/SessionProvider";
 
 import HomePageHeartbeat from "../hooks/HeartBeat";
-import Navbar from "./(components)/Navbar";
+import ClientNavbarWrapper from "./(components)/DynamicNavbar";
 import Footer from "./(components)/Footer";
 
 export const metadata: Metadata = {
@@ -26,7 +25,7 @@ export default function RootLayout({
         <SessionProviderNextAuth>
           <Suspense fallback={<div>loading ...</div>}>
             <HomePageHeartbeat />
-            <Navbar />
+            <ClientNavbarWrapper />
             {children}
             <Toaster
               position="bottom-left"

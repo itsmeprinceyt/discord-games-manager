@@ -27,9 +27,9 @@ async function getPool(): Promise<Pool> {
 declare module "next-auth" {
   interface Session {
     user: {
-      id?: string;
-      username?: string | null;
-      email?: string;
+      id: string;
+      username: string;
+      email: string;
       is_admin?: boolean;
       created_at?: Date;
       updated_at?: Date | null;
@@ -37,9 +37,9 @@ declare module "next-auth" {
   }
 
   interface User extends DefaultUser {
-    id?: string;
-    username?: string | null;
-    email?: string;
+    id: string;
+    username: string;
+    email: string;
     is_admin?: boolean;
     created_at?: Date;
     updated_at?: Date | null;
