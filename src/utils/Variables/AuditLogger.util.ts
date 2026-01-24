@@ -27,18 +27,18 @@ export async function logAudit(
   try {
     await pool.query(
       `INSERT INTO audit_logs (
-                id, 
-                action_type, 
-                actor_user_id, 
-                target_user_id,
-                actor_email, 
-                actor_name, 
-                description, 
-                meta,
-                performed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, 
+          action_type, 
+          actor_user_id, 
+          target_user_id,
+          actor_email, 
+          actor_name, 
+          description, 
+          meta,
+          performed_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        generateHexId(36),
+        generateHexId(12),
         actionType,
         actor.user_id,
         targetId,

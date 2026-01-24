@@ -1,24 +1,27 @@
-import {
-  AuditLog,
-  FilterInfo,
-  PaginationInfo,
-} from "../Admin/AuditLogger/Audit.type";
-
-export interface GetAuditLogsResponseDTO {
-  audit_logs: AuditLog[];
-  pagination: PaginationInfo;
-  filters: FilterInfo;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface AuditLog {
+  id: string;
+  action_type: 'user_signup' | 'user_update' | 'user_ban' | 'user_unban' | 
+              'game_account_create' | 'game_account_update' | 'game_account_delete' | 
+              'system' | 'admin_action' | 'user_action';
+  actor_user_id: string | null;
+  target_user_id: string | null;
+  actor_email: string | null;
+  actor_name: string | null;
+  description: string;
+  meta: Record<string, any> | null;
+  performed_at: string | null;
 }
 
-export interface GetAuditLogsRequestDTO {
-  page?: number;
-  limit?: number;
-  search?: string;
-  action_type?: string;
-  actor_user_id?: string;
-  target_user_id?: string;
-  start_date?: string;
-  end_date?: string;
-  sort_by?: "performed_at" | "action_type" | "actor_name";
-  sort_order?: "asc" | "desc";
+export interface AdminDashboardStats {
+  total_users: number;
+}
+
+export interface AdminDashboardResponse {
+  success: boolean;
+  data: {
+    stats: AdminDashboardStats;
+    auditLogs: AuditLog[];
+  };
+  error?: string;
 }

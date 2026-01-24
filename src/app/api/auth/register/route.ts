@@ -6,6 +6,8 @@ import { getCurrentDateTime } from "../../../../utils/Variables/getDateTime.util
 import { generateHexId } from "../../../../utils/Variables/generateHexID.util";
 import { isValidEmail } from "../../../../utils/Validator/NextAuth.util";
 import prepareUsername from "../../../../utils/Validator/PrepareUsername.util";
+import { logAudit } from "../../../../utils/Variables/AuditLogger.util";
+import { AuditActor } from "../../../../types/Admin/AuditLogger/auditLogger.type";
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,19 +88,29 @@ export async function POST(request: NextRequest) {
       [id, preparedUsername, trimmedEmail, passwordHash, now]
     );
 
+    const newUser: AuditActor = {
+      user_id: id,
+      email: trimmedEmail,
+      name: preparedUsername,
+    };
+
+    await logAudit(
+      newUser,
+      "user_signup",
+      "New user registered successfully",
+      {}
+    );
+
     return NextResponse.json(
       {
         success: true,
         message: "User registered successfully",
-        userId: id
+        userId: id,
       },
       { status: 201 }
     );
   } catch (error: unknown) {
     console.error("Registration error:", error);
-    return NextResponse.json(
-      { error: error },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error }, { status: 500 });
   }
 }

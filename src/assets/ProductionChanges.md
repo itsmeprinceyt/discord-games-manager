@@ -1,13 +1,3 @@
-CREATE TABLE users (
-    id CHAR(12) PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(120) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at VARCHAR(30) NOT NULL,
-    updated_at VARCHAR(30) NULL
-);
-
 CREATE TABLE IF NOT EXISTS audit_logs (
     id CHAR(12) NOT NULL PRIMARY KEY,
     action_type ENUM(

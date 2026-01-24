@@ -1,12 +1,25 @@
 "use client";
+import Sidebar from "./Sidebar/Sidebar.index";
+
+interface PageWrapperProps {
+  children: React.ReactNode;
+  withSidebar?: boolean;
+  sidebarRole?: "admin" | "user";
+}
+
 export default function PageWrapper({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+  withSidebar = false,
+  sidebarRole,
+}: PageWrapperProps) {
   return (
     <div className="min-h-screen w-full relative">
-      {children}
+      <div className="flex">
+        {withSidebar && <Sidebar role={sidebarRole} />}
+
+        <div className="flex-1">{children}</div>
+      </div>
+
       <div
         className="absolute inset-0 -z-1"
         style={{
