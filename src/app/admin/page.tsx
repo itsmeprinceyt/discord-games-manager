@@ -15,7 +15,7 @@ import type {
 import PageWrapper from "../(components)/PageWrapper";
 import getAxiosErrorMessage from "../../utils/Variables/getAxiosError.util";
 import toast from "react-hot-toast";
-import { formatTime } from "../../utils/main.util";
+import { formatDate, formatDateTime } from "../../utils/main.util";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -230,7 +230,9 @@ export default function AdminDashboard() {
                               {log.performed_at && (
                                 <>
                                   <span>•</span>
-                                  <span>{formatTime(log.performed_at)}</span>
+                                  <span>
+                                    {formatDateTime(log.performed_at)} ({formatDate(log.performed_at)})
+                                  </span>
                                 </>
                               )}
                             </div>
