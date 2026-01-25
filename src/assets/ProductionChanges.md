@@ -26,3 +26,7 @@ CREATE TABLE IF NOT EXISTS selected_bot (
     FOREIGN KEY (name) REFERENCES bots(name) ON DELETE CASCADE,
     FOREIGN KEY (currency_name) REFERENCES bots(currency_name) ON DELETE CASCADE
 );
+
+
+ADD COLUMN normal_days TINYINT UNSIGNED NOT NULL AFTER balance,
+ADD COLUMN weekend_days TINYINT UNSIGNED NOT NULL AFTER normal_days;

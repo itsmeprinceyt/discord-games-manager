@@ -390,7 +390,7 @@ export default function ManageAccounts() {
 
                     <div className="flex gap-2 pt-3 border-t border-stone-800">
                       <Link
-                        href={`/dashboard/accounts/${account.id}`}
+                        href={`${account.id}`}
                         className={`flex-1 py-2 ${BLUE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
                       >
                         <ArrowRight className="h-3 w-3" />
