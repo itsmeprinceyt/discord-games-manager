@@ -61,7 +61,6 @@ CREATE TABLE IF NOT EXISTS crosstrades (
     currency ENUM('inr', 'usd') NOT NULL DEFAULT 'inr',
     crosstrade_via ENUM('upi', 'paypal', 'wise') NOT NULL DEFAULT 'upi',
     amount_received DECIMAL(10, 2) NOT NULL,
-    amount_received INT UNSIGNED NOT NULL,
     rate VARCHAR(10) DEFAULT NULL,
     conversion_rate DECIMAL(18, 12) NULL,
     net_amount DECIMAL(10, 2) NULL,
