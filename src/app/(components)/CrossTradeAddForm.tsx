@@ -188,16 +188,6 @@ export default function CrossTradeForm({
     setTraderChecks({
       required: value.trim().length > 0,
     });
-
-    if (!value.trim()) {
-      setErrors((prev) => ({ ...prev, traded_with: "Trader ID is required" }));
-    } else {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.traded_with;
-        return newErrors;
-      });
-    }
   };
 
   const validateTradeLink = (value: string) => {
@@ -216,9 +206,7 @@ export default function CrossTradeForm({
       validFormat: trimmed.length > 0 && isValidUrl(trimmed),
     });
 
-    if (!trimmed) {
-      setErrors((prev) => ({ ...prev, trade_link: "Trade link is required" }));
-    } else if (!isValidUrl(trimmed)) {
+    if (trimmed && !isValidUrl(trimmed)) {
       setErrors((prev) => ({
         ...prev,
         trade_link: "Please enter a valid URL",
@@ -257,7 +245,12 @@ export default function CrossTradeForm({
     setConversionRateChecks({ required: false, positive: false });
     setTraderChecks({ required: false });
     setTradeLinkChecks({ required: false, validFormat: false });
-    setErrors({});
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors.traded_with;
+      delete newErrors.trade_link;
+      return newErrors;
+    });
   };
 
   const handleInputChange = (
@@ -312,8 +305,6 @@ export default function CrossTradeForm({
     validateRate(formData.rate);
     if (formData.currency === "usd")
       validateConversionRate(formData.conversion_rate);
-    validateTrader(formData.traded_with);
-    validateTradeLink(formData.trade_link);
 
     if (Object.keys(errors).length > 0) {
       toast.error("Please fix the errors in the form");
@@ -323,9 +314,7 @@ export default function CrossTradeForm({
     if (
       !amountChecks.positive ||
       !netAmountChecks.positive ||
-      !rateChecks.required ||
-      !traderChecks.required ||
-      !tradeLinkChecks.required
+      !rateChecks.required
     ) {
       toast.error("Please complete all required fields");
       return;
@@ -497,7 +486,7 @@ export default function CrossTradeForm({
           {bot_associated && bot_associated.length > 0 && (
             <div className="space-y-2">
               <label className="block text-sm font-medium text-stone-300 mb-2">
-                Associated Bot <span className="text-red-400">*</span>
+                Select Bot <span className="text-red-400">*</span>
               </label>
               <select
                 name="selected_bot_id"
@@ -621,7 +610,7 @@ export default function CrossTradeForm({
               className={`w-full p-2.5 bg-stone-900/50 border ${
                 errors.rate ? "border-red-600" : "border-stone-700"
               } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
-              placeholder="30:1$"
+              placeholder="30:1$ (Write 'N/A' if not applicable)"
             />
 
             {errors.rate && (
@@ -655,7 +644,7 @@ export default function CrossTradeForm({
                 value={formData.conversion_rate || ""}
                 onChange={handleInputChange}
                 min="0"
-                step="0.0000000000001"
+                step="0.00000000000001"
                 className={`w-full p-2.5 bg-stone-900/50 border ${
                   errors.conversion_rate ? "border-red-600" : "border-stone-700"
                 } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
@@ -740,10 +729,10 @@ export default function CrossTradeForm({
             )}
           </div>
 
-          {/* Trader ID */}
+          {/* Buyer ID */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
-              Trader ID <span className="text-red-400">*</span>
+              Buyer ID
             </label>
             <input
               type="text"
@@ -753,7 +742,7 @@ export default function CrossTradeForm({
               className={`w-full p-2.5 bg-stone-900/50 border ${
                 errors.traded_with ? "border-red-600" : "border-stone-700"
               } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
-              placeholder="User ID of the user traded with"
+              placeholder="User ID of the buyer (optional)"
             />
 
             {errors.traded_with && (
@@ -768,7 +757,7 @@ export default function CrossTradeForm({
                 <div className="grid grid-cols-1 gap-1">
                   <ChecklistItem
                     checked={traderChecks.required}
-                    label="Required field"
+                    label="Field is optional"
                   />
                 </div>
               </div>
@@ -778,7 +767,7 @@ export default function CrossTradeForm({
           {/* Trade Link */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
-              Trade Link <span className="text-red-400">*</span>
+              Trade Link
             </label>
             <input
               type="url"
@@ -788,7 +777,7 @@ export default function CrossTradeForm({
               className={`w-full p-2.5 bg-stone-900/50 border ${
                 errors.trade_link ? "border-red-600" : "border-stone-700"
               } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
-              placeholder="Trade link"
+              placeholder="Trade link (optional)"
             />
 
             {errors.trade_link && (
@@ -803,7 +792,7 @@ export default function CrossTradeForm({
                 <div className="grid grid-cols-1 gap-1">
                   <ChecklistItem
                     checked={tradeLinkChecks.required}
-                    label="Required field"
+                    label="Field is optional"
                   />
                   <ChecklistItem
                     checked={tradeLinkChecks.validFormat}
