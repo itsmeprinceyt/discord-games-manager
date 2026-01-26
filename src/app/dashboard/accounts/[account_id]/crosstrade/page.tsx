@@ -244,7 +244,7 @@ export default function CrossTradeManager() {
                           RATE
                         </th>
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
-                          BUYER
+                          BUYER ID
                         </th>
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           VIA
@@ -350,7 +350,7 @@ export default function CrossTradeManager() {
                                 <User className="h-4 w-4 text-stone-500 shrink-0" />
                                 <div className="min-w-0">
                                   <div className="text-white truncate">
-                                    {trade.traded_with || "Unknown"}
+                                    {trade.traded_with || "--"}
                                   </div>
                                 </div>
                               </div>
