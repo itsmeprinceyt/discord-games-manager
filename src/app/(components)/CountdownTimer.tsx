@@ -8,7 +8,7 @@ interface CountdownTimerProps {
 
 export default function CountdownTimer({
   startDate,
-  cooldownDays = 10,
+  cooldownDays = 14,
 }: CountdownTimerProps) {
   const [countdown, setCountdown] = useState<string>("--");
 
@@ -66,7 +66,7 @@ export default function CountdownTimer({
 
   return (
     <span
-      className={`font-medium ${isReady ? "text-green-400" : "text-stone-200"}`}
+      className={`font-medium ${isReady ? "text-blue-400" : "text-stone-200"}`}
     >
       {countdown}
     </span>

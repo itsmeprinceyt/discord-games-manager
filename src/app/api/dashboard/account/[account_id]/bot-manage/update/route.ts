@@ -14,6 +14,33 @@ interface RequestBody {
   botAccountId: string;
 }
 
+/**
+ * Updates the selected bots association for a bot account.
+ *
+ * This endpoint allows users to manage which bots are associated with their bot account.
+ * It handles adding new bot associations and removing old ones, while also managing
+ * the cleanup of related crosstrades data.
+ *
+ * Workflow:
+ * 1. Authenticate the user session
+ * 2. Validate the input parameters (botAccountId and botIds array)
+ * 3. Check if the specified bot account exists and belongs to the authenticated user
+ * 4. Fetch the currently selected bots for the account
+ * 5. For each currently selected bot, determine if it's being removed (not in the new botIds list)
+ * 6. If bots are being removed, delete their associated crosstrades from the crosstrades table
+ * 7. Delete all current selected_bot entries for the account
+ * 8. If botIds array is empty:
+ *    - Log audit trail for complete removal
+ *    - Return success response indicating all bots and crosstrades were removed
+ * 9. If botIds array has entries:
+ *    - Validate that all specified bot IDs exist in the database
+ *    - Create new selected_bot entries for each bot ID
+ *    - Log audit trail with details of the update
+ *    - Return success response with the new bot associations
+ *
+ * Note: When botIds is an empty array, this indicates the user wants to remove
+ * all bot associations and their related crosstrades from the account.
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -58,6 +85,66 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const [currentSelectedBots] = await pool.execute<any[]>(
+      "SELECT id, name FROM selected_bot WHERE bot_account_id = ?",
+      [botAccountId]
+    );
+
+    let crosstradesDeleted = false;
+
+    if (Array.isArray(currentSelectedBots) && currentSelectedBots.length > 0) {
+      const [currentBotDetails] = await pool.execute<any[]>(
+        `SELECT sb.id as selected_bot_id, b.id as bot_id, b.name as bot_name
+         FROM selected_bot sb
+         JOIN bots b ON sb.name = b.name
+         WHERE sb.bot_account_id = ?`,
+        [botAccountId]
+      );
+
+      if (botIds.length > 0 && Array.isArray(currentBotDetails)) {
+        const placeholders = botIds.map(() => "?").join(",");
+        const [botsToKeep] = await pool.execute<any[]>(
+          `SELECT id, name FROM bots WHERE id IN (${placeholders})`,
+          botIds
+        );
+
+        if (Array.isArray(botsToKeep)) {
+          const botsToKeepIds = botsToKeep.map((bot) => bot.id);
+          const selectedBotsToDelete = currentBotDetails.filter(
+            (botDetail) => !botsToKeepIds.includes(botDetail.bot_id)
+          );
+
+          if (selectedBotsToDelete.length > 0) {
+            const selectedBotIdsToDelete = selectedBotsToDelete.map(
+              (bot) => bot.selected_bot_id
+            );
+            const deletePlaceholders = selectedBotIdsToDelete
+              .map(() => "?")
+              .join(",");
+
+            await pool.execute(
+              `DELETE FROM crosstrades WHERE selected_bot_id IN (${deletePlaceholders})`,
+              selectedBotIdsToDelete
+            );
+            crosstradesDeleted = true;
+          }
+        }
+      } else if (botIds.length === 0 && Array.isArray(currentBotDetails)) {
+        const selectedBotIds = currentBotDetails.map(
+          (bot) => bot.selected_bot_id
+        );
+        if (selectedBotIds.length > 0) {
+          const deletePlaceholders = selectedBotIds.map(() => "?").join(",");
+
+          await pool.execute(
+            `DELETE FROM crosstrades WHERE selected_bot_id IN (${deletePlaceholders})`,
+            selectedBotIds
+          );
+          crosstradesDeleted = true;
+        }
+      }
+    }
+
     await pool.execute("DELETE FROM selected_bot WHERE bot_account_id = ?", [
       botAccountId,
     ]);
@@ -72,20 +159,22 @@ export async function POST(request: NextRequest) {
       await logAudit(
         actor,
         "user_action",
-        `User removed all bots from account #${botAccountId}`,
+        `User removed all bots and their crosstrades from account #${botAccountId}`,
         {
           user_id: session.user.id,
           removed_all_bots: true,
+          crosstrades_deleted: crosstradesDeleted,
         }
       );
 
       return NextResponse.json(
         {
           success: true,
-          message: "All bots removed from account",
+          message: "All bots and their crosstrades removed from account",
           data: {
             removedAll: true,
             count: 0,
+            crosstrades_deleted: crosstradesDeleted,
           },
         },
         { status: 200 }
@@ -163,6 +252,7 @@ export async function POST(request: NextRequest) {
         user_id: session.user.id,
         bot_count: insertedBots.length,
         bot_names: insertedBots.map((bot) => bot.name),
+        crosstrades_deleted: crosstradesDeleted,
       }
     );
 
@@ -173,6 +263,7 @@ export async function POST(request: NextRequest) {
         data: {
           count: insertedBots.length,
           bots: insertedBots,
+          crosstrades_deleted: crosstradesDeleted,
         },
       },
       { status: 201 }

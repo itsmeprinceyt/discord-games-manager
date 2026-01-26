@@ -1,5 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import PageWrapper from "../../../(components)/PageWrapper";
 import Link from "next/link";
 import {
@@ -18,6 +19,23 @@ import {
   ArrowLeft,
   LucideIcon,
 } from "lucide-react";
+import axios from "axios";
+import toast from "react-hot-toast";
+import getAxiosErrorMessage from "@/utils/Variables/getAxiosError.util";
+import CountdownTimer from "../../../(components)/CountdownTimer";
+import { formatDateTime, formatDate } from "@/utils/main.util";
+import { BLUE_Button } from "../../../../utils/CSS/Button.util";
+import { BotAccountResponse } from "../../../api/dashboard/account/[account_id]/route";
+
+interface BotInfo {
+  name: string;
+  balance: number;
+  currency: string;
+  lastTrade: string;
+  cooldown: string;
+  isReady?: boolean;
+  last_crosstraded_at: string | null;
+}
 
 interface OptionCard {
   href: string;
@@ -30,21 +48,11 @@ interface OptionCard {
   hoverBgColor: string;
 }
 
-interface BotInfo {
-  name: string;
-  balance: string;
-  currency: string;
-  lastTrade: string;
-  cooldown: string;
-  isReady?: boolean;
-}
-
 interface StatCard {
   title: string;
   icon: LucideIcon;
   iconBgColor: string;
   iconColor: string;
-  badgeText: string;
   badgeColor: string;
   content: React.ReactNode;
   description?: string;
@@ -58,50 +66,83 @@ interface TradeStat {
 
 export default function GameAccountManager() {
   const { account_id } = useParams();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [account, setAccount] = useState<BotAccountResponse | null>(null);
 
-  const accountStats = {
-    balance: "326",
-    lastCrossTrade: "15th Jan, 2026 14:30",
-    nextCrossTrade: "2024-01-20",
-    tradeCount: 47,
-    activeBots: 3,
-    accountStatus: "Active",
-  };
+  const fetchAccountData = useCallback(async () => {
+    if (!account_id) return;
 
-  const accountInfo = {
-    name: "ItsMe Prince",
-    uid: "310672946316181514",
-    created: "2023-11-10",
-    lastUpdated: "2024-01-18",
-  };
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/dashboard/account/${account_id}`);
 
-  // Bot information array
-  const botsData: BotInfo[] = [
-    {
-      name: "Sofi",
-      balance: "326",
-      currency: "Wists",
-      lastTrade: accountStats.lastCrossTrade,
-      cooldown: "9 days 23 hours 43 minutes",
-      isReady: false,
-    },
-    {
-      name: "Karuta",
-      balance: "176",
-      currency: "Tickets",
-      lastTrade: accountStats.lastCrossTrade,
-      cooldown: "2 days 1 hour 23 minutes",
-      isReady: false,
-    },
-    {
-      name: "Nairi",
-      balance: "141",
-      currency: "Jades",
-      lastTrade: accountStats.lastCrossTrade,
-      cooldown: "3 days 1 hour 23 minutes",
-      isReady: true,
-    },
-  ];
+      if (response.data.success) {
+        setAccount(response.data.data);
+      } else {
+        toast.error(response.data.error || "Failed to fetch account data");
+      }
+    } catch (err: unknown) {
+      const message = getAxiosErrorMessage(err, "Error fetching account data");
+      toast.error(message);
+      console.error("Error fetching account data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [account_id]);
+
+  useEffect(() => {
+    fetchAccountData();
+  }, [fetchAccountData]);
+
+  if (loading) {
+    return (
+      <PageWrapper withSidebar sidebarRole="user">
+        <div className="min-h-screen p-4 md:p-6 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="text-stone-400 mt-2">Loading account data...</p>
+          </div>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (!account) {
+    return (
+      <PageWrapper withSidebar sidebarRole="user">
+        <div className="min-h-screen p-4 md:p-6 flex items-center justify-center">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-stone-300 mb-2">
+              Account not found
+            </h3>
+            <p className="text-stone-500 mb-4">
+              The account you&apos;re looking for doesn&apos;t exist or you
+              don&apos;t have permission to access it.
+            </p>
+            <Link
+              href="/dashboard/accounts"
+              className={`px-4 py-2 ${BLUE_Button}} text-white rounded-lg transition-colors cursor-pointer inline-block`}
+            >
+              Back to Accounts
+            </Link>
+          </div>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  const botsData: BotInfo[] = account.selected_bots.map((bot) => ({
+    name: bot.name,
+    balance: bot.balance || 0,
+    currency: bot.currency_name,
+    lastTrade: bot.last_crosstraded_at
+      ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(
+          bot.last_crosstraded_at
+        )})`
+      : "--",
+    cooldown: bot.last_crosstraded_at || "",
+    last_crosstraded_at: bot.last_crosstraded_at,
+  }));
 
   const optionCards: OptionCard[] = [
     {
@@ -156,54 +197,54 @@ export default function GameAccountManager() {
     },
   ];
 
-  // Trade statistics array
   const tradeStats: TradeStat[] = [
     {
       label: "Total Trades",
-      value: accountStats.tradeCount.toString(),
-      valueColor: "text-yellow-400",
+      value: account.trade_count.toString(),
+      valueColor: "text-white",
     },
     {
-      label: "Total Profit ($)",
-      value: "$28.50",
+      label: "Net Profit ($)",
+      value: "--",
       valueColor: "text-green-400",
     },
     {
-      label: "Total Profit (₹)",
-      value: "₹43,899.00",
+      label: "Net Profit (₹)",
+      value: "--",
       valueColor: "text-green-400",
     },
   ];
 
-  // Stat cards array
   const statCards: StatCard[] = [
     {
-      title: "Bot Balance",
+      title: "Wallet",
       icon: BotMessageSquare,
       iconBgColor: "bg-green-600/20",
       iconColor: "text-green-400",
-      badgeText: "Bot Balance",
       badgeColor: "bg-stone-800/50",
       content: (
         <>
           {botsData.map((bot) => (
             <h3 key={bot.name} className="text-sm text-stone-400 mb-1">
               {bot.name}:{" "}
-              <span className="font-medium text-white">
-                {bot.balance} {bot.currency}
+              <span className="font-medium text-green-400">
+                {bot.balance}{" "}
+                {bot.balance > 1 ? `${bot.currency}s` : `${bot.currency}`}
               </span>
             </h3>
           ))}
+          {botsData.length === 0 && (
+            <p className="text-stone-400 text-sm">No bots configured</p>
+          )}
         </>
       ),
-      description: "Approx Wallet Balance",
+      description: "",
     },
     {
       title: "Last Crosstrade",
       icon: RefreshCw,
       iconBgColor: "bg-blue-600/20",
       iconColor: "text-blue-400",
-      badgeText: "Last Crosstrade",
       badgeColor: "bg-stone-800/50",
       content: (
         <>
@@ -213,45 +254,45 @@ export default function GameAccountManager() {
               <span className="font-medium text-white">{bot.lastTrade}</span>
             </h3>
           ))}
+          {botsData.length === 0 && (
+            <p className="text-stone-400 text-sm">No trades yet</p>
+          )}
         </>
       ),
     },
     {
-      title: "Crosstrade cooldown",
+      title: "Crosstrade Cooldown",
       icon: Calendar,
       iconBgColor: "bg-purple-600/20",
       iconColor: "text-purple-400",
-      badgeText: "Crosstrade cooldown",
       badgeColor: "bg-stone-800/50",
       content: (
         <>
           {botsData.map((bot) => (
             <h3 key={bot.name} className="text-sm text-stone-400 mb-1">
-              {bot.name}:{" "}
-              <span
-                className={`font-medium ${
-                  bot.isReady ? "text-green-400" : "text-white"
-                }`}
-              >
-                {bot.isReady ? "READY" : bot.cooldown}
-              </span>
+              {bot.name}: <CountdownTimer startDate={bot.last_crosstraded_at} />
             </h3>
           ))}
+          {botsData.length === 0 && (
+            <p className="text-stone-400 text-sm">No bots configured</p>
+          )}
         </>
       ),
-      description: "Remaining time",
+      description: "",
     },
     {
       title: "Account Status",
       icon: Shield,
       iconBgColor: "bg-emerald-600/20",
       iconColor: "text-emerald-400",
-      badgeText: accountStats.accountStatus,
-      badgeColor: "bg-emerald-900/30",
+      badgeColor:
+        account.selected_bots.length > 0
+          ? "bg-emerald-900/30"
+          : "bg-stone-800/50",
       content: (
         <>
           <h3 className="text-2xl font-medium text-white mb-1">
-            {accountStats.activeBots}
+            {account.selected_bots.length}
           </h3>
           <p className="text-stone-400 text-sm">Bots in account</p>
           <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-stone-800">
@@ -263,28 +304,33 @@ export default function GameAccountManager() {
                 {bot.name}
               </div>
             ))}
+            {botsData.length === 0 && (
+              <p className="text-stone-500 text-sm">No bots selected</p>
+            )}
           </div>
         </>
       ),
     },
   ];
 
-  // Quick action buttons
   const quickActions = [
     {
       text: "Refresh Data",
       bgColor: "bg-stone-800 hover:bg-stone-700",
       textColor: "text-stone-300",
+      onClick: fetchAccountData,
     },
     {
       text: "Edit Account",
       bgColor: "bg-blue-900/30 hover:bg-blue-900/50",
       textColor: "text-blue-400",
+      onClick: () => toast("Edit feature coming soon"),
     },
     {
       text: "Delete Account",
       bgColor: "bg-red-900/30 hover:bg-red-900/50",
       textColor: "text-red-400",
+      onClick: () => toast("Delete feature coming soon"),
     },
   ];
 
@@ -307,9 +353,9 @@ export default function GameAccountManager() {
                 </div>
                 <div>
                   <h1 className="text-2xl md:text-3xl font-medium text-white">
-                    {accountInfo.name}
+                    {account.name}
                   </h1>
-                  <p className="text-stone-400 text-xs">#{account_id}</p>
+                  <p className="text-stone-400 text-xs">#{account.id}</p>
                 </div>
               </div>
             </div>
@@ -318,6 +364,7 @@ export default function GameAccountManager() {
                 {quickActions.map((action, index) => (
                   <button
                     key={index}
+                    onClick={action.onClick}
                     className={`px-3 py-1.5 ${action.bgColor} ${action.textColor} text-xs rounded-lg transition-colors cursor-pointer`}
                   >
                     {action.text}
@@ -342,7 +389,7 @@ export default function GameAccountManager() {
                 <span
                   className={`text-xs px-2 py-1 ${stat.badgeColor} text-stone-300 rounded`}
                 >
-                  {stat.badgeText}
+                  {stat.title}
                 </span>
               </div>
               {stat.content}
@@ -372,14 +419,12 @@ export default function GameAccountManager() {
                   </div>
                   <p className="text-stone-300 text-xs">
                     Account Name:{" "}
-                    <span className="text-white break-all">
-                      {accountInfo.name}
-                    </span>
+                    <span className="text-white break-all">{account.name}</span>
                   </p>
                   <p className="text-stone-300 text-xs">
                     Account UID:{" "}
                     <span className="text-white break-all">
-                      {accountInfo.uid}
+                      {account.account_uid || "Not set"}
                     </span>
                   </p>
                 </div>
@@ -415,13 +460,16 @@ export default function GameAccountManager() {
                     <Calendar className="h-4 w-4 text-stone-500" />
                     <span className="text-sm text-stone-400">Created Date</span>
                   </div>
-                  <p className="text-white text-sm">{accountInfo.created}</p>
+                  <p className="text-white text-sm">
+                    {formatDateTime(account.created_at)}
+                  </p>
                   <div className="flex items-center gap-3 mb-2">
                     <Clock className="h-4 w-4 text-stone-500" />
                     <span className="text-sm text-stone-400">Last Updated</span>
                   </div>
                   <p className="text-white text-sm">
-                    {accountInfo.lastUpdated}
+                    {formatDateTime(account.updated_at)} (
+                    {formatDate(account.updated_at)})
                   </p>
                 </div>
               </div>

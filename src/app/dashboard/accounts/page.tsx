@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Gamepad2,
@@ -47,11 +47,7 @@ export default function ManageAccounts() {
   });
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get("/api/dashboard/account");
@@ -66,7 +62,11 @@ export default function ManageAccounts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
 
   const totalAccounts = accounts.length;
 
@@ -291,7 +291,7 @@ export default function ManageAccounts() {
         </div>
 
         {/* Accounts Section */}
-        <div className="">
+        <div>
           {/* Loading State */}
           {loading && (
             <div className="text-center py-12">
@@ -353,7 +353,7 @@ export default function ManageAccounts() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 py-3 border-t border-stone-800">
+                      <div className="flex flex-wrap gap-2 border-t border-stone-800">
                         {account.selected_bots.map((bot) => (
                           <div
                             key={bot.name}
@@ -364,7 +364,7 @@ export default function ManageAccounts() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-stone-500">Wallet</span>
-                              <span className="text-stone-200 font-medium">
+                              <span className="text-green-400 font-medium">
                                 {bot.balance}{" "}
                                 {bot.balance > 1
                                   ? `${bot.currency_name}s`
@@ -378,7 +378,6 @@ export default function ManageAccounts() {
                               <span className="text-stone-200 font-medium">
                                 <CountdownTimer
                                   startDate={bot.last_crosstraded_at}
-                                  cooldownDays={10}
                                 />
                               </span>
                             </div>
@@ -412,7 +411,7 @@ export default function ManageAccounts() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-3 border-t border-stone-800">
+                    <div className="flex gap-2 pt-3 border-stone-800">
                       <Link
                         href={`${account.id}`}
                         className={`flex-1 py-2 ${BLUE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
