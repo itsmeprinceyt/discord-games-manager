@@ -16,23 +16,17 @@ import { BLUE_Button, RED_Button } from "../../../utils/CSS/Button.util";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "@/utils/Variables/getAxiosError.util";
 import { formatDate, formatDateTime } from "../../../utils/main.util";
+import { BotAccountResponse } from "../../api/dashboard/account/route";
+import CountdownTimer from "../../(components)/CountdownTimer";
 
-// TODO: put in a file
-interface BotAccount {
-  id: string;
-  name: string;
-  account_uid: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
+// TODO: add in a file
 interface AddAccountFormData {
   name: string;
   account_uid: string;
 }
 
 export default function ManageAccounts() {
-  const [accounts, setAccounts] = useState<BotAccount[]>([]);
+  const [accounts, setAccounts] = useState<BotAccountResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [formData, setFormData] = useState<AddAccountFormData>({
@@ -329,63 +323,93 @@ export default function ManageAccounts() {
                 {accounts.map((account, index) => (
                   <div
                     key={index}
-                    className="bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800 hover:scale-101 transition-all ease-in-out duration-150"
+                    className="flex flex-col justify-between bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800 hover:scale-101 transition-all ease-in-out duration-150"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="text-white font-medium">
-                          {account.name}
-                        </h3>
-                        <p className="text-stone-400 text-xs">
-                          {account.account_uid || "No UID"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 mb-4 text-xs">
-                      {/* TODO: Add crosstrade countdown & last crosstrade date & time */}
-                      <div className="flex justify-between">
-                        <span className="text-stone-500">
-                          Crosstrade Countdown
-                        </span>
-                        <span className="text-stone-400">--</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-stone-500">Last Crosstraded</span>
-                        <span className="text-stone-400">--</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-stone-500">Created at</span>
-                        <span className="text-stone-400">
-                          {formatDateTime(account.created_at)} (
-                          {formatDate(account.created_at)})
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-stone-500">Last Updated</span>
-                        <span className="text-stone-400">
-                          {formatDate(account.updated_at)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 py-3 border-t border-stone-800">
-                      {/* TODO: Return bots name associated with this account */}
-                      {[
-                        "Sofi",
-                        "Karuta",
-                        "Mazoku",
-                        "Nairi",
-                        "Lumina",
-                        "Luvi",
-                      ].map((botName) => (
-                        <div
-                          key={botName}
-                          className="bg-black text-stone-500 text-sm border border-stone-900 px-3 py-1 rounded-lg"
-                        >
-                          {botName}
+                    <div>
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="text-white font-medium">
+                            {account.name}
+                          </h3>
+                          <p className="text-stone-400 text-xs">
+                            {account.account_uid || "No UID"}
+                          </p>
                         </div>
-                      ))}
+                      </div>
+
+                      <div className="space-y-2 mb-4 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-stone-500">Created at</span>
+                          <span className="text-stone-400">
+                            {formatDateTime(account.created_at)} (
+                            {formatDate(account.created_at)})
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-stone-500">Last Updated</span>
+                          <span className="text-stone-400">
+                            {formatDate(account.updated_at)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 py-3 border-t border-stone-800">
+                        {account.selected_bots.map((bot) => (
+                          <div
+                            key={bot.name}
+                            className="w-full bg-black text-stone-500 border border-stone-900 px-3 py-1 rounded-lg text-xs"
+                          >
+                            <div className="font-medium text-stone-300 text-sm">
+                              {bot.name}
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-stone-500">Wallet</span>
+                              <span className="text-stone-200 font-medium">
+                                {bot.balance}{" "}
+                                {bot.balance > 1
+                                  ? `${bot.currency_name}s`
+                                  : `${bot.currency_name}`}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-stone-500">
+                                Crosstrade Countdown
+                              </span>
+                              <span className="text-stone-200 font-medium">
+                                <CountdownTimer
+                                  startDate={bot.last_crosstraded_at}
+                                  cooldownDays={10}
+                                />
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-stone-500">
+                                Last Crosstraded
+                              </span>
+                              <span className="text-stone-200 font-medium">
+                                {bot.last_crosstraded_at ? (
+                                  <>
+                                    {formatDateTime(bot.last_crosstraded_at)} (
+                                    {formatDate(bot.last_crosstraded_at)})
+                                  </>
+                                ) : (
+                                  "--"
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-stone-500">Last Voted</span>
+                              <span className="text-stone-200 font-medium">
+                                {bot.voted_at ? (
+                                  <>{formatDateTime(bot.voted_at)} </>
+                                ) : (
+                                  "--"
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="flex gap-2 pt-3 border-t border-stone-800">

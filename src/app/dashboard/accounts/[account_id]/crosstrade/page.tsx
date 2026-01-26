@@ -109,20 +109,13 @@ export default function CrossTradeManager() {
     }
   };
 
-  const getStatusColorTraded = (traded: boolean) => {
-    if (traded) return "bg-green-900/30 text-green-400 border-green-800";
-    if (!traded) return "bg-red-900/30 text-red-400 border-red-800";
+  const getStatusColor = (value: boolean) => {
+    if (value) return "bg-green-900/30 text-green-400 border-green-800";
+    return "bg-yellow-900/30 text-yellow-400 border-yellow-800";
   };
 
-  const getStatusColorPaid = (paid: boolean) => {
-    if (paid) return "bg-green-900/30 text-green-400 border-green-800";
-    if (!paid) return "bg-red-900/30 text-red-400 border-red-800";
-  };
-
-  const getStatusText = (traded: boolean, paid: boolean) => {
-    if (traded && paid) return "Completed";
-    if (traded && !paid) return "Traded, Not Paid";
-    if (!traded && paid) return "Paid, Not Traded";
+  const getStatusText = (value: boolean) => {
+    if (value) return "Completed";
     return "Pending";
   };
 
@@ -193,7 +186,7 @@ export default function CrossTradeManager() {
 
         {/* Stats Summary */}
         {!loading && data?.cross_trade_logs.length && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
             <div className="bg-stone-900/50 border border-stone-800 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -271,7 +264,7 @@ export default function CrossTradeManager() {
                       {data?.cross_trade_logs.map((trade) => (
                         <React.Fragment key={trade.id}>
                           {/* Main Table Row */}
-                          <tr className="border-b border-stone-800 hover:bg-stone-900/30 transition-colors text-xs">
+                          <tr className="border-t border-stone-800 hover:bg-stone-900/30 transition-colors text-xs">
                             {/* ID */}
                             <td className="p-4">
                               <div className="flex items-center gap-2">
@@ -373,12 +366,12 @@ export default function CrossTradeManager() {
                             {/* Traded */}
                             <td className="p-4 text-nowrap">
                               <div
-                                className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColorTraded(
+                                className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
                                   trade.traded
                                 )}`}
                               >
                                 <span className="text-xs font-medium">
-                                  {getStatusText(trade.traded, trade.paid)}
+                                  {getStatusText(trade.traded)}
                                 </span>
                               </div>
                             </td>
@@ -386,12 +379,12 @@ export default function CrossTradeManager() {
                             {/* Paid */}
                             <td className="p-4 text-nowrap">
                               <div
-                                className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColorPaid(
+                                className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
                                   trade.paid
                                 )}`}
                               >
                                 <span className="text-xs font-medium">
-                                  {getStatusText(trade.traded, trade.paid)}
+                                  {getStatusText(trade.paid)}
                                 </span>
                               </div>
                             </td>
@@ -421,7 +414,7 @@ export default function CrossTradeManager() {
                           {/* Expanded Details Row */}
                           {expandedTradeId === trade.id && (
                             <tr className="bg-black/20 border-b border-stone-800">
-                              <td colSpan={7} className="p-0">
+                              <td colSpan={11} className="p-0">
                                 <div className="p-6 border-t border-stone-800">
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                                     {/* Trade Details */}
@@ -545,10 +538,18 @@ export default function CrossTradeManager() {
                                               </div>
                                               <div className="text-white text-sm font-medium flex items-center">
                                                 <IndianRupee className="h-3.5 w-3.5 text-green-400" />
-                                                {formatCurrency(
-                                                  trade.amount_received *
-                                                    trade.conversion_rate,
-                                                  "inr"
+                                                {trade.net_amount ? (
+                                                  <>
+                                                    {formatCurrency(
+                                                      trade.net_amount *
+                                                        trade.conversion_rate,
+                                                      "inr"
+                                                    )}
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    `Net amount not available`
+                                                  </>
                                                 )}
                                               </div>
                                             </div>
@@ -562,10 +563,16 @@ export default function CrossTradeManager() {
                                         Note
                                       </h4>
                                       <div className="space-y-4 text-xs">
-                                        {trade.note && (
+                                        {trade.note ? (
                                           <div>
                                             <div className="text-white italic">
                                               {`" ${trade.note} "`}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div>
+                                            <div className="text-white italic">
+                                              {`--`}
                                             </div>
                                           </div>
                                         )}
@@ -594,7 +601,9 @@ export default function CrossTradeManager() {
                                           title="Edit"
                                           onClick={() => {
                                             // TODO: Implement edit
-                                            toast("Edit feature coming soon");
+                                            toast.error(
+                                              "Edit feature coming soon"
+                                            );
                                           }}
                                         >
                                           <Edit className="h-3 w-3" />

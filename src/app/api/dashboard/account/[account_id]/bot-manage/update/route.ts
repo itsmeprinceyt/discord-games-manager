@@ -28,16 +28,16 @@ export async function POST(request: NextRequest) {
     const body: RequestBody = await request.json();
     const { botIds, botAccountId } = body;
 
-    if (!botIds || !Array.isArray(botIds) || !botAccountId) {
+    if (!botAccountId) {
       return NextResponse.json(
-        { error: "Missing required fields: botIds and botAccountId" },
+        { error: "Missing required field: botAccountId" },
         { status: 400 }
       );
     }
 
-    if (botIds.length === 0) {
+    if (!Array.isArray(botIds)) {
       return NextResponse.json(
-        { error: "botIds array cannot be empty" },
+        { error: "botIds must be an array" },
         { status: 400 }
       );
     }
@@ -58,6 +58,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await pool.execute("DELETE FROM selected_bot WHERE bot_account_id = ?", [
+      botAccountId,
+    ]);
+
+    if (botIds.length === 0) {
+      const actor: AuditActor = {
+        user_id: session.user.id,
+        email: session.user.email,
+        name: session.user.username,
+      };
+
+      await logAudit(
+        actor,
+        "user_action",
+        `User removed all bots from account #${botAccountId}`,
+        {
+          user_id: session.user.id,
+          removed_all_bots: true,
+        }
+      );
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: "All bots removed from account",
+          data: {
+            removedAll: true,
+            count: 0,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
     const placeholders = botIds.map(() => "?").join(",");
     const [botDetails] = await pool.execute<any[]>(
       `SELECT id, name, currency_name, normal_days, weekend_days 
@@ -73,49 +107,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await pool.execute("DELETE FROM selected_bot WHERE bot_account_id = ?", [
-      botAccountId,
-    ]);
+    const insertedBots = await Promise.all(
+      botDetails.map(async (bot) => {
+        const selectedBotId = generateHexId(12);
 
-    botDetails.map(async (bot) => {
-      const selectedBotId = generateHexId(12);
+        await pool.execute(
+          `INSERT INTO selected_bot (
+            id, 
+            bot_account_id, 
+            name, 
+            currency_name, 
+            balance, 
+            normal_days, 
+            weekend_days, 
+            last_crosstraded_at, 
+            voted_at, 
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            selectedBotId,
+            botAccountId,
+            bot.name,
+            bot.currency_name,
+            0,
+            bot.normal_days,
+            bot.weekend_days,
+            null,
+            null,
+            now,
+          ]
+        );
 
-      await pool.execute(
-        `INSERT INTO selected_bot (
-          id, 
-          bot_account_id, 
-          name, 
-          currency_name, 
-          balance, 
-          normal_days, 
-          weekend_days, 
-          last_crosstraded_at, 
-          voted_at, 
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          selectedBotId,
-          botAccountId,
-          bot.name,
-          bot.currency_name,
-          0,
-          bot.normal_days,
-          bot.weekend_days,
-          null,
-          null,
-          now,
-        ]
-      );
-
-      return {
-        id: selectedBotId,
-        bot_id: bot.id,
-        name: bot.name,
-        currency_name: bot.currency_name,
-        normal_days: bot.normal_days,
-        weekend_days: bot.weekend_days,
-      };
-    });
+        return {
+          id: selectedBotId,
+          bot_id: bot.id,
+          name: bot.name,
+          currency_name: bot.currency_name,
+          normal_days: bot.normal_days,
+          weekend_days: bot.weekend_days,
+        };
+      })
+    );
 
     const actor: AuditActor = {
       user_id: session.user.id,
@@ -126,16 +158,22 @@ export async function POST(request: NextRequest) {
     await logAudit(
       actor,
       "user_action",
-      `User updated the bots associated to the account #${botAccountId}`,
+      `User updated bots associated with account #${botAccountId} (${insertedBots.length} bots)`,
       {
-        user_id: session.user.id
+        user_id: session.user.id,
+        bot_count: insertedBots.length,
+        bot_names: insertedBots.map((bot) => bot.name),
       }
     );
 
     return NextResponse.json(
       {
         success: true,
-        message: `Updated bots association with this account`,
+        message: `Updated bots association with this account (${insertedBots.length} bots)`,
+        data: {
+          count: insertedBots.length,
+          bots: insertedBots,
+        },
       },
       { status: 201 }
     );
