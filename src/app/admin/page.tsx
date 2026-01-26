@@ -177,7 +177,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-black/30 border border-stone-800 rounded-lg p-4 sm:p-6">
+            <div className="bg-black/30 border border-stone-800 rounded-lg p-4 sm:p-6 select-text">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
                 <h2 className="text-lg sm:text-xl font-medium text-white">
                   Recent Activity
