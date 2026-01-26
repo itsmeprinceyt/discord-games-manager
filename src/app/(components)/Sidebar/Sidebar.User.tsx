@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Bookmark,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -18,6 +19,11 @@ const userNavItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
+  },
+  {
+    title: "Manage Accounts",
+    href: "/dashboard/accounts",
+    icon: <Bookmark className="h-5 w-5" />,
   },
   {
     title: "Settings",
@@ -53,8 +59,7 @@ export default function UserSidebar() {
       {/* Sidebar */}
       <div
         className={`
-        ${isCollapsed ? "w-16" : "w-64"}
-        h-screen bg-black border-r border-stone-800 p-2
+        ${isCollapsed ? "w-16" : "w-64"} min-h-screen bg-black border-r border-stone-800 p-2
         transition-all duration-300
         fixed lg:relative z-40
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}

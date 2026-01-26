@@ -9,6 +9,96 @@ import { BotFormData } from "../../../../types/Admin/BotManager/BotManager.type"
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
+// TODO: put this in a file
+interface Bot {
+  id: string;
+  name: string;
+  currency_name: string;
+  vote_link: string | null;
+  normal_days: number;
+  weekend_days: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized - Please log in" },
+        { status: 401 }
+      );
+    }
+
+    if (!session.user.is_admin) {
+      return NextResponse.json(
+        { error: "Forbidden - Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    await initServer();
+    const pool = db();
+
+    const [bots] = await pool.execute<any[]>(`
+      SELECT 
+        id, 
+        name, 
+        currency_name, 
+        vote_link, 
+        vote_link_alternate,
+        normal_days, 
+        weekend_days, 
+        created_at, 
+        updated_at
+      FROM bots 
+      ORDER BY created_at DESC
+    `);
+
+    if (!Array.isArray(bots)) {
+      return NextResponse.json({ success: true, data: [] }, { status: 200 });
+    }
+
+    const botData: Bot[] = bots.map((bot) => ({
+      id: bot.id,
+      name: bot.name,
+      currency_name: bot.currency_name,
+      vote_link: bot.vote_link,
+      vote_link_alternate: bot.vote_link_alternate,
+      normal_days: Number(bot.normal_days),
+      weekend_days: Number(bot.weekend_days),
+      created_at: bot.created_at,
+      updated_at: bot.updated_at,
+    }));
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: botData,
+        count: botData.length,
+        meta: {
+          total: botData.length,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
+    console.error("Error fetching bots for admin:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -28,8 +118,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, currency_name, vote_link, normal_days, weekend_days } =
-      body as BotFormData;
+    const {
+      name,
+      currency_name,
+      vote_link,
+      vote_link_alternate,
+      normal_days,
+      weekend_days,
+    } = body as BotFormData;
 
     if (
       !name ||
@@ -39,7 +135,10 @@ export async function POST(request: NextRequest) {
       weekend_days === undefined
     ) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        {
+          error:
+            "Required fields: name, currency_name, vote_link, normal_days, weekend_days",
+        },
         { status: 400 }
       );
     }
@@ -47,10 +146,13 @@ export async function POST(request: NextRequest) {
     const trimmedName = name.trim();
     const trimmedCurrencyName = currency_name.trim();
     const trimmedVoteLink = vote_link.trim();
+    const trimmedVoteLinkAlternate = vote_link_alternate
+      ? vote_link_alternate.trim()
+      : "";
 
     if (!trimmedName || !trimmedCurrencyName || !trimmedVoteLink) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "Bot name, currency name, and vote link are required" },
         { status: 400 }
       );
     }
@@ -83,6 +185,23 @@ export async function POST(request: NextRequest) {
         { error: "Vote link must be 100 characters or less" },
         { status: 400 }
       );
+    }
+
+    if (trimmedVoteLinkAlternate) {
+      try {
+        new URL(trimmedVoteLinkAlternate);
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid alternate vote link URL format" },
+          { status: 400 }
+        );
+      }
+      if (trimmedVoteLinkAlternate.length > 100) {
+        return NextResponse.json(
+          { error: "Alternate vote link must be 100 characters or less" },
+          { status: 400 }
+        );
+      }
     }
 
     if (normal_days < 1 || normal_days > 30) {
@@ -127,15 +246,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (trimmedVoteLinkAlternate) {
+      const [existingAlternateVoteLinks] = await pool.execute<any[]>(
+        "SELECT id FROM bots WHERE vote_link_alternate = ?",
+        [trimmedVoteLinkAlternate]
+      );
+
+      if (
+        Array.isArray(existingAlternateVoteLinks) &&
+        existingAlternateVoteLinks.length > 0
+      ) {
+        return NextResponse.json(
+          { error: "A bot with this alternate vote link already exists" },
+          { status: 409 }
+        );
+      }
+    }
+
     const id = generateHexId(12);
 
     await pool.execute(
-      "INSERT INTO bots (id, name, currency_name, vote_link, normal_days, weekend_days, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO bots (id, name, currency_name, vote_link, vote_link_alternate, normal_days, weekend_days, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         id,
         trimmedName,
         trimmedCurrencyName,
         trimmedVoteLink,
+        trimmedVoteLinkAlternate || null,
         normal_days,
         weekend_days,
         now,
@@ -162,17 +299,6 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: "Bot created successfully",
-        botId: id,
-        bot: {
-          id,
-          name: trimmedName,
-          currency_name: trimmedCurrencyName,
-          vote_link: trimmedVoteLink,
-          normal_days,
-          weekend_days,
-          created_at: now,
-          updated_at: now,
-        },
       },
       { status: 201 }
     );

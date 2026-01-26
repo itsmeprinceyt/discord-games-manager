@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getDBName } from "../../utils/Variables/getDBName.util";
 
 /**
  * @description A comprehensive rate limiting system using Redis with Lua scripting
@@ -73,7 +74,7 @@ export class RateLimiter {
       "*.avif",
     ],
     trustProxy: true,
-    prefix: "dual_leaf:ratelimit",
+    prefix: `${getDBName()}:ratelimit`,
     enabled: true,
   };
 

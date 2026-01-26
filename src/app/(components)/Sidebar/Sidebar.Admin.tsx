@@ -71,8 +71,9 @@ export default function AdminSidebar() {
       {/* Sidebar */}
       <div
         className={`
-        ${isCollapsed ? "w-16" : "w-64"}
-        h-screen bg-black border-r border-stone-800 p-2
+        ${
+          isCollapsed ? "w-16" : "w-64"
+        } min-h-screen bg-black border-r border-stone-800 p-2
         transition-all duration-300
         fixed lg:relative z-40
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
