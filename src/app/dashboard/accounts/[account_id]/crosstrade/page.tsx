@@ -220,7 +220,7 @@ export default function CrossTradeManager() {
                 </p>
               </div>
             ) : (
-              <div className="bg-stone-950 border border-stone-800 rounded-xl overflow-hidden">
+              <div className="bg-stone-950 border border-stone-800 rounded-xl overflow-hidden select-text">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
