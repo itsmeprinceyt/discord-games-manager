@@ -323,10 +323,10 @@ export default function ManageAccounts() {
                 {accounts.map((account, index) => (
                   <div
                     key={index}
-                    className="flex flex-col justify-between bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800 hover:scale-101 transition-all ease-in-out duration-150"
+                    className="flex flex-col justify-between gap-4 bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800 hover:scale-101 transition-all ease-in-out duration-150"
                   >
-                    <div>
-                      <div className="flex items-start justify-between mb-3">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-white font-medium">
                             {account.name}
@@ -337,7 +337,7 @@ export default function ManageAccounts() {
                         </div>
                       </div>
 
-                      <div className="space-y-2 mb-4 text-xs">
+                      <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
                           <span className="text-stone-500">Created at</span>
                           <span className="text-stone-400">
@@ -353,11 +353,17 @@ export default function ManageAccounts() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 border-t border-stone-800">
+                      <div
+                        className={`flex flex-wrap gap-4 ${
+                          account.selected_bots.length > 0
+                            ? `py-4 border-b`
+                            : ``
+                        } border-t border-stone-800`}
+                      >
                         {account.selected_bots.map((bot) => (
                           <div
                             key={bot.name}
-                            className="w-full bg-black text-stone-500 border border-stone-900 px-3 py-1 rounded-lg text-xs"
+                            className="w-full bg-black text-stone-500 border border-stone-900 px-3 py-2 rounded-lg text-xs space-y-1"
                           >
                             <div className="font-medium text-stone-300 text-sm">
                               {bot.name}
@@ -411,7 +417,7 @@ export default function ManageAccounts() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-3 border-stone-800">
+                    <div className="flex gap-4 border-stone-800">
                       <Link
                         href={`${account.id}`}
                         className={`flex-1 py-2 ${BLUE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
