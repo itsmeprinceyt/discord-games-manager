@@ -37,7 +37,6 @@ export interface CombinedResponse {
   bot_associated: BotAssociated[];
   cross_trade_logs: CrossTradeLog[];
 }
-
 export async function GET(
   request: Request,
   context: { params: Promise<{ account_id: string }> }
@@ -58,6 +57,24 @@ export async function GET(
     await initServer();
     const pool = db();
 
+    const [accountOwnership] = await pool.execute<any[]>(
+      `
+      SELECT id FROM bot_accounts 
+      WHERE id = ? AND user_id = ?
+    `,
+      [accountId, session.user.id]
+    );
+
+    if (!Array.isArray(accountOwnership) || accountOwnership.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Bot account not found or you don't have permission to access it",
+        },
+        { status: 403 }
+      );
+    }
+
     const [selectedBots] = await pool.execute<any[]>(
       `
       SELECT 
@@ -71,31 +88,31 @@ export async function GET(
     );
 
     const [crossTrades] = await pool.execute<any[]>(
-        `
-        SELECT
-          ct.id,
-          ct.crosstrade_date,
-          ct.currency,
-          ct.crosstrade_via,
-          ct.amount_received,
-          ct.rate,
-          ct.conversion_rate,
-          ct.net_amount,
-          ct.traded_with,
-          ct.trade_link,
-          ct.traded,
-          ct.paid,
-          ct.note,
-          ct.created_at,
-          ct.updated_at,
-          sb.name AS bot_name
-        FROM crosstrades ct
-        JOIN selected_bot sb
-        ON ct.selected_bot_id = sb.id
-        WHERE ct.bot_account_id = ?
-        ORDER BY ct.crosstrade_date DESC
-      `,
-      [accountId]
+      `
+      SELECT
+        ct.id,
+        ct.crosstrade_date,
+        ct.currency,
+        ct.crosstrade_via,
+        ct.amount_received,
+        ct.rate,
+        ct.conversion_rate,
+        ct.net_amount,
+        ct.traded_with,
+        ct.trade_link,
+        ct.traded,
+        ct.paid,
+        ct.note,
+        ct.created_at,
+        ct.updated_at,
+        sb.name AS bot_name
+      FROM crosstrades ct
+      JOIN selected_bot sb
+      ON ct.selected_bot_id = sb.id
+      WHERE ct.bot_account_id = ? AND ct.user_id = ?
+      ORDER BY ct.crosstrade_date DESC
+    `,
+      [accountId, session.user.id] // Added user_id check here too
     );
 
     const botAssociated: BotAssociated[] = Array.isArray(selectedBots)
