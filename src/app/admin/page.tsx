@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   CheckCircle,
@@ -177,18 +177,18 @@ export default function AdminDashboard() {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-black/30 border border-stone-800 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-medium text-white">
+            <div className="bg-black/30 border border-stone-800 rounded-lg p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+                <h2 className="text-lg sm:text-xl font-medium text-white">
                   Recent Activity
                 </h2>
-                <span className="text-stone-400 text-sm">
+                <span className="text-stone-400 text-xs sm:text-sm">
                   Showing latest {auditLogs.length} activities
                 </span>
               </div>
 
               {auditLogs.length === 0 ? (
-                <div className="text-center py-8 text-stone-500">
+                <div className="text-center py-8 text-stone-500 text-sm sm:text-base">
                   No recent activity found
                 </div>
               ) : (
@@ -198,65 +198,81 @@ export default function AdminDashboard() {
                     return (
                       <div
                         key={log.id}
-                        className="flex items-center justify-between p-3 bg-stone-900/30 rounded border border-stone-800 hover:border-stone-700 transition-colors"
+                        className="flex items-center justify-between p-3 sm:p-4 bg-stone-900/30 rounded border border-stone-800 hover:border-stone-700 transition-colors"
                       >
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-start space-x-3 w-full">
                           <div
-                            className={`p-2 rounded ${getStatusBg(
+                            className={`p-2 rounded shrink-0 ${getStatusBg(
                               status
                             )} ${getStatusColor(status)}`}
                           >
                             {getActionIcon(log.action_type)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm truncate">
-                              {log.description ||
-                                formatActionType(log.action_type)}
-                            </p>
-                            <div className="flex items-center space-x-2 text-stone-500 text-xs mt-1">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 text-white text-sm">
+                              <div className=" text-sm sm:text-base wrap-break-word">
+                                {log.description ||
+                                  formatActionType(log.action_type)}
+
+                                {log.performed_at && (
+                                  <span className="ml-1 text-xs text-stone-600">
+                                    ({formatDate(log.performed_at)})
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center">
+                                <span
+                                  className={`rounded p-1 text-xs ${getStatusBg(
+                                    status
+                                  )} ${getStatusColor(
+                                    status
+                                  )} whitespace-nowrap`}
+                                >
+                                  {formatActionType(log.action_type)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-stone-500 text-xs mt-2">
+                              •
                               {log.actor_name && (
-                                <span className="truncate">
+                                <span className="truncate max-w-full sm:max-w-30">
                                   {log.actor_name}
                                 </span>
                               )}
+                              •
                               {log.actor_email && (
                                 <>
-                                  <span>•</span>
-                                  <span className="truncate">
+                                  <span className="hidden sm:inline">•</span>
+                                  <span className="truncate max-w-full sm:max-w-45">
                                     {log.actor_email}
                                   </span>
                                 </>
                               )}
+                              •
                               {log.performed_at && (
-                                <>
-                                  <span>•</span>
-                                  <span>
-                                    {formatDateTime(log.performed_at)} ({formatDate(log.performed_at)})
-                                  </span>
-                                </>
+                                <span>{formatDateTime(log.performed_at)}</span>
                               )}
                             </div>
+
                             {log.meta && Object.keys(log.meta).length > 0 && (
-                              <div className="text-xs text-stone-600 mt-1">
+                              <div className="text-xs text-stone-600 mt-2 flex flex-wrap gap-1 sm:gap-2">
                                 {Object.entries(log.meta).map(
                                   ([key, value]) => (
-                                    <span key={key} className="mr-2">
-                                      {key}: {String(value)}
-                                    </span>
+                                    <React.Fragment key={key}>
+                                      •
+                                      <span className="break-all">
+                                        <span className="font-medium">
+                                          {key}:
+                                        </span>{" "}
+                                        {String(value)}
+                                      </span>
+                                    </React.Fragment>
                                   )
                                 )}
                               </div>
                             )}
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span
-                            className={`px-3 py-1 rounded text-xs ${getStatusBg(
-                              status
-                            )} ${getStatusColor(status)} whitespace-nowrap`}
-                          >
-                            {formatActionType(log.action_type)}
-                          </span>
                         </div>
                       </div>
                     );
