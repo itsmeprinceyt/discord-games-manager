@@ -38,7 +38,10 @@ export interface CombinedResponse {
   cross_trade_logs: CrossTradeLog[];
 }
 
-export async function GET() {
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ account_id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -49,25 +52,26 @@ export async function GET() {
       );
     }
 
-    if (!session.user.is_admin) {
-      return NextResponse.json(
-        { error: "Forbidden - Admin access required" },
-        { status: 403 }
-      );
-    }
+    const { account_id } = await context.params;
+    const accountId = account_id;
 
     await initServer();
     const pool = db();
 
-    const [selectedBots] = await pool.execute<any[]>(`
+    const [selectedBots] = await pool.execute<any[]>(
+      `
       SELECT 
         id,
         name
       FROM selected_bot
+      WHERE bot_account_id = ?
       ORDER BY name ASC
-    `);
+    `,
+      [accountId]
+    );
 
-    const [crossTrades] = await pool.execute<any[]>(`
+    const [crossTrades] = await pool.execute<any[]>(
+        `
         SELECT
           ct.id,
           ct.crosstrade_date,
@@ -88,8 +92,11 @@ export async function GET() {
         FROM crosstrades ct
         JOIN selected_bot sb
         ON ct.selected_bot_id = sb.id
+        WHERE ct.bot_account_id = ?
         ORDER BY ct.crosstrade_date DESC
-        `);
+      `,
+      [accountId]
+    );
 
     const botAssociated: BotAssociated[] = Array.isArray(selectedBots)
       ? selectedBots.map((bot) => ({
@@ -215,6 +222,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    await initServer();
+    const pool = db();
+
+    const [botValidation] = await pool.execute<any[]>(
+      `
+      SELECT id FROM selected_bot 
+      WHERE id = ? AND bot_account_id = ?
+    `,
+      [bot_id, bot_account_id]
+    );
+
+    if (!Array.isArray(botValidation) || botValidation.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Bot not found or does not belong to the specified account",
+        },
+        { status: 404 }
+      );
+    }
+
     const dateObj = new Date(crosstrade_date);
     if (isNaN(dateObj.getTime())) {
       console.error("Invalid date format:", crosstrade_date);
@@ -296,9 +324,6 @@ export async function POST(request: NextRequest) {
 
     const crosstradeId = generateHexId(12);
     const now = getCurrentDateTime();
-
-    await initServer();
-    const pool = db();
 
     connection = await pool.getConnection();
 
