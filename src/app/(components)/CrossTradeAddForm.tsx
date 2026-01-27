@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   X,
   Calendar,
@@ -21,11 +21,30 @@ interface BotAssociated {
   name: string;
 }
 
+interface CrossTrade {
+  id: string;
+  crosstrade_date: string;
+  currency: "inr" | "usd";
+  crosstrade_via: "upi" | "paypal" | "wise";
+  amount_received: number;
+  rate: string;
+  conversion_rate: number;
+  net_amount: number;
+  traded_with: string;
+  trade_link: string;
+  traded: boolean;
+  paid: boolean;
+  note: string;
+  bot_id?: string;
+}
+
 interface CrossTradeFormProps {
   accountId: string;
   onClose: () => void;
   onSuccess?: () => void;
   bot_associated?: BotAssociated[];
+  isEditing?: boolean;
+  tradeToEdit?: CrossTrade | null;
 }
 
 interface CrossTradeFormData {
@@ -60,6 +79,8 @@ export default function CrossTradeForm({
   onClose,
   onSuccess,
   bot_associated = [],
+  isEditing = false,
+  tradeToEdit = null,
 }: CrossTradeFormProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -92,21 +113,51 @@ export default function CrossTradeForm({
     validFormat: false,
   });
 
-  const [formData, setFormData] = useState<CrossTradeFormData>({
-    crosstrade_date: getLocalDateTimeString(),
-    currency: "inr",
-    crosstrade_via: "upi",
-    amount_received: 0,
-    rate: "",
-    conversion_rate: 0,
-    net_amount: 0,
-    traded_with: "",
-    trade_link: "",
-    traded: true,
-    paid: true,
-    note: "",
-    selected_bot_id: bot_associated.length > 0 ? bot_associated[0].id : "",
-  });
+  const getInitialFormData = (): CrossTradeFormData => {
+    if (isEditing && tradeToEdit) {
+      // Convert ISO date to local datetime-local format for editing
+      const editDate = new Date(tradeToEdit.crosstrade_date);
+      const localDate = editDate.toISOString().slice(0, 16);
+
+      return {
+        crosstrade_date: localDate,
+        currency: tradeToEdit.currency,
+        crosstrade_via: tradeToEdit.crosstrade_via,
+        amount_received: tradeToEdit.amount_received,
+        rate: tradeToEdit.rate || "",
+        conversion_rate: tradeToEdit.conversion_rate || 0,
+        net_amount: tradeToEdit.net_amount,
+        traded_with: tradeToEdit.traded_with || "",
+        trade_link: tradeToEdit.trade_link || "",
+        traded: tradeToEdit.traded,
+        paid: tradeToEdit.paid,
+        note: tradeToEdit.note || "",
+        selected_bot_id:
+          tradeToEdit.bot_id ||
+          (bot_associated.length > 0 ? bot_associated[0].id : ""),
+      };
+    }
+
+    return {
+      crosstrade_date: getLocalDateTimeString(),
+      currency: "inr",
+      crosstrade_via: "upi",
+      amount_received: 0,
+      rate: "",
+      conversion_rate: 0,
+      net_amount: 0,
+      traded_with: "",
+      trade_link: "",
+      traded: true,
+      paid: true,
+      note: "",
+      selected_bot_id: bot_associated.length > 0 ? bot_associated[0].id : "",
+    };
+  };
+
+  const [formData, setFormData] = useState<CrossTradeFormData>(
+    getInitialFormData()
+  );
 
   const validateAmountReceived = (value: number) => {
     setAmountChecks({
@@ -164,25 +215,44 @@ export default function CrossTradeForm({
     }
   };
 
-  const validateConversionRate = (value: number) => {
-    setConversionRateChecks({
-      required: formData.currency === "usd" && value > 0,
-      positive: value > 0,
-    });
-
-    if (formData.currency === "usd" && (!value || value <= 0)) {
-      setErrors((prev) => ({
-        ...prev,
-        conversion_rate: "Conversion rate must be greater than 0 for USD",
-      }));
-    } else {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.conversion_rate;
-        return newErrors;
+  const validateConversionRate = useCallback(
+    (value: number) => {
+      setConversionRateChecks({
+        required: formData.currency === "usd" && value > 0,
+        positive: value > 0,
       });
+
+      if (formData.currency === "usd" && (!value || value <= 0)) {
+        setErrors((prev) => ({
+          ...prev,
+          conversion_rate: "Conversion rate must be greater than 0 for USD",
+        }));
+      } else {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.conversion_rate;
+          return newErrors;
+        });
+      }
+    },
+    [formData.currency]
+  );
+
+  useEffect(() => {
+    validateAmountReceived(formData.amount_received);
+    validateNetAmount(formData.net_amount);
+    validateRate(formData.rate);
+    if (formData.currency === "usd") {
+      validateConversionRate(formData.conversion_rate);
     }
-  };
+  }, [
+    formData.amount_received,
+    formData.conversion_rate,
+    formData.currency,
+    formData.net_amount,
+    formData.rate,
+    validateConversionRate,
+  ]);
 
   const validateTrader = (value: string) => {
     setTraderChecks({
@@ -356,22 +426,42 @@ export default function CrossTradeForm({
         requestData.bot_account_id = accountId;
       }
 
-      const response = await axios.post(
-        `/api/dashboard/account/${accountId}/crosstrade`,
-        requestData
-      );
+      let response;
+      if (isEditing && tradeToEdit) {
+        response = await axios.put(
+          `/api/dashboard/account/${accountId}/crosstrade/${tradeToEdit.id}`,
+          requestData
+        );
+      } else {
+        response = await axios.post(
+          `/api/dashboard/account/${accountId}/crosstrade`,
+          requestData
+        );
+      }
 
       if (response.data.success) {
-        toast.success("Cross trade created successfully!");
+        toast.success(
+          isEditing
+            ? "Cross trade updated successfully!"
+            : "Cross trade created successfully!"
+        );
         onSuccess?.();
         onClose();
       }
     } catch (error: unknown) {
-      toast.error(getAxiosErrorMessage(error, "Error creating cross trade"));
+      toast.error(
+        getAxiosErrorMessage(
+          error,
+          isEditing
+            ? "Error updating cross trade"
+            : "Error creating cross trade"
+        )
+      );
     } finally {
       setLoading(false);
     }
   };
+
   const ChecklistItem = ({
     checked,
     label,
@@ -406,10 +496,17 @@ export default function CrossTradeForm({
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
       <div className="bg-black/90 border border-stone-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+        {/* Header - Show different title for edit */}
         <div className="flex items-center justify-between p-6 border-b border-stone-800">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-medium text-white">New Crosstrade</h2>
+            <h2 className="text-xl font-medium text-white">
+              {isEditing ? "Edit Crosstrade" : "New Crosstrade"}
+            </h2>
+            {isEditing && (
+              <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded border border-blue-800">
+                Editing: #{tradeToEdit?.id}
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -419,7 +516,7 @@ export default function CrossTradeForm({
           </button>
         </div>
 
-        {/* Form */}
+        {/* Form remains mostly the same */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Currency Selection */}
           <div className="space-y-2">
@@ -899,7 +996,7 @@ export default function CrossTradeForm({
             />
           </div>
 
-          {/* Form Actions */}
+          {/* Update submit button text */}
           <div className="flex gap-3 pt-4">
             <button
               type="button"
@@ -921,12 +1018,12 @@ export default function CrossTradeForm({
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing...
+                  {isEditing ? "Updating..." : "Processing..."}
                 </>
               ) : (
                 <>
                   <Check className="h-4 w-4" />
-                  Submit
+                  {isEditing ? "Update" : "Submit"}
                 </>
               )}
             </button>
