@@ -35,7 +35,7 @@ interface CrossTrade {
   traded: boolean;
   paid: boolean;
   note: string;
-  bot_id?: string;
+  bot_name?: string;
 }
 
 interface CrossTradeFormProps {
@@ -115,9 +115,19 @@ export default function CrossTradeForm({
 
   const getInitialFormData = (): CrossTradeFormData => {
     if (isEditing && tradeToEdit) {
-      // Convert ISO date to local datetime-local format for editing
       const editDate = new Date(tradeToEdit.crosstrade_date);
       const localDate = editDate.toISOString().slice(0, 16);
+      let selectedBotId = "";
+      if (tradeToEdit.bot_name && bot_associated.length > 0) {
+        const foundBot = bot_associated.find(
+          (bot) => bot.name === tradeToEdit.bot_name
+        );
+        selectedBotId = foundBot ? foundBot.id : "";
+      }
+
+      if (!selectedBotId && bot_associated.length > 0) {
+        selectedBotId = bot_associated[0].id;
+      }
 
       return {
         crosstrade_date: localDate,
@@ -132,9 +142,7 @@ export default function CrossTradeForm({
         traded: tradeToEdit.traded,
         paid: tradeToEdit.paid,
         note: tradeToEdit.note || "",
-        selected_bot_id:
-          tradeToEdit.bot_id ||
-          (bot_associated.length > 0 ? bot_associated[0].id : ""),
+        selected_bot_id: selectedBotId,
       };
     }
 
@@ -306,7 +314,9 @@ export default function CrossTradeForm({
       traded: true,
       paid: true,
       note: "",
-      selected_bot_id: bot_associated.length > 0 ? bot_associated[0].id : "",
+      selected_bot_id:
+        formData.selected_bot_id ||
+        (bot_associated.length > 0 ? bot_associated[0].id : ""),
     });
 
     setAmountChecks({ required: false, positive: false });
