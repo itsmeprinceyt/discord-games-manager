@@ -11,7 +11,7 @@ import { CrossTradeRequestAPI } from "../route";
 
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ account_id: string; crosstrade_id: string }> },
+  context: { params: Promise<{ account_id: string; crosstrade_id: string }> }
 ) {
   let connection: PoolConnection | null = null;
 
@@ -21,7 +21,7 @@ export async function PUT(
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -29,7 +29,6 @@ export async function PUT(
     const accountId = account_id;
     const tradeId = crosstrade_id;
 
-    // Parse request body
     const body = await request.json();
     const {
       crosstrade_date,
@@ -47,7 +46,6 @@ export async function PUT(
       bot_id,
     } = body as CrossTradeRequestAPI;
 
-    // Validate required fields
     const requiredFields = [
       "crosstrade_date",
       "currency",
@@ -60,7 +58,7 @@ export async function PUT(
         console.error(`Missing required field: ${field}`);
         return NextResponse.json(
           { success: false, error: `Missing required field: ${field}` },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -68,7 +66,6 @@ export async function PUT(
     await initServer();
     const pool = db();
 
-    // First, check if the cross trade exists and belongs to the user
     const [existingTrade] = await pool.execute<any[]>(
       `
       SELECT 
@@ -79,7 +76,7 @@ export async function PUT(
       FROM crosstrades ct
       WHERE ct.id = ? AND ct.user_id = ? AND ct.bot_account_id = ?
     `,
-      [tradeId, session.user.id, accountId],
+      [tradeId, session.user.id, accountId]
     );
 
     if (!Array.isArray(existingTrade) || existingTrade.length === 0) {
@@ -89,13 +86,12 @@ export async function PUT(
           error:
             "Cross trade not found or you don't have permission to edit it",
         },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
     const existingTradeData = existingTrade[0];
 
-    // If bot_id is provided, validate it belongs to the account
     let selectedBotId = existingTradeData.selected_bot_id;
     if (bot_id && bot_id !== selectedBotId) {
       const [botValidation] = await pool.execute<any[]>(
@@ -103,7 +99,7 @@ export async function PUT(
         SELECT id FROM selected_bot 
         WHERE id = ? AND bot_account_id = ?
       `,
-        [bot_id, accountId],
+        [bot_id, accountId]
       );
 
       if (!Array.isArray(botValidation) || botValidation.length === 0) {
@@ -112,32 +108,29 @@ export async function PUT(
             success: false,
             error: "Bot not found or does not belong to the specified account",
           },
-          { status: 404 },
+          { status: 404 }
         );
       }
       selectedBotId = bot_id;
     }
 
-    // Validate date format
     const dateObj = new Date(crosstrade_date);
     if (isNaN(dateObj.getTime())) {
       console.error("Invalid date format:", crosstrade_date);
       return NextResponse.json(
         { success: false, error: "Invalid date format" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // Validate amount_received
     if (typeof amount_received !== "number" || amount_received <= 0) {
       console.error("Invalid amount_received:", amount_received);
       return NextResponse.json(
         { success: false, error: "Amount received must be a positive number" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // Validate net_amount if provided
     if (
       net_amount !== null &&
       (typeof net_amount !== "number" || net_amount <= 0)
@@ -148,11 +141,10 @@ export async function PUT(
           success: false,
           error: "Net amount must be a positive number or null",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // Validate conversion_rate for USD
     if (
       currency === "usd" &&
       (!conversion_rate ||
@@ -165,16 +157,15 @@ export async function PUT(
           success: false,
           error: "Conversion rate is required and must be positive for USD",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // Validate field lengths
     if (rate && rate.length > 10) {
       console.error("Rate too long:", rate.length);
       return NextResponse.json(
         { success: false, error: "Rate must be 10 characters or less" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -182,7 +173,7 @@ export async function PUT(
       console.error("Traded_with too long:", traded_with.length);
       return NextResponse.json(
         { success: false, error: "Trader ID must be 36 characters or less" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -190,7 +181,7 @@ export async function PUT(
       console.error("Trade link too long:", trade_link.length);
       return NextResponse.json(
         { success: false, error: "Trade link must be 100 characters or less" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -198,7 +189,7 @@ export async function PUT(
       console.error("Note too long:", note.length);
       return NextResponse.json(
         { success: false, error: "Note must be 250 characters or less" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -208,7 +199,6 @@ export async function PUT(
     try {
       await connection.beginTransaction();
 
-      // Update the cross trade record
       const updateCrosstradeQuery = `
         UPDATE crosstrades 
         SET 
@@ -249,19 +239,43 @@ export async function PUT(
         accountId,
       ]);
 
-      // Update the selected_bot's last_crosstraded_at if bot changed or date changed
-      if (bot_id && bot_id !== existingTradeData.selected_bot_id) {
-        // Update new bot's last_crosstraded_at
+      // 1. First, update the new selected_bot (if bot was changed)
+      if (selectedBotId) {
         await connection.execute(
           `
           UPDATE selected_bot 
-          SET last_crosstraded_at = ?,
-              updated_at = ?
+          SET last_crosstraded_at = (
+            SELECT MAX(crosstrade_date) 
+            FROM crosstrades 
+            WHERE selected_bot_id = ?
+          ),
+          updated_at = ?
           WHERE id = ? AND bot_account_id = ?
         `,
-          [crosstrade_date, now, bot_id, accountId],
+          [selectedBotId, now, selectedBotId, accountId]
         );
       }
+
+      // 2. If the bot was changed from a previous bot, also update the old bot
+      if (bot_id && bot_id !== existingTradeData.selected_bot_id) {
+        const oldSelectedBotId = existingTradeData.selected_bot_id;
+
+        // Update old bot's last_crosstraded_at to its latest trade date (or NULL if no trades)
+        await connection.execute(
+          `
+          UPDATE selected_bot 
+          SET last_crosstraded_at = (
+            SELECT MAX(crosstrade_date) 
+            FROM crosstrades 
+            WHERE selected_bot_id = ?
+          ),
+          updated_at = ?
+          WHERE id = ? AND bot_account_id = ?
+        `,
+          [oldSelectedBotId, now, oldSelectedBotId, accountId]
+        );
+      }
+      // =============== END FIXED LOGIC ===============
 
       await connection.commit();
 
@@ -281,7 +295,7 @@ export async function PUT(
           crosstrade_id: tradeId,
           account_id: accountId,
           bot_id: selectedBotId,
-        },
+        }
       );
 
       return NextResponse.json(
@@ -293,7 +307,7 @@ export async function PUT(
             updated_at: now,
           },
         },
-        { status: 200 },
+        { status: 200 }
       );
     } catch (dbError: unknown) {
       if (connection) {
@@ -312,7 +326,7 @@ export async function PUT(
         message: error instanceof Error ? error.message : "Unknown error",
         details: error instanceof Error ? error.stack : undefined,
       },
-      { status: 500 },
+      { status: 500 }
     );
   } finally {
     if (connection) {

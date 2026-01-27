@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   X,
   Calendar,
@@ -155,17 +155,9 @@ export default function CrossTradeForm({
     };
   };
 
-  const [formData, setFormData] =
-    useState<CrossTradeFormData>(getInitialFormData());
-
-  useEffect(() => {
-    validateAmountReceived(formData.amount_received);
-    validateNetAmount(formData.net_amount);
-    validateRate(formData.rate);
-    if (formData.currency === "usd") {
-      validateConversionRate(formData.conversion_rate);
-    }
-  }, [formData.amount_received, formData.conversion_rate, formData.currency, formData.net_amount, formData.rate, validateConversionRate]);
+  const [formData, setFormData] = useState<CrossTradeFormData>(
+    getInitialFormData()
+  );
 
   const validateAmountReceived = (value: number) => {
     setAmountChecks({
@@ -223,26 +215,44 @@ export default function CrossTradeForm({
     }
   };
 
-  // TODO: fix
-  const validateConversionRate = (value: number) => {
-    setConversionRateChecks({
-      required: formData.currency === "usd" && value > 0,
-      positive: value > 0,
-    });
-
-    if (formData.currency === "usd" && (!value || value <= 0)) {
-      setErrors((prev) => ({
-        ...prev,
-        conversion_rate: "Conversion rate must be greater than 0 for USD",
-      }));
-    } else {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.conversion_rate;
-        return newErrors;
+  const validateConversionRate = useCallback(
+    (value: number) => {
+      setConversionRateChecks({
+        required: formData.currency === "usd" && value > 0,
+        positive: value > 0,
       });
+
+      if (formData.currency === "usd" && (!value || value <= 0)) {
+        setErrors((prev) => ({
+          ...prev,
+          conversion_rate: "Conversion rate must be greater than 0 for USD",
+        }));
+      } else {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.conversion_rate;
+          return newErrors;
+        });
+      }
+    },
+    [formData.currency]
+  );
+
+  useEffect(() => {
+    validateAmountReceived(formData.amount_received);
+    validateNetAmount(formData.net_amount);
+    validateRate(formData.rate);
+    if (formData.currency === "usd") {
+      validateConversionRate(formData.conversion_rate);
     }
-  };
+  }, [
+    formData.amount_received,
+    formData.conversion_rate,
+    formData.currency,
+    formData.net_amount,
+    formData.rate,
+    validateConversionRate,
+  ]);
 
   const validateTrader = (value: string) => {
     setTraderChecks({
@@ -316,7 +326,7 @@ export default function CrossTradeForm({
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
+    >
   ) => {
     const { name, value, type } = e.target;
 
@@ -420,12 +430,12 @@ export default function CrossTradeForm({
       if (isEditing && tradeToEdit) {
         response = await axios.put(
           `/api/dashboard/account/${accountId}/crosstrade/${tradeToEdit.id}`,
-          requestData,
+          requestData
         );
       } else {
         response = await axios.post(
           `/api/dashboard/account/${accountId}/crosstrade`,
-          requestData,
+          requestData
         );
       }
 
@@ -433,7 +443,7 @@ export default function CrossTradeForm({
         toast.success(
           isEditing
             ? "Cross trade updated successfully!"
-            : "Cross trade created successfully!",
+            : "Cross trade created successfully!"
         );
         onSuccess?.();
         onClose();
@@ -444,8 +454,8 @@ export default function CrossTradeForm({
           error,
           isEditing
             ? "Error updating cross trade"
-            : "Error creating cross trade",
-        ),
+            : "Error creating cross trade"
+        )
       );
     } finally {
       setLoading(false);
@@ -474,8 +484,8 @@ export default function CrossTradeForm({
           checked
             ? "text-green-400"
             : error
-              ? "text-yellow-400"
-              : "text-stone-400"
+            ? "text-yellow-400"
+            : "text-stone-400"
         }
       >
         {label}
