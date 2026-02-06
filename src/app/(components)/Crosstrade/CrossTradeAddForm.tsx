@@ -11,9 +11,9 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import getAxiosErrorMessage from "../../utils/Variables/getAxiosError.util";
-import { CrossTradeRequestAPI } from "../api/dashboard/account/[account_id]/crosstrade/route";
-import { BLUE_Button, STONE_Button } from "../../utils/CSS/Button.util";
+import getAxiosErrorMessage from "../../../utils/Variables/getAxiosError.util";
+import { CrossTradeRequestAPI } from "../../api/dashboard/account/[account_id]/crosstrade/route";
+import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
 
 // TODO: put in the file
 interface BotAssociated {
@@ -225,21 +225,33 @@ export default function CrossTradeForm({
 
   const validateConversionRate = useCallback(
     (value: number) => {
-      setConversionRateChecks({
-        required: formData.currency === "usd" && value > 0,
-        positive: value > 0,
-      });
+      if (formData.currency === "usd") {
+        setConversionRateChecks({
+          required: value > 0,
+          positive: value > 0,
+        });
 
-      if (formData.currency === "usd" && (!value || value <= 0)) {
-        setErrors((prev) => ({
-          ...prev,
-          conversion_rate: "Conversion rate must be greater than 0 for USD",
-        }));
+        if (!value || value <= 0) {
+          setErrors((prev) => ({
+            ...prev,
+            conversion_rate: "Conversion rate must be greater than 0 for USD",
+          }));
+        } else {
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors.conversion_rate;
+            return newErrors;
+          });
+        }
       } else {
         setErrors((prev) => {
           const newErrors = { ...prev };
           delete newErrors.conversion_rate;
           return newErrors;
+        });
+        setConversionRateChecks({
+          required: false,
+          positive: false,
         });
       }
     },
@@ -252,6 +264,12 @@ export default function CrossTradeForm({
     validateRate(formData.rate);
     if (formData.currency === "usd") {
       validateConversionRate(formData.conversion_rate);
+    } else {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.conversion_rate;
+        return newErrors;
+      });
     }
   }, [
     formData.amount_received,
@@ -327,6 +345,7 @@ export default function CrossTradeForm({
     setTradeLinkChecks({ required: false, validFormat: false });
     setErrors((prev) => {
       const newErrors = { ...prev };
+      delete newErrors.conversion_rate;
       delete newErrors.traded_with;
       delete newErrors.trade_link;
       return newErrors;
