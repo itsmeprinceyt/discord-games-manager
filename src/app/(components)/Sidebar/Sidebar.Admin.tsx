@@ -82,7 +82,7 @@ export default function AdminSidebar() {
         {/* Toggle Button */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute top-1/2 -right-3 bg-black border border-stone-800 rounded-full p-1 text-stone-400 hover:text-white hover:border-stone-700 transition-colors cursor-pointer"
+          className="hidden lg:flex absolute top-4 -right-3 bg-black border border-stone-800 rounded-full p-1 text-stone-400 hover:text-white hover:border-stone-700 transition-colors cursor-pointer"
         >
           {isCollapsed ? (
             <ChevronRight className="h-4 w-4" />

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS bot_accounts (
     -- Bot account name
     account_uid CHAR(36),
     voted_at VARCHAR(30),
+    todo TEXT NULL,
     created_at VARCHAR(30) NOT NULL,
     updated_at VARCHAR(30) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

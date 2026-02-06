@@ -8,16 +8,22 @@ import {
   AlertCircle,
   Check,
   Trash,
+  NotebookPen,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../../(components)/PageWrapper";
 import Link from "next/link";
-import { BLUE_Button, RED_Button } from "../../../utils/CSS/Button.util";
+import {
+  BLUE_Button,
+  RED_Button,
+  STONE_Button,
+} from "../../../utils/CSS/Button.util";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "@/utils/Variables/getAxiosError.util";
 import { formatDate, formatDateTime } from "../../../utils/main.util";
 import { BotAccountResponse } from "../../api/dashboard/account/route";
 import CountdownTimer from "../../(components)/CountdownTimer";
+import TodoModal from "../../(components)/DynamicComponent/TodoModal";
 
 // TODO: add in a file
 interface AddAccountFormData {
@@ -46,6 +52,10 @@ export default function ManageAccounts() {
     uidValidFormat: false,
   });
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  const [showTodoModal, setShowTodoModal] = useState<boolean>(false);
+  const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
+  const [selectedBotName, setSelectedBotName] = useState<string>("");
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -253,6 +263,12 @@ export default function ManageAccounts() {
     return !formErrors.name && !formErrors.account_uid;
   };
 
+  const handleTodoClick = (botId: string, botName: string) => {
+    setSelectedBotId(botId);
+    setSelectedBotName(botName);
+    setShowTodoModal(true);
+  };
+
   return (
     <PageWrapper withSidebar sidebarRole="user">
       <div className="min-h-screen p-4 md:p-6">
@@ -422,15 +438,23 @@ export default function ManageAccounts() {
                         href={`${account.id}`}
                         className={`flex-1 py-2 ${BLUE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
                       >
-                        <ArrowRight className="h-3 w-3" />
+                        <ArrowRight size={14} />
                         Manage
                       </Link>
                       <button
                         onClick={() => handleDeleteAccount(account.id)}
                         className={`flex-1 py-2 ${RED_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
                       >
-                        <Trash className="h-3 w-3" />
+                        <Trash size={14} />
                         Delete
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleTodoClick(account.id, account.name)
+                        }
+                        className={`p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer`}
+                      >
+                        <NotebookPen size={14} />
                       </button>
                     </div>
                   </div>
@@ -588,6 +612,17 @@ export default function ManageAccounts() {
           </div>
         )}
       </div>
+
+      <TodoModal
+        account_id={String(selectedBotId)}
+        isOpen={showTodoModal}
+        onClose={() => {
+          setShowTodoModal(false);
+          setSelectedBotId(null);
+          setSelectedBotName("");
+        }}
+        account_name={selectedBotName}
+      />
     </PageWrapper>
   );
 }
