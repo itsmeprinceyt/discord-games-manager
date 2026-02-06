@@ -156,9 +156,9 @@ export default function GameAccountManager() {
       hoverBgColor: "hover:bg-amber-900/10",
     },
     {
-      href: `/dashboard/accounts/${account_id}/withdraw`,
+      href: `/dashboard/accounts/${account_id}/wallet`,
       icon: CreditCard,
-      title: "Balance",
+      title: "Wallet",
       description: "Approximate balance for each bot",
       color: "red",
       iconColor: "text-red-400",
