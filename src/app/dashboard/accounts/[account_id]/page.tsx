@@ -18,13 +18,20 @@ import {
   BotIcon,
   ArrowLeft,
   LucideIcon,
+  Trash,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "@/utils/Variables/getAxiosError.util";
 import CountdownTimer from "../../../(components)/CountdownTimer";
 import { formatDateTime, formatDate } from "@/utils/main.util";
-import { BLUE_Button } from "../../../../utils/CSS/Button.util";
+import {
+  BLUE_Button,
+  RED_Button,
+  STONE_Button,
+} from "../../../../utils/CSS/Button.util";
 import { BotAccountResponse } from "../../../api/dashboard/account/[account_id]/route";
 
 interface BotInfo {
@@ -69,6 +76,10 @@ export default function GameAccountManager() {
   const [loading, setLoading] = useState<boolean>(true);
   const [account, setAccount] = useState<BotAccountResponse | null>(null);
 
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
+
   const fetchAccountData = useCallback(async () => {
     if (!account_id) return;
 
@@ -93,6 +104,44 @@ export default function GameAccountManager() {
   useEffect(() => {
     fetchAccountData();
   }, [fetchAccountData]);
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!account_id || !account) {
+      toast.error("Invalid account ID");
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      const response = await axios.delete("/api/dashboard/account/delete", {
+        params: { id: account_id },
+      });
+
+      if (response.data.success) {
+        toast.success("Account deleted successfully!");
+
+        // Redirect to accounts page after successful deletion
+        setTimeout(() => {
+          window.location.href = "/dashboard/accounts";
+        }, 1500);
+      }
+    } catch (err: unknown) {
+      const message = getAxiosErrorMessage(err, "Error deleting account");
+      toast.error(message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleting(false);
+  };
 
   if (loading) {
     return (
@@ -121,7 +170,7 @@ export default function GameAccountManager() {
             </p>
             <Link
               href="/dashboard/accounts"
-              className={`px-4 py-2 ${BLUE_Button}} text-white rounded-lg transition-colors cursor-pointer inline-block`}
+              className={`px-4 py-2 ${BLUE_Button} text-white rounded-lg transition-colors cursor-pointer inline-block`}
             >
               Back to Accounts
             </Link>
@@ -330,196 +379,285 @@ export default function GameAccountManager() {
       text: "Delete Account",
       bgColor: "bg-red-900/30 hover:bg-red-900/50",
       textColor: "text-red-400",
-      onClick: () => toast("Delete feature coming soon"),
+      onClick: handleDeleteClick,
     },
   ];
 
   return (
-    <PageWrapper withSidebar sidebarRole="user">
-      <div className="min-h-screen p-4 md:p-6">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Link
-                href={`/dashboard/accounts/`}
-                className="p-2 hover:bg-stone-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="h-5 w-5 text-stone-400" />
-              </Link>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-blue-600/20 rounded-lg">
-                  <BotIcon className="h-6 w-6 text-blue-400" />
-                </div>
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-medium text-white">
-                    {account.name}
-                  </h1>
-                  <p className="text-stone-400 text-xs">#{account.id}</p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="flex flex-wrap justify-end gap-2">
-                {quickActions.map((action, index) => (
-                  <button
-                    key={index}
-                    onClick={action.onClick}
-                    className={`px-3 py-1.5 ${action.bgColor} ${action.textColor} text-xs rounded-lg transition-colors cursor-pointer`}
-                  >
-                    {action.text}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {statCards.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-2 rounded-lg ${stat.iconBgColor}`}>
-                  <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                </div>
-                <span
-                  className={`text-xs px-2 py-1 ${stat.badgeColor} text-stone-300 rounded`}
+    <>
+      <PageWrapper withSidebar sidebarRole="user">
+        <div className="min-h-screen p-4 md:p-6">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/dashboard/accounts/`}
+                  className="p-2 hover:bg-stone-800 rounded-lg transition-colors cursor-pointer"
                 >
-                  {stat.title}
-                </span>
-              </div>
-              {stat.content}
-              {stat.description && (
-                <p className="text-stone-400 text-xs mt-1">
-                  {stat.description}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <div className="bg-stone-950 border border-stone-800 rounded-xl p-6">
-              <h2 className="text-xl font-medium text-white mb-6">
-                Account Details
-              </h2>
-
-              <div className="space-y-4">
-                {/* Account UID */}
-                <div className="bg-black/30 border border-stone-800 rounded-lg p-4 space-y-2">
-                  <div className="flex items-center gap-3 mb-2">
-                    <User className="h-4 w-4 text-stone-500" />
-                    <span className="text-sm text-stone-400">User Details</span>
+                  <ArrowLeft className="h-5 w-5 text-stone-400" />
+                </Link>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-blue-600/20 rounded-lg">
+                    <BotIcon className="h-6 w-6 text-blue-400" />
                   </div>
-                  <p className="text-stone-300 text-xs">
-                    Account Name:{" "}
-                    <span className="text-white break-all">{account.name}</span>
-                  </p>
-                  <p className="text-stone-300 text-xs">
-                    Account UID:{" "}
-                    <span className="text-white break-all">
-                      {account.account_uid || "Not set"}
-                    </span>
-                  </p>
-                </div>
-
-                {/* Trade Statistics */}
-                <div className="bg-black/30 border border-stone-800 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <BarChart3 className="h-4 w-4 text-stone-500" />
-                    <span className="text-sm text-stone-400">
-                      Trade Statistics
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {tradeStats.map((stat, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center"
-                      >
-                        <span className="text-stone-400 text-sm">
-                          {stat.label}
-                        </span>
-                        <span className={`font-medium ${stat.valueColor}`}>
-                          {stat.value}
-                        </span>
-                      </div>
-                    ))}
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-medium text-white">
+                      {account.name}
+                    </h1>
+                    <p className="text-stone-400 text-xs">#{account.id}</p>
                   </div>
                 </div>
-
-                {/* Created Date */}
-                <div className="bg-black/30 border border-stone-800 rounded-lg p-4 space-y-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Calendar className="h-4 w-4 text-stone-500" />
-                    <span className="text-sm text-stone-400">Created Date</span>
-                  </div>
-                  <p className="text-white text-sm">
-                    {formatDateTime(account.created_at)}
-                  </p>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Clock className="h-4 w-4 text-stone-500" />
-                    <span className="text-sm text-stone-400">Last Updated</span>
-                  </div>
-                  <p className="text-white text-sm">
-                    {formatDateTime(account.updated_at)} (
-                    {formatDate(account.updated_at)})
-                  </p>
-                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Left Column - Options */}
-          <div className="lg:col-span-2">
-            <div className="bg-stone-950 border border-stone-800 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-medium text-white">
-                  Account Options
-                </h2>
-                <p className="text-stone-500 text-sm">Choose an action</p>
-              </div>
-
-              {/* Options Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {optionCards.map((option, index) => {
-                  const Icon = option.icon;
-                  return (
-                    <Link
+              <div>
+                <div className="flex flex-wrap justify-end gap-2">
+                  {quickActions.map((action, index) => (
+                    <button
                       key={index}
-                      href={option.href}
-                      className={`group bg-black/30 border border-stone-800 rounded-lg p-5 ${option.hoverBorderColor} ${option.hoverBgColor} transition-all duration-200 cursor-pointer`}
+                      onClick={action.onClick}
+                      className={`px-3 py-1.5 ${action.bgColor} ${action.textColor} text-xs rounded-lg transition-colors cursor-pointer`}
                     >
-                      <div className="flex items-center justify-between mb-4">
+                      {action.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {statCards.map((stat, index) => (
+              <div
+                key={index}
+                className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`p-2 rounded-lg ${stat.iconBgColor}`}>
+                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                  </div>
+                  <span
+                    className={`text-xs px-2 py-1 ${stat.badgeColor} text-stone-300 rounded`}
+                  >
+                    {stat.title}
+                  </span>
+                </div>
+                {stat.content}
+                {stat.description && (
+                  <p className="text-stone-400 text-xs mt-1">
+                    {stat.description}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <div className="bg-stone-950 border border-stone-800 rounded-xl p-6">
+                <h2 className="text-xl font-medium text-white mb-6">
+                  Account Details
+                </h2>
+
+                <div className="space-y-4">
+                  {/* Account UID */}
+                  <div className="bg-black/30 border border-stone-800 rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-3 mb-2">
+                      <User className="h-4 w-4 text-stone-500" />
+                      <span className="text-sm text-stone-400">
+                        User Details
+                      </span>
+                    </div>
+                    <p className="text-stone-300 text-xs">
+                      Account Name:{" "}
+                      <span className="text-white break-all">
+                        {account.name}
+                      </span>
+                    </p>
+                    <p className="text-stone-300 text-xs">
+                      Account UID:{" "}
+                      <span className="text-white break-all">
+                        {account.account_uid || "Not set"}
+                      </span>
+                    </p>
+                  </div>
+
+                  {/* Trade Statistics */}
+                  <div className="bg-black/30 border border-stone-800 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <BarChart3 className="h-4 w-4 text-stone-500" />
+                      <span className="text-sm text-stone-400">
+                        Trade Statistics
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {tradeStats.map((stat, index) => (
                         <div
-                          className={`p-2 rounded-lg bg-${option.color}-600/20 group-hover:bg-${option.color}-600/30 transition-colors`}
+                          key={index}
+                          className="flex justify-between items-center"
                         >
-                          <Icon className={`h-5 w-5 ${option.iconColor}`} />
+                          <span className="text-stone-400 text-sm">
+                            {stat.label}
+                          </span>
+                          <span className={`font-medium ${stat.valueColor}`}>
+                            {stat.value}
+                          </span>
                         </div>
-                        <ChevronRight
-                          className={`h-4 w-4 text-stone-500 group-hover:${option.iconColor} transition-colors`}
-                        />
-                      </div>
-                      <h3 className="text-lg font-medium text-white mb-2">
-                        {option.title}
-                      </h3>
-                      <p className="text-stone-400 text-sm">
-                        {option.description}
-                      </p>
-                    </Link>
-                  );
-                })}
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Created Date */}
+                  <div className="bg-black/30 border border-stone-800 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Calendar className="h-4 w-4 text-stone-500" />
+                      <span className="text-sm text-stone-400">
+                        Created Date
+                      </span>
+                    </div>
+                    <p className="text-white text-sm">
+                      {formatDateTime(account.created_at)}
+                    </p>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Clock className="h-4 w-4 text-stone-500" />
+                      <span className="text-sm text-stone-400">
+                        Last Updated
+                      </span>
+                    </div>
+                    <p className="text-white text-sm">
+                      {formatDateTime(account.updated_at)} (
+                      {formatDate(account.updated_at)})
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Left Column - Options */}
+            <div className="lg:col-span-2">
+              <div className="bg-stone-950 border border-stone-800 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-medium text-white">
+                    Account Options
+                  </h2>
+                  <p className="text-stone-500 text-sm">Choose an action</p>
+                </div>
+
+                {/* Options Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {optionCards.map((option, index) => {
+                    const Icon = option.icon;
+                    return (
+                      <Link
+                        key={index}
+                        href={option.href}
+                        className={`group bg-black/30 border border-stone-800 rounded-lg p-5 ${option.hoverBorderColor} ${option.hoverBgColor} transition-all duration-200 cursor-pointer`}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div
+                            className={`p-2 rounded-lg bg-${option.color}-600/20 group-hover:bg-${option.color}-600/30 transition-colors`}
+                          >
+                            <Icon className={`h-5 w-5 ${option.iconColor}`} />
+                          </div>
+                          <ChevronRight
+                            className={`h-4 w-4 text-stone-500 group-hover:${option.iconColor} transition-colors`}
+                          />
+                        </div>
+                        <h3 className="text-lg font-medium text-white mb-2">
+                          {option.title}
+                        </h3>
+                        <p className="text-stone-400 text-sm">
+                          {option.description}
+                        </p>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </PageWrapper>
+      </PageWrapper>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
+          <div className="bg-black/90 border border-stone-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-900/20 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                </div>
+                <h2 className="text-xl font-medium text-white">
+                  Delete Account
+                </h2>
+              </div>
+              <button
+                onClick={closeDeleteModal}
+                className="p-2 hover:bg-stone-900 rounded-lg transition-colors cursor-pointer"
+                disabled={deleting}
+              >
+                <X className="h-5 w-5 text-stone-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-red-900/10 border border-red-800/50 rounded-lg">
+                <p className="text-red-200 text-center font-medium">
+                  Are you sure you want to delete this account?
+                </p>
+              </div>
+
+              <div className="p-4 bg-stone-900/30 rounded-lg">
+                <p className="text-stone-300 text-center">
+                  You are about to delete the account:
+                </p>
+                <p className="text-white text-center font-medium text-lg mt-2">
+                  {account.name}
+                </p>
+                <p className="text-stone-400 text-xs text-center mt-2">
+                  This action cannot be undone. All data associated with this
+                  account will be permanently removed.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  className={`flex-1 p-3 ${STONE_Button} text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteAccount}
+                  disabled={deleting}
+                  className={`flex-1 p-3 ${
+                    deleting
+                      ? "bg-red-900/50 cursor-not-allowed"
+                      : `${RED_Button} cursor-pointer`
+                  } text-white rounded-lg font-medium flex items-center justify-center gap-2`}
+                >
+                  {deleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="h-4 w-4" />
+                      Delete Account
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
