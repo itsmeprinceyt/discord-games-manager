@@ -74,6 +74,29 @@ const getLocalDateTimeString = () => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+// Helper function to validate date string
+const isValidDateTimeString = (dateTimeString: string): boolean => {
+  if (!dateTimeString) return false;
+
+  try {
+    const date = new Date(dateTimeString);
+    return !isNaN(date.getTime());
+  } catch {
+    return false;
+  }
+};
+
+// Format date for display in input
+const formatDateTimeForInput = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 export default function CrossTradeForm({
   accountId,
   onClose,
@@ -113,10 +136,14 @@ export default function CrossTradeForm({
     validFormat: false,
   });
 
+  const [dateError, setDateError] = useState<string>("");
+
   const getInitialFormData = (): CrossTradeFormData => {
     if (isEditing && tradeToEdit) {
       const editDate = new Date(tradeToEdit.crosstrade_date);
-      const localDate = editDate.toISOString().slice(0, 16);
+      const localDate = isValidDateTimeString(tradeToEdit.crosstrade_date)
+        ? formatDateTimeForInput(editDate)
+        : getLocalDateTimeString();
       let selectedBotId = "";
       if (tradeToEdit.bot_name && bot_associated.length > 0) {
         const foundBot = bot_associated.find(
@@ -166,6 +193,66 @@ export default function CrossTradeForm({
   const [formData, setFormData] = useState<CrossTradeFormData>(
     getInitialFormData()
   );
+
+  // Validate datetime input
+  const validateDateTime = (dateTimeString: string) => {
+    if (!dateTimeString) {
+      setDateError("Date and time are required");
+      return false;
+    }
+
+    // Basic pattern validation
+    const dateTimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+    if (!dateTimePattern.test(dateTimeString)) {
+      setDateError("Invalid date/time format");
+      return false;
+    }
+
+    // Extract parts
+    const [datePart, timePart] = dateTimeString.split("T");
+    const [year, month, day] = datePart.split("-").map(Number);
+    const [hours, minutes] = timePart.split(":").map(Number);
+
+    // Validate ranges
+    if (year < 1000 || year > 9999) {
+      setDateError("Year must be between 1000 and 9999");
+      return false;
+    }
+
+    if (month < 1 || month > 12) {
+      setDateError("Month must be between 01 and 12");
+      return false;
+    }
+
+    // Validate day based on month
+    const daysInMonth = new Date(year, month, 0).getDate();
+    if (day < 1 || day > daysInMonth) {
+      setDateError(
+        `Day must be between 01 and ${daysInMonth} for month ${month}`
+      );
+      return false;
+    }
+
+    if (hours < 0 || hours > 23) {
+      setDateError("Hour must be between 00 and 23");
+      return false;
+    }
+
+    if (minutes < 0 || minutes > 59) {
+      setDateError("Minutes must be between 00 and 59");
+      return false;
+    }
+
+    // Validate it's a valid date
+    const date = new Date(dateTimeString);
+    if (isNaN(date.getTime())) {
+      setDateError("Invalid date/time");
+      return false;
+    }
+
+    setDateError("");
+    return true;
+  };
 
   const validateAmountReceived = (value: number) => {
     setAmountChecks({
@@ -343,6 +430,7 @@ export default function CrossTradeForm({
     setConversionRateChecks({ required: false, positive: false });
     setTraderChecks({ required: false });
     setTradeLinkChecks({ required: false, validFormat: false });
+    setDateError("");
     setErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors.conversion_rate;
@@ -350,6 +438,19 @@ export default function CrossTradeForm({
       delete newErrors.trade_link;
       return newErrors;
     });
+  };
+
+  const handleDateTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+
+    // First update the form data
+    setFormData((prev) => ({
+      ...prev,
+      crosstrade_date: value,
+    }));
+
+    // Then validate it
+    validateDateTime(value);
   };
 
   const handleInputChange = (
@@ -387,8 +488,36 @@ export default function CrossTradeForm({
     }
   };
 
+  // Format date on blur to ensure valid format
+  const handleDateTimeBlur = () => {
+    const date = new Date(formData.crosstrade_date);
+
+    if (isNaN(date.getTime())) {
+      // If invalid, reset to current date
+      setFormData((prev) => ({
+        ...prev,
+        crosstrade_date: getLocalDateTimeString(),
+      }));
+      setDateError("");
+    } else {
+      // Format it properly
+      const formatted = formatDateTimeForInput(date);
+      setFormData((prev) => ({
+        ...prev,
+        crosstrade_date: formatted,
+      }));
+      validateDateTime(formatted);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate date first
+    if (!validateDateTime(formData.crosstrade_date)) {
+      toast.error("Please enter a valid date and time");
+      return;
+    }
 
     if (
       bot_associated &&
@@ -405,7 +534,7 @@ export default function CrossTradeForm({
     if (formData.currency === "usd")
       validateConversionRate(formData.conversion_rate);
 
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length > 0 || dateError) {
       toast.error("Please fix the errors in the form");
       return;
     }
@@ -545,14 +674,17 @@ export default function CrossTradeForm({
           </button>
         </div>
 
-        {/* Form remains mostly the same */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Currency Selection */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Currency <span className="text-red-400">*</span>
             </label>
-            <div className="flex gap-3">
+            <div
+              className="flex gap
+
+3"
+            >
               <button
                 type="button"
                 onClick={() => handleCurrencyChange("inr")}
@@ -633,7 +765,7 @@ export default function CrossTradeForm({
             </div>
           )}
 
-          {/* Crosstrade Date */}
+          {/* Crosstrade Date - Fixed with better validation */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Crosstrade Date <span className="text-red-400">*</span>
@@ -644,11 +776,22 @@ export default function CrossTradeForm({
                 type="datetime-local"
                 name="crosstrade_date"
                 value={formData.crosstrade_date}
-                onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-pointer"
+                onChange={handleDateTimeChange}
+                onBlur={handleDateTimeBlur}
+                className={`w-full pl-10 pr-4 py-2.5 bg-stone-900/50 border ${
+                  dateError ? "border-red-600" : "border-stone-700"
+                } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-pointer`}
                 required
+                // Set min and max attributes to help with validation
+                min="2020-01-01T00:00"
+                max="2100-12-31T23:59"
+                step="60" // Only allow minutes in steps of 1 minute (or use 900 for 15 minutes)
               />
             </div>
+            {dateError && <p className="text-xs text-red-500">{dateError}</p>}
+            <p className="text-xs text-stone-500">
+              Format: YYYY-MM-DD HH:MM (24-hour format)
+            </p>
           </div>
 
           {/* Payment Method */}

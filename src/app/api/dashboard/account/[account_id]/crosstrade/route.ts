@@ -69,7 +69,8 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: "Bot account not found or you don't have permission to access it",
+          error:
+            "Bot account not found or you don't have permission to access it",
         },
         { status: 403 }
       );
@@ -377,14 +378,43 @@ export async function POST(request: NextRequest) {
         now,
       ]);
 
-      await connection.execute(
+      // Find the latest crosstrade date for this bot
+      const [latestCrosstrade] = await connection.execute<any[]>(
         `
-        UPDATE selected_bot 
-          SET last_crosstraded_at = ?,
-              updated_at = ?
-        WHERE id = ? AND bot_account_id = ?`,
-        [crosstrade_date, now, bot_id, bot_account_id]
+        SELECT MAX(crosstrade_date) as latest_date 
+        FROM crosstrades 
+        WHERE selected_bot_id = ? AND bot_account_id = ?
+      `,
+        [bot_id, bot_account_id]
       );
+
+      const latestDate =
+        Array.isArray(latestCrosstrade) &&
+        latestCrosstrade.length > 0 &&
+        latestCrosstrade[0].latest_date
+          ? latestCrosstrade[0].latest_date
+          : null;
+
+      // Update if we found a latest date
+      if (latestDate) {
+        await connection.execute(
+          `
+          UPDATE selected_bot 
+            SET last_crosstraded_at = ?,
+                updated_at = ?
+          WHERE id = ? AND bot_account_id = ?`,
+          [latestDate, now, bot_id, bot_account_id]
+        );
+      } else {
+        // If no crosstrades exist (shouldn't happen after insert, but for safety)
+        await connection.execute(
+          `
+          UPDATE selected_bot 
+            SET updated_at = ?
+          WHERE id = ? AND bot_account_id = ?`,
+          [now, bot_id, bot_account_id]
+        );
+      }
 
       await connection.commit();
 
