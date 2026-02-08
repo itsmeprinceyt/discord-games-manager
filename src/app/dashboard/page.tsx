@@ -39,6 +39,7 @@ export default function UserDashboard() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [autoVoteLoading, setAutoVoteLoading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -64,6 +65,25 @@ export default function UserDashboard() {
       setError(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoVote = async () => {
+    try {
+      setAutoVoteLoading(true);
+      const response = await axios.post("/api/dashboard/vote-all");
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+        fetchDashboardData();
+      } else {
+        toast.error(response.data.error || "Failed to trigger auto-vote");
+      }
+    } catch (err: unknown) {
+      const message = getAxiosErrorMessage(err, "Error triggering auto-vote");
+      toast.error(message);
+    } finally {
+      setAutoVoteLoading(false);
     }
   };
 
@@ -181,6 +201,30 @@ export default function UserDashboard() {
                   {stats.total_trades}
                 </h3>
                 <p className="text-stone-400 text-sm">Total Trades</p>
+              </div>
+
+              <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-2 rounded-lg bg-purple-600/20">
+                    <RefreshCw className="text-purple-400 h-5 w-5" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-medium text-white mb-1">Vote</h3>
+                <p className="text-stone-400 text-sm mb-3">
+                  Add rewards to all bots
+                </p>
+                <button
+                  onClick={handleAutoVote}
+                  disabled={autoVoteLoading}
+                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${
+                      autoVoteLoading ? "animate-spin" : ""
+                    }`}
+                  />
+                  {autoVoteLoading ? "Processing..." : "Trigger Auto Vote"}
+                </button>
               </div>
             </div>
 

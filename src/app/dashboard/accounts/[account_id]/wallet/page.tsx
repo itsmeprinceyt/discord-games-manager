@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../../../utils/Variables/getAxiosError.util";
 import { STONE_Button } from "../../../../../utils/CSS/Button.util";
 import EditBalanceModal from "../../../../(components)/Balance/EditBalanceModal";
+import LoaderFullscreen from "../../../../(components)/LoaderFullscreen";
 
 interface BotBalance {
   id: string;
@@ -100,17 +101,33 @@ export default function AccountWalletPage() {
     fetchWalletData();
   };
 
+  const handleVotedClick = async (botId: string) => {
+    try {
+      const response = await axios.post(
+        `/api/dashboard/account/${account_id}/wallet/manual-vote`,
+        { bot_id: botId }
+      );
+
+      if (response.data.success) {
+        const { new_balance } = response.data.data;
+
+        setWalletData((prev) =>
+          prev.map((bot) =>
+            bot.id === botId ? { ...bot, balance: new_balance } : bot
+          )
+        );
+
+        toast.success(response.data.message);
+      }
+    } catch (err: unknown) {
+      const message = getAxiosErrorMessage(err, "Error adding daily reward");
+      toast.error(message);
+      console.error("Error adding daily reward:", err);
+    }
+  };
+
   if (loading) {
-    return (
-      <PageWrapper withSidebar sidebarRole="user">
-        <div className="min-h-screen p-4 md:p-6 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-stone-400 mt-2">Loading balance data...</p>
-          </div>
-        </div>
-      </PageWrapper>
-    );
+    return <LoaderFullscreen />;
   }
 
   return (
@@ -206,10 +223,10 @@ export default function AccountWalletPage() {
                     Edit
                   </button>
                   <button
-                    onClick={() => toast("Work in progress")}
+                    onClick={() => handleVotedClick(bot.id)}
                     className={`w-full px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer`}
                   >
-                    Vote
+                    I&apos;ve Voted
                   </button>
                 </div>
               </div>
