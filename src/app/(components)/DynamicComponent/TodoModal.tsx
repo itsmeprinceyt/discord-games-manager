@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { X, Loader2, Edit, Save } from "lucide-react";
 import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
 import axios from "axios";
+import Loader from "../Loader";
+import toast from "react-hot-toast";
 
 interface TodoModalProps {
   account_id: string;
@@ -62,12 +64,10 @@ export default function TodoModal({
     if (!account_id) return;
 
     if (!isEditing) {
-      // Switch to edit mode
       setIsEditing(true);
       return;
     }
 
-    // Save changes
     setSaving(true);
     setError("");
 
@@ -81,8 +81,7 @@ export default function TodoModal({
 
       if (response.data.success) {
         setIsEditing(false);
-        // Show success message
-        // toast.success("Todo updated successfully!");
+        toast.success(response.data.message);
       }
     } catch (error) {
       console.error("Error updating todo:", error);
@@ -136,12 +135,7 @@ export default function TodoModal({
         >
           <div className="flex-1 overflow-hidden p-6">
             {fetching ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-400 mx-auto mb-4" />
-                  <p className="text-stone-400">Loading todo...</p>
-                </div>
-              </div>
+              <Loader />
             ) : (
               <div className="h-full flex flex-col">
                 <div className="flex-1">
