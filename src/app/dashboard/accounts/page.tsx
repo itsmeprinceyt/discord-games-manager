@@ -9,6 +9,7 @@ import {
   Check,
   Trash,
   NotebookPen,
+  AlertTriangle,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../../(components)/PageWrapper";
@@ -57,6 +58,14 @@ export default function ManageAccounts() {
   const [showTodoModal, setShowTodoModal] = useState<boolean>(false);
   const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
   const [selectedBotName, setSelectedBotName] = useState<string>("");
+
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [accountToDelete, setAccountToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -176,25 +185,44 @@ export default function ManageAccounts() {
     }
   };
 
-  const handleDeleteAccount = async (botAccountId: string) => {
-    if (!botAccountId) {
+  const handleDeleteClick = (botAccountId: string, botAccountName: string) => {
+    setAccountToDelete({
+      id: botAccountId,
+      name: botAccountName,
+    });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!accountToDelete?.id) {
       toast.error("Invalid account ID");
       return;
     }
 
+    setDeleting(true);
+
     try {
       const response = await axios.delete("/api/dashboard/account/delete", {
-        params: { id: botAccountId },
+        params: { id: accountToDelete.id },
       });
 
       if (response.data.success) {
         toast.success("Account deleted successfully!");
         fetchAccounts();
+        closeDeleteModal();
       }
     } catch (err: unknown) {
       const message = getAxiosErrorMessage(err, "Error deleting account");
       toast.error(message);
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setAccountToDelete(null);
+    setDeleting(false);
   };
 
   const resetForm = () => {
@@ -441,7 +469,9 @@ export default function ManageAccounts() {
                         Manage
                       </Link>
                       <button
-                        onClick={() => handleDeleteAccount(account.id)}
+                        onClick={() =>
+                          handleDeleteClick(account.id, account.name)
+                        }
                         className={`flex-1 py-2 ${RED_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
                       >
                         <Trash size={14} />
@@ -610,6 +640,85 @@ export default function ManageAccounts() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && accountToDelete && (
+          <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
+            <div className="bg-black/90 border border-stone-800 rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-900/20 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-red-400" />
+                  </div>
+                  <h2 className="text-xl font-medium text-white">
+                    Delete Account
+                  </h2>
+                </div>
+                <button
+                  onClick={closeDeleteModal}
+                  className="p-2 hover:bg-stone-900 rounded-lg transition-colors cursor-pointer"
+                  disabled={deleting}
+                >
+                  <X className="h-5 w-5 text-stone-400" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-red-900/10 border border-red-800/50 rounded-lg">
+                  <p className="text-red-200 text-center font-medium">
+                    Are you sure you want to delete this account?
+                  </p>
+                </div>
+
+                <div className="p-4 bg-stone-900/30 rounded-lg">
+                  <p className="text-stone-300 text-center">
+                    You are about to delete the account:
+                  </p>
+                  <p className="text-white text-center font-medium text-lg mt-2">
+                    {accountToDelete.name}
+                  </p>
+                  <p className="text-stone-400 text-xs text-center mt-2">
+                    This action cannot be undone. All data associated with this
+                    account will be permanently removed.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={closeDeleteModal}
+                    className={`flex-1 p-3 ${STONE_Button} text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDeleteAccount}
+                    disabled={deleting}
+                    className={`flex-1 p-3 ${
+                      deleting
+                        ? "bg-red-900/50 cursor-not-allowed"
+                        : `${RED_Button} cursor-pointer`
+                    } text-white rounded-lg font-medium flex items-center justify-center gap-2`}
+                  >
+                    {deleting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash className="h-4 w-4" />
+                        Delete Account
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

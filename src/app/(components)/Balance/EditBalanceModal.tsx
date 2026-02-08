@@ -121,7 +121,7 @@ export default function EditBalanceModal({
                 setError("");
               }}
               min="0"
-              step="0.01"
+              step="1"
               className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text"
               placeholder="Enter new balance"
               required
