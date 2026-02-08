@@ -11,6 +11,7 @@ export interface BotAccountResponse {
   account_uid: string | null;
   created_at: string;
   updated_at: string;
+  todo_exists: boolean;
   selected_bots: SelectedBotResponse[];
 }
 
@@ -41,6 +42,7 @@ export async function GET() {
         ba.id,
         ba.name,
         ba.account_uid,
+        ba.todo,
         ba.created_at,
         ba.updated_at,
         sb.name as selected_bot_name,
@@ -72,12 +74,16 @@ export async function GET() {
       const accountId = row.id;
 
       if (!accountsMap.has(accountId)) {
+        const todoExists =
+          row.todo !== null && row.todo !== undefined && row.todo.trim() !== "";
+
         accountsMap.set(accountId, {
           id: row.id,
           name: row.name,
           account_uid: row.account_uid,
           created_at: row.created_at,
           updated_at: row.updated_at,
+          todo_exists: todoExists,
           selected_bots: [],
         });
       }
