@@ -338,7 +338,10 @@ export default function ManageAccounts() {
                     className="flex flex-col justify-between gap-4 bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800 hover:scale-101 transition-all ease-in-out duration-150"
                   >
                     <div className="space-y-4">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-stone-900 border border-stone-800 text-stone-300 rounded-full font-bold w-10 h-10 flex items-center justify-center">
+                          {account?.name?.charAt(0).toUpperCase()}
+                        </div>
                         <div>
                           <h3 className="text-white font-medium">
                             {account.name}

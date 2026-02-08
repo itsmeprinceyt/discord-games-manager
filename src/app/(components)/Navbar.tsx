@@ -66,7 +66,7 @@ export default function Navbar() {
                 onClick={toggleUserMenu}
                 className="flex items-center space-x-2 rounded-full p-1 hover:bg-stone-950 transition-colors focus:outline-none cursor-pointer"
               >
-                <div className="h-8 w-8 rounded-full bg-stone-800 flex items-center justify-center text-stone-300">
+                <div className="h-8 w-8 rounded-full bg-stone-900 border border-stone-800 flex items-center justify-center text-stone-300">
                   {isAuthenticated ? (
                     user?.username?.[0]?.toUpperCase() ||
                     user?.email?.[0]?.toUpperCase() || (
