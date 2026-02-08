@@ -452,8 +452,11 @@ export default function ManageAccounts() {
                         onClick={() =>
                           handleTodoClick(account.id, account.name)
                         }
-                        className={`p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer`}
+                        className={`p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
                       >
+                        {account.todo_exists && (
+                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-md shadow-green-400/50 group-hover:opacity-0 group-hover:animate-none transition-all ease-in-out duration-150" />
+                        )}
                         <NotebookPen size={14} />
                       </button>
                     </div>
