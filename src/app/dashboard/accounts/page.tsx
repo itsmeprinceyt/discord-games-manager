@@ -24,6 +24,7 @@ import { formatDate, formatDateTime } from "../../../utils/main.util";
 import { BotAccountResponse } from "../../api/dashboard/account/route";
 import CountdownTimer from "../../(components)/CountdownTimer";
 import TodoModal from "../../(components)/DynamicComponent/TodoModal";
+import Loader from "../../(components)/Loader";
 
 // TODO: add in a file
 interface AddAccountFormData {
@@ -309,12 +310,7 @@ export default function ManageAccounts() {
         {/* Accounts Section */}
         <div>
           {/* Loading State */}
-          {loading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-stone-400 mt-2">Loading accounts...</p>
-            </div>
-          )}
+          {loading && <Loader />}
 
           {/* Accounts Grid */}
           {!loading && accounts.length === 0 ? (
