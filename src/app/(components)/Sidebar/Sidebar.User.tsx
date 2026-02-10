@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   Bookmark,
+  FileSpreadsheet,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -19,6 +20,11 @@ const userNavItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
+  },
+  {
+    title: "Crosstrade Logs",
+    href: "/dashboard/crosstrade-logs",
+    icon: <FileSpreadsheet className="h-5 w-5" />,
   },
   {
     title: "Manage Accounts",

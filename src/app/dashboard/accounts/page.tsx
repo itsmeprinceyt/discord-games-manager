@@ -10,6 +10,8 @@ import {
   Trash,
   NotebookPen,
   AlertTriangle,
+  CreditCard,
+  FileSpreadsheet,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../../(components)/PageWrapper";
@@ -268,8 +270,8 @@ export default function ManageAccounts() {
           checked
             ? "text-green-400"
             : error
-            ? "text-yellow-400"
-            : "text-stone-400"
+              ? "text-yellow-400"
+              : "text-stone-400"
         }
       >
         {label}
@@ -488,6 +490,18 @@ export default function ManageAccounts() {
                         )}
                         <NotebookPen size={14} />
                       </button>
+                      <Link
+                        href={`${account.id}/crosstrade/`}
+                        className={`flex items-center justify-center p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
+                      >
+                        <FileSpreadsheet size={14} />
+                      </Link>
+                      <Link
+                        href={`${account.id}/wallet/`}
+                        className={`flex items-center justify-center p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
+                      >
+                        <CreditCard size={14} />
+                      </Link>
                     </div>
                   </div>
                 ))}

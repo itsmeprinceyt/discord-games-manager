@@ -56,7 +56,7 @@ export default function CrossTradeManager() {
       setLoading(true);
 
       const response = await axios.get(
-        `/api/dashboard/account/${account_id}/crosstrade`
+        `/api/dashboard/account/${account_id}/crosstrade`,
       );
 
       if (response.data.success) {
@@ -64,7 +64,7 @@ export default function CrossTradeManager() {
       }
     } catch (error: unknown) {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to load cross trade data")
+        getAxiosErrorMessage(error, "Failed to load cross trade data"),
       );
     } finally {
       setLoading(false);
@@ -327,7 +327,7 @@ export default function CrossTradeManager() {
                                   <div className="text-white font-medium">
                                     {formatCurrency(
                                       trade.amount_received,
-                                      trade.currency
+                                      trade.currency,
                                     )}
                                   </div>
                                 </div>
@@ -352,7 +352,7 @@ export default function CrossTradeManager() {
                                   trade.net_amount !== trade.amount_received
                                     ? formatCurrency(
                                         trade.net_amount,
-                                        trade.currency
+                                        trade.currency,
                                       )
                                     : `--`}
                                 </div>
@@ -387,7 +387,7 @@ export default function CrossTradeManager() {
                             <td className="p-4 text-nowrap">
                               <div
                                 className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
-                                  trade.traded
+                                  trade.traded,
                                 )}`}
                               >
                                 <span className="text-xs font-medium">
@@ -400,7 +400,7 @@ export default function CrossTradeManager() {
                             <td className="p-4 text-nowrap">
                               <div
                                 className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
-                                  trade.paid
+                                  trade.paid,
                                 )}`}
                               >
                                 <span className="text-xs font-medium">
@@ -468,7 +468,7 @@ export default function CrossTradeManager() {
                                             </div>
                                             <div className="text-white flex items-center gap-2">
                                               {getPaymentMethodText(
-                                                trade.crosstrade_via
+                                                trade.crosstrade_via,
                                               )}
                                             </div>
                                           </div>
@@ -520,7 +520,7 @@ export default function CrossTradeManager() {
                                             <div className="text-white font-medium">
                                               {formatCurrency(
                                                 trade.amount_received,
-                                                trade.currency
+                                                trade.currency,
                                               )}
                                             </div>
                                           </div>
@@ -532,7 +532,7 @@ export default function CrossTradeManager() {
                                               <div className="text-white font-medium">
                                                 {formatCurrency(
                                                   trade.net_amount,
-                                                  trade.currency
+                                                  trade.currency,
                                                 )}
                                               </div>
                                             </div>
@@ -563,7 +563,7 @@ export default function CrossTradeManager() {
                                                     {formatCurrency(
                                                       trade.net_amount *
                                                         trade.conversion_rate,
-                                                      "inr"
+                                                      "inr",
                                                     )}
                                                   </>
                                                 ) : (
@@ -605,7 +605,7 @@ export default function CrossTradeManager() {
                                         Actions
                                       </h4>
                                       <div className="flex items-center flex-wrap gap-2">
-                                        {trade.trade_link && (
+                                        {trade.trade_link ? (
                                           <Link
                                             href={trade.trade_link}
                                             target="_blank"
@@ -615,6 +615,15 @@ export default function CrossTradeManager() {
                                             <LinkIcon className="h-3 w-3" />
                                             Trade Link
                                           </Link>
+                                        ) : (
+                                          <button
+                                            disabled={true}
+                                            rel="noopener noreferrer"
+                                            className={`px-3 py-1.5 bg-blue-800 text-white text-sm rounded cursor-not-allowed flex items-center gap-2 opacity-50`}
+                                          >
+                                            <LinkIcon className="h-3 w-3" />
+                                            No Trade Link
+                                          </button>
                                         )}
                                         <button
                                           className={`px-3 py-1.5 ${BLUE_Button} text-white text-sm rounded transition-colors cursor-pointer flex items-center gap-2`}

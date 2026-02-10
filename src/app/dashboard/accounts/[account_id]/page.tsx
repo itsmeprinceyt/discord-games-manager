@@ -21,10 +21,11 @@ import {
   Trash,
   X,
   AlertTriangle,
+  FileSpreadsheet,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import getAxiosErrorMessage from "@/utils/Variables/getAxiosError.util";
+import getAxiosErrorMessage from "../../../../utils/Variables/getAxiosError.util";
 import CountdownTimer from "../../../(components)/CountdownTimer";
 import { formatDateTime, formatDate } from "@/utils/main.util";
 import {
@@ -186,7 +187,7 @@ export default function GameAccountManager() {
     currency: bot.currency_name,
     lastTrade: bot.last_crosstraded_at
       ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(
-          bot.last_crosstraded_at
+          bot.last_crosstraded_at,
         )})`
       : "--",
     cooldown: bot.last_crosstraded_at || "",
@@ -216,7 +217,7 @@ export default function GameAccountManager() {
     },
     {
       href: `/dashboard/accounts/${account_id}/crosstrade`,
-      icon: RefreshCw,
+      icon: FileSpreadsheet,
       title: "Cross Trade Manager",
       description: "Manage all cross trades",
       color: "purple",
