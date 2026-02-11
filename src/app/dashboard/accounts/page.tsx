@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   CreditCard,
   FileSpreadsheet,
+  Search,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../../(components)/PageWrapper";
@@ -69,6 +70,9 @@ export default function ManageAccounts() {
   } | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
   const fetchAccounts = useCallback(async () => {
     try {
       setLoading(true);
@@ -91,6 +95,15 @@ export default function ManageAccounts() {
   }, [fetchAccounts]);
 
   const totalAccounts = accounts.length;
+
+  // Filter accounts based on search query
+  const filteredAccounts = accounts.filter((account) =>
+    account.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const hasSearchResults =
+    searchQuery.trim() !== "" && filteredAccounts.length > 0;
+  const showAllAccounts = searchQuery.trim() === "";
 
   const validateName = (value: string) => {
     const trimmed = value.trim();
@@ -270,8 +283,8 @@ export default function ManageAccounts() {
           checked
             ? "text-green-400"
             : error
-              ? "text-yellow-400"
-              : "text-stone-400"
+            ? "text-yellow-400"
+            : "text-stone-400"
         }
       >
         {label}
@@ -323,7 +336,7 @@ export default function ManageAccounts() {
         </div>
 
         {/* Total Accounts Card */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors">
             <div className="flex items-start justify-between mb-4">
               <div className="p-2 rounded-lg bg-blue-600/20">
@@ -337,12 +350,77 @@ export default function ManageAccounts() {
           </div>
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-8">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-stone-500" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search accounts by name..."
+              className="w-full pl-10 pr-4 py-3 bg-black/30 border border-stone-800 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                <X className="h-5 w-5 text-stone-500 hover:text-stone-300 transition-colors" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Accounts Section */}
         <div>
           {/* Loading State */}
           {loading && <Loader />}
 
-          {/* Accounts Grid */}
+          {/* Search Results Header */}
+          {!loading && hasSearchResults && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-blue-400" />
+                  <h3 className="text-lg font-medium text-white">
+                    Search Results
+                  </h3>
+                  <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
+                    {filteredAccounts.length}{" "}
+                    {filteredAccounts.length === 1 ? "account" : "accounts"}{" "}
+                    found
+                  </span>
+                </div>
+                <p className="text-sm text-stone-500">
+                  Matching &quot;{searchQuery}&quot;
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* No Search Results */}
+          {!loading && searchQuery && filteredAccounts.length === 0 && (
+            <div className="text-center py-12 border border-dashed border-stone-700 rounded-lg">
+              <Search className="h-12 w-12 text-stone-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-stone-300 mb-2">
+                No accounts found
+              </h3>
+              <p className="text-stone-500 mb-2">
+                No accounts match &quot;{searchQuery}&quot;
+              </p>
+              <button
+                onClick={() => setSearchQuery("")}
+                className="text-blue-400 hover:text-blue-300 text-sm underline underline-offset-4 cursor-pointer"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+
+          {/* Accounts Grid - Show search results OR all accounts */}
           {!loading && accounts.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-stone-700 rounded-lg">
               <Gamepad2 className="h-12 w-12 text-stone-600 mx-auto mb-4" />
@@ -361,151 +439,60 @@ export default function ManageAccounts() {
             </div>
           ) : (
             !loading && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {accounts.map((account, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col justify-between gap-4 bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800 hover:scale-101 transition-all ease-in-out duration-150"
-                  >
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-stone-900 border border-stone-800 text-stone-300 rounded-full font-bold w-10 h-10 flex items-center justify-center">
-                          {account?.name?.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 className="text-white font-medium">
-                            {account.name}
-                          </h3>
-                          <p className="text-stone-400 text-xs">
-                            {account.account_uid || "No UID"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-stone-500">Created at</span>
-                          <span className="text-stone-400">
-                            {formatDateTime(account.created_at)} (
-                            {formatDate(account.created_at)})
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-stone-500">Last Updated</span>
-                          <span className="text-stone-400">
-                            {formatDate(account.updated_at)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`flex flex-wrap gap-4 ${
-                          account.selected_bots.length > 0
-                            ? `py-4 border-b`
-                            : ``
-                        } border-t border-stone-800`}
-                      >
-                        {account.selected_bots.map((bot) => (
-                          <div
-                            key={bot.name}
-                            className="w-full bg-black text-stone-500 border border-stone-900 px-3 py-2 rounded-lg text-xs space-y-1"
-                          >
-                            <div className="font-medium text-stone-300 text-sm">
-                              {bot.name}
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-stone-500">Wallet</span>
-                              <span className="text-green-400 font-medium">
-                                {bot.balance}{" "}
-                                {bot.balance > 1
-                                  ? `${bot.currency_name}s`
-                                  : `${bot.currency_name}`}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-stone-500">
-                                Crosstrade Countdown
-                              </span>
-                              <span className="text-stone-200 font-medium">
-                                <CountdownTimer
-                                  startDate={bot.last_crosstraded_at}
-                                />
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-stone-500">
-                                Last Crosstraded
-                              </span>
-                              <span className="text-stone-200 font-medium">
-                                {bot.last_crosstraded_at ? (
-                                  <>
-                                    {formatDateTime(bot.last_crosstraded_at)} (
-                                    {formatDate(bot.last_crosstraded_at)})
-                                  </>
-                                ) : (
-                                  "--"
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-stone-500">Last Voted</span>
-                              <span className="text-stone-200 font-medium">
-                                {bot.voted_at ? (
-                                  <>{formatDateTime(bot.voted_at)} </>
-                                ) : (
-                                  "--"
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+              <>
+                {/* Search Results */}
+                {hasSearchResults && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredAccounts.map((account, index) => (
+                        <AccountCard
+                          key={index}
+                          account={account}
+                          onDeleteClick={handleDeleteClick}
+                          onTodoClick={handleTodoClick}
+                        />
+                      ))}
                     </div>
 
-                    <div className="flex gap-4 border-stone-800">
-                      <Link
-                        href={`${account.id}`}
-                        className={`flex-1 py-2 ${BLUE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
-                      >
-                        <ArrowRight size={14} />
-                        Manage
-                      </Link>
-                      <button
-                        onClick={() =>
-                          handleDeleteClick(account.id, account.name)
-                        }
-                        className={`flex-1 py-2 ${RED_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
-                      >
-                        <Trash size={14} />
-                        Delete
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleTodoClick(account.id, account.name)
-                        }
-                        className={`p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
-                      >
-                        {account.todo_exists && (
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-md shadow-green-400/50 group-hover:opacity-0 group-hover:animate-none transition-all ease-in-out duration-150" />
-                        )}
-                        <NotebookPen size={14} />
-                      </button>
-                      <Link
-                        href={`${account.id}/crosstrade/`}
-                        className={`flex items-center justify-center p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
-                      >
-                        <FileSpreadsheet size={14} />
-                      </Link>
-                      <Link
-                        href={`${account.id}/wallet/`}
-                        className={`flex items-center justify-center p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
-                      >
-                        <CreditCard size={14} />
-                      </Link>
+                    {/* Divider between search results and all accounts */}
+                    {!showAllAccounts &&
+                      accounts.length > filteredAccounts.length && (
+                        <div className="relative my-8">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-stone-800"></div>
+                          </div>
+                          <div className="relative flex justify-center">
+                            <span className="px-4 py-1 bg-black text-xs font-medium text-stone-500 border border-stone-800 rounded-full">
+                              All Accounts
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                  </>
+                )}
+
+                {/* All Accounts - Only show when no search query OR after search results */}
+                {(showAllAccounts ||
+                  (hasSearchResults && !showAllAccounts)) && (
+                  <div className={hasSearchResults ? "mt-4" : ""}>
+                    {showAllAccounts && (
+                      <h3 className="text-lg font-medium text-white mb-4">
+                        All Accounts
+                      </h3>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {accounts.map((account, index) => (
+                        <AccountCard
+                          key={index}
+                          account={account}
+                          onDeleteClick={handleDeleteClick}
+                          onTodoClick={handleTodoClick}
+                        />
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )
           )}
         </div>
@@ -751,3 +738,133 @@ export default function ManageAccounts() {
     </PageWrapper>
   );
 }
+
+// Account Card Component to avoid code duplication
+const AccountCard = ({
+  account,
+  onDeleteClick,
+  onTodoClick,
+}: {
+  account: BotAccountResponse;
+  onDeleteClick: (id: string, name: string) => void;
+  onTodoClick: (id: string, name: string) => void;
+}) => (
+  <div className="flex flex-col justify-between gap-4 bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800 hover:scale-101 transition-all ease-in-out duration-150">
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="bg-stone-900 border border-stone-800 text-stone-300 rounded-full font-bold w-10 h-10 flex items-center justify-center">
+          {account?.name?.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <h3 className="text-white font-medium">{account.name}</h3>
+          <p className="text-stone-400 text-xs">
+            {account.account_uid || "No UID"}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2 text-xs">
+        <div className="flex justify-between">
+          <span className="text-stone-500">Created at</span>
+          <span className="text-stone-400">
+            {formatDateTime(account.created_at)} (
+            {formatDate(account.created_at)})
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-stone-500">Last Updated</span>
+          <span className="text-stone-400">
+            {formatDate(account.updated_at)}
+          </span>
+        </div>
+      </div>
+
+      {account.selected_bots.length > 0 && (
+        <div className="flex flex-wrap gap-4 py-4 border-t border-b border-stone-800">
+          {account.selected_bots.map((bot) => (
+            <div
+              key={bot.name}
+              className="w-full bg-black text-stone-500 border border-stone-900 px-3 py-2 rounded-lg text-xs space-y-1"
+            >
+              <div className="font-medium text-stone-300 text-sm">
+                {bot.name}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Wallet</span>
+                <span className="text-green-400 font-medium">
+                  {bot.balance}{" "}
+                  {bot.balance > 1
+                    ? `${bot.currency_name}s`
+                    : `${bot.currency_name}`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Crosstrade Countdown</span>
+                <span className="text-stone-200 font-medium">
+                  <CountdownTimer startDate={bot.last_crosstraded_at} />
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Last Crosstraded</span>
+                <span className="text-stone-200 font-medium">
+                  {bot.last_crosstraded_at ? (
+                    <>
+                      {formatDateTime(bot.last_crosstraded_at)} (
+                      {formatDate(bot.last_crosstraded_at)})
+                    </>
+                  ) : (
+                    "--"
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Last Voted</span>
+                <span className="text-stone-200 font-medium">
+                  {bot.voted_at ? <>{formatDateTime(bot.voted_at)} </> : "--"}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <div className="flex gap-4 border-stone-800">
+      <Link
+        href={`${account.id}`}
+        className={`flex-1 py-2 ${BLUE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
+      >
+        <ArrowRight size={14} />
+        Manage
+      </Link>
+      <button
+        onClick={() => onDeleteClick(account.id, account.name)}
+        className={`flex-1 py-2 ${RED_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
+      >
+        <Trash size={14} />
+        Delete
+      </button>
+      <button
+        onClick={() => onTodoClick(account.id, account.name)}
+        className={`p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
+      >
+        {account.todo_exists && (
+          <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-md shadow-green-400/50 group-hover:opacity-0 group-hover:animate-none transition-all ease-in-out duration-150" />
+        )}
+        <NotebookPen size={14} />
+      </button>
+      <Link
+        href={`${account.id}/crosstrade/`}
+        className={`flex items-center justify-center p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
+      >
+        <FileSpreadsheet size={14} />
+      </Link>
+      <Link
+        href={`${account.id}/wallet/`}
+        className={`flex items-center justify-center p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
+      >
+        <CreditCard size={14} />
+      </Link>
+    </div>
+  </div>
+);
