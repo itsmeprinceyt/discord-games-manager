@@ -13,6 +13,8 @@ import {
   CreditCard,
   FileSpreadsheet,
   Search,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../../(components)/PageWrapper";
@@ -70,6 +72,9 @@ export default function ManageAccounts() {
   const [deleting, setDeleting] = useState<boolean>(false);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // State for todos dropdown
+  const [showTodos, setShowTodos] = useState<boolean>(false);
 
   const todoContainerRef = useRef<HTMLDivElement>(null);
 
@@ -270,6 +275,10 @@ export default function ManageAccounts() {
     setShowTodoModal(true);
   };
 
+  const toggleTodos = () => {
+    setShowTodos(!showTodos);
+  };
+
   const ChecklistItem = ({
     checked,
     label,
@@ -353,67 +362,96 @@ export default function ManageAccounts() {
           </div>
         </div>
 
-        {/* Todo List Section - Horizontal Scrollable Container */}
+        {/* Todo List Section - Collapsible */}
         {!loading && accountsWithTodos.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-lg font-medium text-white">Active Todos</h3>
-              <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
-                {accountsWithTodos.length}{" "}
-                {accountsWithTodos.length === 1 ? "account" : "accounts"}
-              </span>
-            </div>
-
-            <div
-              ref={todoContainerRef}
-              className="w-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-stone-900"
-              style={{ maxHeight: "300px" }}
+          <div className="mb-4">
+            {/* Dropdown Header */}
+            <button
+              onClick={toggleTodos}
+              className="w-full flex items-center justify-between p-4 bg-stone-950 border border-stone-800 rounded-lg hover:border-stone-700 transition-colors cursor-pointer group"
             >
-              <div className="flex flex-col gap-4">
-                {accountsWithTodos.map((account) => (
-                  <div
-                    key={account.id}
-                    id={`todo-card-${account.id}`}
-                    className={`w-full bg-stone-950 border border-stone-800 rounded-lg p-4 transition-all duration-200`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="bg-stone-900 border border-stone-700 text-stone-300 rounded-full font-bold w-8 h-8 flex items-center justify-center text-sm">
-                          {account.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <h4 className="text-white font-medium text-sm">
-                            {account.name}
-                          </h4>
-                          <p className="text-stone-500 text-xs">
-                            #{account.id.slice(0, 8)}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() =>
-                          handleTodoClick(account.id, account.name)
-                        }
-                        className="p-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors cursor-pointer flex items-center justify-center gap-1"
-                      >
-                        <NotebookPen size={12} />
-                        Edit Todo
-                      </button>
-                    </div>
-
-                    {/* Todo Content */}
-                    <div className="mb-3">
-                      <p className="text-xs text-stone-400 mb-1">Todo:</p>
-                      <div className="bg-black/50 border border-stone-800 rounded p-2">
-                        <p className="text-white text-sm wrap-break-word">
-                          {account.todo}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-stone-600/20 group-hover:bg-stone-600/30 transition-colors">
+                  <NotebookPen className="h-5 w-5 text-stone-400" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-medium text-white">
+                    Active Todos
+                  </h3>
+                  <p className="text-xs text-stone-400">
+                    {accountsWithTodos.length}{" "}
+                    {accountsWithTodos.length === 1 ? "account" : "accounts"}{" "}
+                    with pending todos
+                  </p>
+                </div>
               </div>
-            </div>
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
+                  {accountsWithTodos.length}
+                </span>
+                {showTodos ? (
+                  <ChevronUp className="h-5 w-5 text-stone-400" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-stone-400" />
+                )}
+              </div>
+            </button>
+
+            {/* Collapsible Content */}
+            {showTodos && (
+              <div className="mt-4 animate-slideDown">
+                <div
+                  ref={todoContainerRef}
+                  className="w-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-stone-900"
+                  style={{ maxHeight: "300px" }}
+                >
+                  <div className="flex flex-col gap-4">
+                    {accountsWithTodos.map((account) => (
+                      <div
+                        key={account.id}
+                        id={`todo-card-${account.id}`}
+                        className="w-full bg-stone-950 border border-stone-800 rounded-lg p-4 transition-all duration-200"
+                      >
+                        <div className="flex flex-wrap gap-4 items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-stone-900 border border-stone-800 text-stone-300 rounded-full font-bold w-10 h-10 flex items-center justify-center">
+                              {account?.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h3 className="text-white font-medium">
+                                {account.name}
+                              </h3>
+                              <p className="text-stone-400 text-xs">
+                                {account.account_uid || "No UID"}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() =>
+                              handleTodoClick(account.id, account.name)
+                            }
+                            className="p-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            <NotebookPen size={12} />
+                            Edit Todo
+                          </button>
+                        </div>
+
+                        {/* Todo Content */}
+                        <div className="mb-3">
+                          <p className="text-xs text-stone-400 mb-1">Todo:</p>
+                          <div className="bg-black/50 border border-stone-800 rounded p-2">
+                            <p className="text-white text-sm wrap-break-word">
+                              {account.todo}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
