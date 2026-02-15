@@ -374,27 +374,26 @@ export default function ManageAccounts() {
                 <div className="p-2 rounded-lg bg-stone-600/20 group-hover:bg-stone-600/30 transition-colors">
                   <NotebookPen className="h-5 w-5 text-stone-400" />
                 </div>
-                <div className="text-left">
-                  <h3 className="text-lg font-medium text-white">
-                    Active Todos
-                  </h3>
+                <div className="flex-col items-center text-left">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-medium text-white">
+                      Active Todos
+                    </h3>
+                    <p className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
+                      {accountsWithTodos.length}{" "}
+                      {accountsWithTodos.length === 1 ? "account" : "accounts"}
+                    </p>
+                  </div>
                   <p className="text-xs text-stone-400">
-                    {accountsWithTodos.length}{" "}
-                    {accountsWithTodos.length === 1 ? "account" : "accounts"}{" "}
-                    with pending todos
+                    See all the accounts who have active todos
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
-                  {accountsWithTodos.length}
-                </span>
-                {showTodos ? (
-                  <ChevronUp className="h-5 w-5 text-stone-400" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-stone-400" />
-                )}
-              </div>
+              {showTodos ? (
+                <ChevronUp className="h-5 w-5 text-stone-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-stone-400" />
+              )}
             </button>
 
             {/* Collapsible Content */}
