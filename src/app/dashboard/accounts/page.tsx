@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Plus,
   Gamepad2,
@@ -62,7 +62,6 @@ export default function ManageAccounts() {
   const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
   const [selectedBotName, setSelectedBotName] = useState<string>("");
 
-  // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [accountToDelete, setAccountToDelete] = useState<{
     id: string;
@@ -70,8 +69,9 @@ export default function ManageAccounts() {
   } | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
 
-  // Search state
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const todoContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -96,9 +96,12 @@ export default function ManageAccounts() {
 
   const totalAccounts = accounts.length;
 
-  // Filter accounts based on search query
   const filteredAccounts = accounts.filter((account) =>
     account.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const accountsWithTodos = accounts.filter(
+    (account) => account.todo_exists && account.todo
   );
 
   const hasSearchResults =
@@ -261,6 +264,12 @@ export default function ManageAccounts() {
     setShowAddModal(true);
   };
 
+  const handleTodoClick = (botId: string, botName: string) => {
+    setSelectedBotId(botId);
+    setSelectedBotName(botName);
+    setShowTodoModal(true);
+  };
+
   const ChecklistItem = ({
     checked,
     label,
@@ -307,12 +316,6 @@ export default function ManageAccounts() {
     return !formErrors.name && !formErrors.account_uid;
   };
 
-  const handleTodoClick = (botId: string, botName: string) => {
-    setSelectedBotId(botId);
-    setSelectedBotName(botName);
-    setShowTodoModal(true);
-  };
-
   return (
     <PageWrapper withSidebar sidebarRole="user">
       <div className="min-h-screen p-4 md:p-6">
@@ -349,6 +352,70 @@ export default function ManageAccounts() {
             <p className="text-stone-400 text-sm">Total Accounts</p>
           </div>
         </div>
+
+        {/* Todo List Section - Horizontal Scrollable Container */}
+        {!loading && accountsWithTodos.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-lg font-medium text-white">Active Todos</h3>
+              <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
+                {accountsWithTodos.length}{" "}
+                {accountsWithTodos.length === 1 ? "account" : "accounts"}
+              </span>
+            </div>
+
+            <div
+              ref={todoContainerRef}
+              className="w-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-stone-900"
+              style={{ maxHeight: "300px" }}
+            >
+              <div className="flex flex-col gap-4">
+                {accountsWithTodos.map((account) => (
+                  <div
+                    key={account.id}
+                    id={`todo-card-${account.id}`}
+                    className={`w-full bg-stone-950 border border-stone-800 rounded-lg p-4 transition-all duration-200`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-stone-900 border border-stone-700 text-stone-300 rounded-full font-bold w-8 h-8 flex items-center justify-center text-sm">
+                          {account.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h4 className="text-white font-medium text-sm">
+                            {account.name}
+                          </h4>
+                          <p className="text-stone-500 text-xs">
+                            #{account.id.slice(0, 8)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() =>
+                          handleTodoClick(account.id, account.name)
+                        }
+                        className="p-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        <NotebookPen size={12} />
+                        Edit Todo
+                      </button>
+                    </div>
+
+                    {/* Todo Content */}
+                    <div className="mb-3">
+                      <p className="text-xs text-stone-400 mb-1">Todo:</p>
+                      <div className="bg-black/50 border border-stone-800 rounded p-2">
+                        <p className="text-white text-sm wrap-break-word">
+                          {account.todo}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search Bar */}
         <div className="mb-8">
@@ -476,9 +543,15 @@ export default function ManageAccounts() {
                   (hasSearchResults && !showAllAccounts)) && (
                   <div className={hasSearchResults ? "mt-4" : ""}>
                     {showAllAccounts && (
-                      <h3 className="text-lg font-medium text-white mb-4">
-                        All Accounts
-                      </h3>
+                      <div className="flex items-center gap-2 mb-3">
+                        <h3 className="text-lg font-medium text-white">
+                          All Accounts
+                        </h3>
+                        <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
+                          {accounts.length}{" "}
+                          {accounts.length === 1 ? "account" : "accounts"}
+                        </span>
+                      </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {accounts.map((account, index) => (
@@ -732,6 +805,7 @@ export default function ManageAccounts() {
           setShowTodoModal(false);
           setSelectedBotId(null);
           setSelectedBotName("");
+          fetchAccounts();
         }}
         account_name={selectedBotName}
       />
@@ -739,7 +813,6 @@ export default function ManageAccounts() {
   );
 }
 
-// Account Card Component to avoid code duplication
 const AccountCard = ({
   account,
   onDeleteClick,
