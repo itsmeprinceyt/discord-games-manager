@@ -11,6 +11,7 @@ export interface BotAccountResponse {
   account_uid: string | null;
   created_at: string;
   updated_at: string;
+  todo: string | null;
   todo_exists: boolean;
   selected_bots: SelectedBotResponse[];
 }
@@ -83,6 +84,7 @@ export async function GET() {
           account_uid: row.account_uid,
           created_at: row.created_at,
           updated_at: row.updated_at,
+          todo: todoExists ? row.todo : null,
           todo_exists: todoExists,
           selected_bots: [],
         });
