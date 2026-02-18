@@ -31,6 +31,10 @@ export interface UserCrossTradesResponse {
   page: number;
   limit: number;
   total_pages: number;
+  filters?: {
+    bot_accounts: Array<{ id: string; name: string }>;
+    bot_names: string[];
+  };
 }
 
 export async function GET(request: Request) {
@@ -40,7 +44,7 @@ export async function GET(request: Request) {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -53,7 +57,7 @@ export async function GET(request: Request) {
           success: false,
           error: "You don't have permission to view this user's data",
         },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
@@ -117,7 +121,7 @@ export async function GET(request: Request) {
         JOIN bot_accounts ba ON ct.bot_account_id = ba.id
         ${whereClause}
         `,
-      queryParams, // Only the WHERE clause params, no LIMIT/OFFSET
+      queryParams
     );
 
     const totalCount =
@@ -154,7 +158,28 @@ export async function GET(request: Request) {
         ORDER BY ct.crosstrade_date DESC, ct.created_at DESC
         LIMIT ? OFFSET ?
         `,
-      [...queryParams, limit.toString(), offset.toString()], // Convert to strings
+      [...queryParams, limit.toString(), offset.toString()]
+    );
+
+    const [botAccounts] = await pool.execute<any[]>(
+      `
+        SELECT DISTINCT ba.id, ba.name
+        FROM bot_accounts ba
+        WHERE ba.user_id = ?
+        ORDER BY ba.name
+      `,
+      [targetUserId]
+    );
+
+    const [botNames] = await pool.execute<any[]>(
+      `
+        SELECT DISTINCT sb.name
+        FROM selected_bot sb
+        JOIN bot_accounts ba ON sb.bot_account_id = ba.id
+        WHERE ba.user_id = ?
+        ORDER BY sb.name
+      `,
+      [targetUserId]
     );
 
     const crossTradeLogs: UserCrossTradeLog[] = Array.isArray(crossTrades)
@@ -190,6 +215,13 @@ export async function GET(request: Request) {
       page: page,
       limit: limit,
       total_pages: totalPages,
+      filters: {
+        bot_accounts: botAccounts.map((acc: any) => ({
+          id: acc.id,
+          name: acc.name,
+        })),
+        bot_names: botNames.map((bot: any) => bot.name),
+      },
     };
 
     return NextResponse.json(
@@ -197,7 +229,7 @@ export async function GET(request: Request) {
         success: true,
         data: responseData,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error: unknown) {
     console.error("Error fetching user cross trade logs:", error);
@@ -208,7 +240,7 @@ export async function GET(request: Request) {
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
