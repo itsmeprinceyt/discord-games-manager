@@ -7,6 +7,7 @@ import PageWrapper from "../(components)/PageWrapper";
 import getAxiosErrorMessage from "../../utils/Variables/getAxiosError.util";
 import toast from "react-hot-toast";
 import { formatDate, formatDateTime } from "../../utils/main.util";
+import Loader from "../(components)/Loader";
 
 interface AuditLog {
   id: string;
@@ -154,11 +155,7 @@ export default function UserDashboard() {
         </div>
 
         {/* Loading State */}
-        {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          </div>
-        )}
+        {loading && <Loader />}
 
         {/* Error State */}
         {error && !loading && (

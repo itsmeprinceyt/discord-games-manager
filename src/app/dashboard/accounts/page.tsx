@@ -38,6 +38,24 @@ interface AddAccountFormData {
   account_uid: string;
 }
 
+function Tooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative group flex items-center justify-center">
+      {children}
+
+      <div className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-black px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-all duration-150 group-hover:opacity-100 group-hover:-translate-y-1 border border-stone-900">
+        {label}
+      </div>
+    </div>
+  );
+}
+
 export default function ManageAccounts() {
   const [accounts, setAccounts] = useState<BotAccountResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -939,42 +957,63 @@ const AccountCard = ({
       )}
     </div>
 
-    <div className="flex gap-4 border-stone-800">
-      <Link
-        href={`${account.id}`}
-        className={`flex-1 py-2 ${BLUE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
-      >
-        <ArrowRight size={14} />
-        Manage
-      </Link>
-      <button
-        onClick={() => onDeleteClick(account.id, account.name)}
-        className={`flex-1 py-2 ${RED_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-1`}
-      >
-        <Trash size={14} />
-        Delete
-      </button>
-      <button
-        onClick={() => onTodoClick(account.id, account.name)}
-        className={`p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
-      >
-        {account.todo_exists && (
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-md shadow-green-400/50 group-hover:opacity-0 group-hover:animate-none transition-all ease-in-out duration-150" />
-        )}
-        <NotebookPen size={14} />
-      </button>
-      <Link
-        href={`${account.id}/crosstrade/`}
-        className={`flex items-center justify-center p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
-      >
-        <FileSpreadsheet size={14} />
-      </Link>
-      <Link
-        href={`${account.id}/wallet/`}
-        className={`flex items-center justify-center p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer relative group`}
-      >
-        <CreditCard size={14} />
-      </Link>
+    <div className="flex flex-col gap-3">
+      {/* Row 1 */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Manage */}
+        <Link
+          href={`${account.id}`}
+          className={`p-2 px-3 ${BLUE_Button} text-white rounded-lg text-sm flex items-center justify-center gap-1`}
+        >
+          <ArrowRight size={14} />
+          Manage
+        </Link>
+
+        {/* Delete */}
+        <button
+          onClick={() => onDeleteClick(account.id, account.name)}
+          className={`p-2 px-3 ${RED_Button} text-white rounded-lg text-sm flex items-center justify-center gap-1 cursor-pointer`}
+        >
+          <Trash size={14} />
+          Delete
+        </button>
+      </div>
+
+      {/* Row 2 */}
+      <div className="grid grid-cols-3 gap-3">
+        {/* Todo */}
+        <Tooltip label="Notes/Todo">
+          <button
+            onClick={() => onTodoClick(account.id, account.name)}
+            className={`w-full p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm flex items-center justify-center relative cursor-pointer`}
+          >
+            {account.todo_exists && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-md shadow-green-400/50" />
+            )}
+            <NotebookPen size={14} />
+          </button>
+        </Tooltip>
+
+        {/* Crosstrade */}
+        <Tooltip label="Crosstrades">
+          <Link
+            href={`${account.id}/crosstrade/`}
+            className={`w-full p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm flex items-center justify-center`}
+          >
+            <FileSpreadsheet size={14} />
+          </Link>
+        </Tooltip>
+
+        {/* Wallet */}
+        <Tooltip label="Wallet">
+          <Link
+            href={`${account.id}/wallet/`}
+            className={`w-full p-2 px-3 ${STONE_Button} text-white rounded-lg text-sm flex items-center justify-center`}
+          >
+            <CreditCard size={14} />
+          </Link>
+        </Tooltip>
+      </div>
     </div>
   </div>
 );
