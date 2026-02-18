@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../utils/Variables/getAxiosError.util";
 import { formatDateTime } from "../../../utils/main.util";
 import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
+import Loader from "../../(components)/Loader";
 
 interface UserCrossTradeLog {
   id: string;
@@ -392,10 +393,7 @@ export default function UserCrossTradeLogs() {
 
         {/* Loading State */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-stone-400 mt-2">Loading cross trade data...</p>
-          </div>
+          <Loader text="Loading cross trade data..." />
         ) : (
           <>
             {/* Empty State */}

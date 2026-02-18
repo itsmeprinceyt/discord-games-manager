@@ -34,6 +34,7 @@ import {
   STONE_Button,
 } from "../../../../utils/CSS/Button.util";
 import { BotAccountResponse } from "../../../api/dashboard/account/[account_id]/route";
+import Loader from "../../../(components)/Loader";
 
 interface BotInfo {
   name: string;
@@ -148,10 +149,7 @@ export default function GameAccountManager() {
     return (
       <PageWrapper withSidebar sidebarRole="user">
         <div className="min-h-screen p-4 md:p-6 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-stone-400 mt-2">Loading account data...</p>
-          </div>
+          <Loader />
         </div>
       </PageWrapper>
     );
@@ -187,7 +185,7 @@ export default function GameAccountManager() {
     currency: bot.currency_name,
     lastTrade: bot.last_crosstraded_at
       ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(
-          bot.last_crosstraded_at,
+          bot.last_crosstraded_at
         )})`
       : "--",
     cooldown: bot.last_crosstraded_at || "",
@@ -366,19 +364,19 @@ export default function GameAccountManager() {
   const quickActions = [
     {
       text: "Refresh Data",
-      bgColor: "bg-stone-800 hover:bg-stone-700",
+      bgColor: "hover:bg-stone-900",
       textColor: "text-stone-300",
       onClick: fetchAccountData,
     },
     {
       text: "Edit Account",
-      bgColor: "bg-blue-900/30 hover:bg-blue-900/50",
+      bgColor: "hover:bg-blue-950",
       textColor: "text-blue-400",
       onClick: () => toast("Edit feature coming soon"),
     },
     {
       text: "Delete Account",
-      bgColor: "bg-red-900/30 hover:bg-red-900/50",
+      bgColor: "hover:bg-red-950",
       textColor: "text-red-400",
       onClick: handleDeleteClick,
     },

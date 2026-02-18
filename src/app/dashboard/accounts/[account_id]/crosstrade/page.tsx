@@ -31,6 +31,7 @@ import {
 } from "../../../../../utils/CSS/Button.util";
 import { CombinedResponse } from "../../../../api/dashboard/account/[account_id]/crosstrade/route";
 import CrossTradeForm from "../../../../(components)/Crosstrade/CrossTradeAddForm";
+import Loader from "../../../../(components)/Loader";
 
 export interface ApiResponse {
   success: boolean;
@@ -56,7 +57,7 @@ export default function CrossTradeManager() {
       setLoading(true);
 
       const response = await axios.get(
-        `/api/dashboard/account/${account_id}/crosstrade`,
+        `/api/dashboard/account/${account_id}/crosstrade`
       );
 
       if (response.data.success) {
@@ -64,7 +65,7 @@ export default function CrossTradeManager() {
       }
     } catch (error: unknown) {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to load cross trade data"),
+        getAxiosErrorMessage(error, "Failed to load cross trade data")
       );
     } finally {
       setLoading(false);
@@ -222,10 +223,7 @@ export default function CrossTradeManager() {
 
         {/* Loading State */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-stone-400 mt-2">Loading cross trade data...</p>
-          </div>
+          <Loader />
         ) : (
           <>
             {/* Empty State */}
@@ -327,7 +325,7 @@ export default function CrossTradeManager() {
                                   <div className="text-white font-medium">
                                     {formatCurrency(
                                       trade.amount_received,
-                                      trade.currency,
+                                      trade.currency
                                     )}
                                   </div>
                                 </div>
@@ -352,7 +350,7 @@ export default function CrossTradeManager() {
                                   trade.net_amount !== trade.amount_received
                                     ? formatCurrency(
                                         trade.net_amount,
-                                        trade.currency,
+                                        trade.currency
                                       )
                                     : `--`}
                                 </div>
@@ -387,7 +385,7 @@ export default function CrossTradeManager() {
                             <td className="p-4 text-nowrap">
                               <div
                                 className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
-                                  trade.traded,
+                                  trade.traded
                                 )}`}
                               >
                                 <span className="text-xs font-medium">
@@ -400,7 +398,7 @@ export default function CrossTradeManager() {
                             <td className="p-4 text-nowrap">
                               <div
                                 className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
-                                  trade.paid,
+                                  trade.paid
                                 )}`}
                               >
                                 <span className="text-xs font-medium">
@@ -468,7 +466,7 @@ export default function CrossTradeManager() {
                                             </div>
                                             <div className="text-white flex items-center gap-2">
                                               {getPaymentMethodText(
-                                                trade.crosstrade_via,
+                                                trade.crosstrade_via
                                               )}
                                             </div>
                                           </div>
@@ -520,7 +518,7 @@ export default function CrossTradeManager() {
                                             <div className="text-white font-medium">
                                               {formatCurrency(
                                                 trade.amount_received,
-                                                trade.currency,
+                                                trade.currency
                                               )}
                                             </div>
                                           </div>
@@ -532,7 +530,7 @@ export default function CrossTradeManager() {
                                               <div className="text-white font-medium">
                                                 {formatCurrency(
                                                   trade.net_amount,
-                                                  trade.currency,
+                                                  trade.currency
                                                 )}
                                               </div>
                                             </div>
@@ -563,7 +561,7 @@ export default function CrossTradeManager() {
                                                     {formatCurrency(
                                                       trade.net_amount *
                                                         trade.conversion_rate,
-                                                      "inr",
+                                                      "inr"
                                                     )}
                                                   </>
                                                 ) : (
