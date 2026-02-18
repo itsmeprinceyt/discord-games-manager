@@ -470,7 +470,7 @@ export default function ManageAccounts() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
               >
                 <X className="h-5 w-5 text-stone-500 hover:text-stone-300 transition-colors" />
               </button>

@@ -6,12 +6,10 @@ export const createIndexStatements: string[] = [
   `CREATE INDEX idx_bot_accounts_account_uid ON bot_accounts(account_uid)`,
   `CREATE INDEX idx_bot_accounts_voted_at ON bot_accounts(voted_at)`,
   `CREATE INDEX idx_bot_accounts_created_at ON bot_accounts(created_at)`,
-  `CREATE INDEX idx_bot_accounts_user_created ON bot_accounts(user_id, created_at)`,
 
   `CREATE INDEX idx_selected_bot_balance ON selected_bot(balance)`,
   `CREATE INDEX idx_selected_bot_last_crosstraded_at ON selected_bot(last_crosstraded_at)`,
   `CREATE INDEX idx_selected_bot_voted_at ON selected_bot(voted_at)`,
-  `CREATE INDEX idx_selected_bot_account_last_crosstrade ON selected_bot(bot_account_id, last_crosstraded_at)`,
 
   `CREATE INDEX idx_crosstrades_crosstrade_date ON crosstrades(crosstrade_date)`,
   `CREATE INDEX idx_crosstrades_currency ON crosstrades(currency)`,
@@ -19,8 +17,6 @@ export const createIndexStatements: string[] = [
   `CREATE INDEX idx_crosstrades_traded ON crosstrades(traded)`,
   `CREATE INDEX idx_crosstrades_paid ON crosstrades(paid)`,
   `CREATE INDEX idx_crosstrades_created_at ON crosstrades(created_at)`,
-  `CREATE INDEX idx_crosstrades_user_date ON crosstrades(user_id, crosstrade_date)`,
-  `CREATE INDEX idx_crosstrades_account_date ON crosstrades(bot_account_id, crosstrade_date)`,
   `CREATE INDEX idx_crosstrades_traded_paid ON crosstrades(traded, paid)`,
 
   `CREATE INDEX idx_audit_logs_action_type ON audit_logs(action_type)`,
@@ -38,12 +34,10 @@ export const dropIndexStatements: string[] = [
   `DROP INDEX idx_bot_accounts_account_uid ON bot_accounts`,
   `DROP INDEX idx_bot_accounts_voted_at ON bot_accounts`,
   `DROP INDEX idx_bot_accounts_created_at ON bot_accounts`,
-  `DROP INDEX idx_bot_accounts_user_created ON bot_accounts`,
 
   `DROP INDEX idx_selected_bot_balance ON selected_bot`,
   `DROP INDEX idx_selected_bot_last_crosstraded_at ON selected_bot`,
   `DROP INDEX idx_selected_bot_voted_at ON selected_bot`,
-  `DROP INDEX idx_selected_bot_account_last_crosstrade ON selected_bot`,
 
   `DROP INDEX idx_crosstrades_crosstrade_date ON crosstrades`,
   `DROP INDEX idx_crosstrades_currency ON crosstrades`,
@@ -51,8 +45,6 @@ export const dropIndexStatements: string[] = [
   `DROP INDEX idx_crosstrades_traded ON crosstrades`,
   `DROP INDEX idx_crosstrades_paid ON crosstrades`,
   `DROP INDEX idx_crosstrades_created_at ON crosstrades`,
-  `DROP INDEX idx_crosstrades_user_date ON crosstrades`,
-  `DROP INDEX idx_crosstrades_account_date ON crosstrades`,
   `DROP INDEX idx_crosstrades_traded_paid ON crosstrades`,
 
   `DROP INDEX idx_audit_logs_action_type ON audit_logs`,
