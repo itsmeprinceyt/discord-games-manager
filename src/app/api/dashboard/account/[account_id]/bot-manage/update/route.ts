@@ -1,12 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// eslint-disable @typescript-eslint/no-explicit-any
 import { NextRequest, NextResponse } from "next/server";
-import { initServer, db } from "../../../../../../../lib/initServer";
-import { getCurrentDateTime } from "../../../../../../../utils/Variables/getDateTime.util";
-import { generateHexId } from "../../../../../../../utils/Variables/generateHexID.util";
+// import { initServer, db } from "../../../../../../../lib/initServer";
+// import { getCurrentDateTime } from "../../../../../../../utils/Variables/getDateTime.util";
+// import { generateHexId } from "../../../../../../../utils/Variables/generateHexID.util";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../auth/[...nextauth]/route";
-import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
-import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
+// import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
+// import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 
 // TODO: put this in a file
 interface RequestBody {
@@ -42,17 +42,30 @@ interface RequestBody {
  * all bot associations and their related crosstrades from the account.
  */
 export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
+  //try {
+  const session = await getServerSession(authOptions);
 
-    if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized - Please log in" },
-        { status: 401 }
-      );
-    }
-
-    const body: RequestBody = await request.json();
+  if (!session) {
+    return NextResponse.json(
+      { error: "Unauthorized - Please log in" },
+      { status: 401 },
+    );
+  }
+  const body: RequestBody = await request.json();
+  console.log(body);
+  if (true) {
+    return NextResponse.json(
+      {
+        error:
+          "This action is currently disabled until its fixed. Thank you for understanding.",
+      },
+      { status: 401 },
+    );
+  }
+  // }
+}
+/*
+    
     const { botIds, botAccountId } = body;
 
     if (!botAccountId) {
@@ -297,3 +310,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+*/
