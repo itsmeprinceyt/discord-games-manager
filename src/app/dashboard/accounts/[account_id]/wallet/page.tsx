@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../../../utils/Variables/getAxiosError.util";
 import { STONE_Button } from "../../../../../utils/CSS/Button.util";
 import EditBalanceModal from "../../../../(components)/Balance/EditBalanceModal";
-import LoaderFullscreen from "../../../../(components)/LoaderFullscreen";
+import Loader from "../../../../(components)/Loader";
 
 interface BotBalance {
   id: string;
@@ -51,7 +51,7 @@ export default function AccountWalletPage() {
         else setRefreshing(true);
 
         const response = await axios.get<WalletResponse>(
-          `/api/dashboard/account/${account_id}/wallet`
+          `/api/dashboard/account/${account_id}/wallet`,
         );
 
         if (response.data.success) {
@@ -62,7 +62,7 @@ export default function AccountWalletPage() {
       } catch (err: unknown) {
         const message = getAxiosErrorMessage(
           err,
-          "Error fetching balance data"
+          "Error fetching balance data",
         );
         toast.error(message);
         console.error("Error fetching balance data:", err);
@@ -71,7 +71,7 @@ export default function AccountWalletPage() {
         setRefreshing(false);
       }
     },
-    [account_id]
+    [account_id],
   );
 
   useEffect(() => {
@@ -93,8 +93,8 @@ export default function AccountWalletPage() {
   const handleUpdateBalance = async (botId: string, newBalance: number) => {
     setWalletData((prev) =>
       prev.map((bot) =>
-        bot.id === botId ? { ...bot, balance: newBalance } : bot
-      )
+        bot.id === botId ? { ...bot, balance: newBalance } : bot,
+      ),
     );
 
     toast.success("Balance updated successfully!");
@@ -105,7 +105,7 @@ export default function AccountWalletPage() {
     try {
       const response = await axios.post(
         `/api/dashboard/account/${account_id}/wallet/manual-vote`,
-        { bot_id: botId }
+        { bot_id: botId },
       );
 
       if (response.data.success) {
@@ -113,8 +113,8 @@ export default function AccountWalletPage() {
 
         setWalletData((prev) =>
           prev.map((bot) =>
-            bot.id === botId ? { ...bot, balance: new_balance } : bot
-          )
+            bot.id === botId ? { ...bot, balance: new_balance } : bot,
+          ),
         );
 
         toast.success(response.data.message);
@@ -127,7 +127,13 @@ export default function AccountWalletPage() {
   };
 
   if (loading) {
-    return <LoaderFullscreen />;
+    return (
+      <PageWrapper withSidebar sidebarRole="user">
+        <div className="min-h-screen p-4 md:p-6 flex items-center justify-center">
+          <Loader />
+        </div>
+      </PageWrapper>
+    );
   }
 
   return (

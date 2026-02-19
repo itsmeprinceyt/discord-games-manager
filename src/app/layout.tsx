@@ -7,6 +7,7 @@ import { SessionProviderNextAuth } from "./(components)/SessionProvider";
 import HomePageHeartbeat from "../hooks/HeartBeat";
 import ClientNavbarWrapper from "./(components)/DynamicNavbar";
 import Footer from "./(components)/Footer";
+import LoaderFullscreen from "./(components)/LoaderFullscreen";
 
 export const metadata: Metadata = {
   title: "Games Manager Pro | ItsMe Prince",
@@ -23,7 +24,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="select-none">
         <SessionProviderNextAuth>
-          <Suspense fallback={<div>loading ...</div>}>
+          <Suspense fallback={<LoaderFullscreen text={"Games Manager Pro"} />}>
             <HomePageHeartbeat />
             <ClientNavbarWrapper />
             {children}
