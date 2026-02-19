@@ -1,14 +1,13 @@
-// eslint-disable @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any*/
 import { NextRequest, NextResponse } from "next/server";
-// import { initServer, db } from "../../../../../../../lib/initServer";
-// import { getCurrentDateTime } from "../../../../../../../utils/Variables/getDateTime.util";
-// import { generateHexId } from "../../../../../../../utils/Variables/generateHexID.util";
+import { initServer, db } from "../../../../../../../lib/initServer";
+import { getCurrentDateTime } from "../../../../../../../utils/Variables/getDateTime.util";
+import { generateHexId } from "../../../../../../../utils/Variables/generateHexID.util";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../auth/[...nextauth]/route";
-// import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
-// import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
+import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
+import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 
-// TODO: put this in a file
 interface RequestBody {
   botIds: string[];
   botAccountId: string;
@@ -18,67 +17,48 @@ interface RequestBody {
  * Updates the selected bots association for a bot account.
  *
  * This endpoint allows users to manage which bots are associated with their bot account.
- * It handles adding new bot associations and removing old ones, while also managing
- * the cleanup of related crosstrades data.
+ * It handles:
+ * - Adding new bot associations (creates new selected_bot records)
+ * - Removing bot associations (deletes selected_bot records and their crosstrades)
+ * - Preserving existing bot associations and their crosstrades
  *
  * Workflow:
  * 1. Authenticate the user session
- * 2. Validate the input parameters (botAccountId and botIds array)
- * 3. Check if the specified bot account exists and belongs to the authenticated user
- * 4. Fetch the currently selected bots for the account
- * 5. For each currently selected bot, determine if it's being removed (not in the new botIds list)
- * 6. If bots are being removed, delete their associated crosstrades from the crosstrades table
- * 7. Delete all current selected_bot entries for the account
- * 8. If botIds array is empty:
- *    - Log audit trail for complete removal
- *    - Return success response indicating all bots and crosstrades were removed
- * 9. If botIds array has entries:
- *    - Validate that all specified bot IDs exist in the database
- *    - Create new selected_bot entries for each bot ID
- *    - Log audit trail with details of the update
- *    - Return success response with the new bot associations
- *
- * Note: When botIds is an empty array, this indicates the user wants to remove
- * all bot associations and their related crosstrades from the account.
+ * 2. Validate the input parameters
+ * 3. Check if the bot account exists and belongs to the user
+ * 4. Fetch currently selected bots for the account
+ * 5. Determine which bots to add and which to remove
+ * 6. For removed bots: delete their selected_bot records and associated crosstrades
+ * 7. For new bots: create new selected_bot records
+ * 8. Update the bot_accounts table's updated_at timestamp
+ * 9. Log audit trail and return response
  */
 export async function POST(request: NextRequest) {
-  //try {
-  const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession(authOptions);
 
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized - Please log in" },
-      { status: 401 },
-    );
-  }
-  const body: RequestBody = await request.json();
-  console.log(body);
-  if (true) {
-    return NextResponse.json(
-      {
-        error:
-          "This action is currently disabled until its fixed. Thank you for understanding.",
-      },
-      { status: 401 },
-    );
-  }
-  // }
-}
-/*
-    
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized - Please log in" },
+        { status: 401 },
+      );
+    }
+
+    const body: RequestBody = await request.json();
     const { botIds, botAccountId } = body;
 
+    // Validation
     if (!botAccountId) {
       return NextResponse.json(
         { error: "Missing required field: botAccountId" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!Array.isArray(botIds)) {
       return NextResponse.json(
         { error: "botIds must be an array" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -86,170 +66,182 @@ export async function POST(request: NextRequest) {
     const pool = db();
     const now = getCurrentDateTime();
 
+    // Check if bot account exists and belongs to the user
     const [accountExists] = await pool.execute<any[]>(
-      "SELECT id FROM bot_accounts WHERE id = ?",
-      [botAccountId]
+      "SELECT id, user_id FROM bot_accounts WHERE id = ?",
+      [botAccountId],
     );
 
     if (!Array.isArray(accountExists) || accountExists.length === 0) {
       return NextResponse.json(
         { error: "Bot account not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
+    // Optional: Verify the bot account belongs to the authenticated user
+    if (accountExists[0].user_id !== session.user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized - You don't own this bot account" },
+        { status: 403 },
+      );
+    }
+
+    // Fetch current selected bots with their bot details
     const [currentSelectedBots] = await pool.execute<any[]>(
-      "SELECT id, name FROM selected_bot WHERE bot_account_id = ?",
-      [botAccountId]
+      `SELECT sb.id as selected_bot_id, sb.name as selected_bot_name, 
+              b.id as bot_id, b.name as bot_name, b.currency_name,
+              b.normal_days, b.weekend_days
+       FROM selected_bot sb
+       JOIN bots b ON sb.name = b.name
+       WHERE sb.bot_account_id = ?`,
+      [botAccountId],
     );
 
-    let crosstradesDeleted = false;
+    const currentBotIds = currentSelectedBots.map((bot) => bot.bot_id);
 
-    if (Array.isArray(currentSelectedBots) && currentSelectedBots.length > 0) {
-      const [currentBotDetails] = await pool.execute<any[]>(
-        `SELECT sb.id as selected_bot_id, b.id as bot_id, b.name as bot_name
-         FROM selected_bot sb
-         JOIN bots b ON sb.name = b.name
-         WHERE sb.bot_account_id = ?`,
-        [botAccountId]
-      );
+    // Determine bots to remove and bots to add
+    const botIdsToRemove = currentBotIds.filter((id) => !botIds.includes(id));
+    const botIdsToAdd = botIds.filter((id) => !currentBotIds.includes(id));
 
-      if (botIds.length > 0 && Array.isArray(currentBotDetails)) {
-        const placeholders = botIds.map(() => "?").join(",");
-        const [botsToKeep] = await pool.execute<any[]>(
-          `SELECT id, name FROM bots WHERE id IN (${placeholders})`,
-          botIds
-        );
-
-        if (Array.isArray(botsToKeep)) {
-          const botsToKeepIds = botsToKeep.map((bot) => bot.id);
-          const selectedBotsToDelete = currentBotDetails.filter(
-            (botDetail) => !botsToKeepIds.includes(botDetail.bot_id)
-          );
-
-          if (selectedBotsToDelete.length > 0) {
-            const selectedBotIdsToDelete = selectedBotsToDelete.map(
-              (bot) => bot.selected_bot_id
-            );
-            const deletePlaceholders = selectedBotIdsToDelete
-              .map(() => "?")
-              .join(",");
-
-            await pool.execute(
-              `DELETE FROM crosstrades WHERE selected_bot_id IN (${deletePlaceholders})`,
-              selectedBotIdsToDelete
-            );
-            crosstradesDeleted = true;
-          }
-        }
-      } else if (botIds.length === 0 && Array.isArray(currentBotDetails)) {
-        const selectedBotIds = currentBotDetails.map(
-          (bot) => bot.selected_bot_id
-        );
-        if (selectedBotIds.length > 0) {
-          const deletePlaceholders = selectedBotIds.map(() => "?").join(",");
-
-          await pool.execute(
-            `DELETE FROM crosstrades WHERE selected_bot_id IN (${deletePlaceholders})`,
-            selectedBotIds
-          );
-          crosstradesDeleted = true;
-        }
-      }
-    }
-
-    await pool.execute("DELETE FROM selected_bot WHERE bot_account_id = ?", [
-      botAccountId,
-    ]);
-
-    if (botIds.length === 0) {
-      const actor: AuditActor = {
-        user_id: session.user.id,
-        email: session.user.email,
-        name: session.user.username,
-      };
-
-      await logAudit(
-        actor,
-        "user_action",
-        `User removed all bots and their crosstrades from account #${botAccountId}`,
-        {
-          user_id: session.user.id,
-          removed_all_bots: true,
-          crosstrades_deleted: crosstradesDeleted,
-        }
-      );
+    // If no changes, return early
+    if (botIdsToRemove.length === 0 && botIdsToAdd.length === 0) {
+      const remainingBots = currentSelectedBots.map((bot) => ({
+        id: bot.selected_bot_id,
+        bot_id: bot.bot_id,
+        name: bot.bot_name,
+        currency_name: bot.currency_name,
+        normal_days: bot.normal_days,
+        weekend_days: bot.weekend_days,
+      }));
 
       return NextResponse.json(
         {
           success: true,
-          message: "All bots and their crosstrades removed from account",
+          message: "No changes made to bot associations",
           data: {
-            removedAll: true,
-            count: 0,
-            crosstrades_deleted: crosstradesDeleted,
+            total_bots: remainingBots.length,
+            added_count: 0,
+            removed_count: 0,
+            crosstrades_deleted: false,
+            bots: remainingBots,
           },
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
-    const placeholders = botIds.map(() => "?").join(",");
-    const [botDetails] = await pool.execute<any[]>(
-      `SELECT id, name, currency_name, normal_days, weekend_days 
-       FROM bots 
-       WHERE id IN (${placeholders})`,
-      botIds
-    );
+    let crosstradesDeleted = false;
 
-    if (!Array.isArray(botDetails) || botDetails.length !== botIds.length) {
-      return NextResponse.json(
-        { error: "One or more bots not found" },
-        { status: 404 }
-      );
-    }
+    // Handle removals: Delete selected_bot records and their crosstrades
+    if (botIdsToRemove.length > 0) {
+      // Get the selected_bot IDs for bots being removed
+      const selectedBotsToRemove = currentSelectedBots
+        .filter((bot) => botIdsToRemove.includes(bot.bot_id))
+        .map((bot) => bot.selected_bot_id);
 
-    const insertedBots = await Promise.all(
-      botDetails.map(async (bot) => {
-        const selectedBotId = generateHexId(12);
+      if (selectedBotsToRemove.length > 0) {
+        const deletePlaceholders = selectedBotsToRemove
+          .map(() => "?")
+          .join(",");
 
+        // First delete crosstrades associated with these selected_bots
         await pool.execute(
-          `INSERT INTO selected_bot (
-            id, 
-            bot_account_id, 
-            name, 
-            currency_name, 
-            balance, 
-            normal_days, 
-            weekend_days, 
-            last_crosstraded_at, 
-            voted_at, 
-            updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            selectedBotId,
-            botAccountId,
-            bot.name,
-            bot.currency_name,
-            0,
-            bot.normal_days,
-            bot.weekend_days,
-            null,
-            null,
-            now,
-          ]
+          `DELETE FROM crosstrades WHERE selected_bot_id IN (${deletePlaceholders})`,
+          selectedBotsToRemove,
         );
 
-        return {
-          id: selectedBotId,
-          bot_id: bot.id,
-          name: bot.name,
-          currency_name: bot.currency_name,
-          normal_days: bot.normal_days,
-          weekend_days: bot.weekend_days,
-        };
-      })
-    );
+        // Then delete the selected_bot records
+        await pool.execute(
+          `DELETE FROM selected_bot WHERE id IN (${deletePlaceholders})`,
+          selectedBotsToRemove,
+        );
+
+        crosstradesDeleted = true;
+      }
+    }
+
+    let addedBots: any[] = [];
+    if (botIdsToAdd.length > 0) {
+      const addPlaceholders = botIdsToAdd.map(() => "?").join(",");
+      const [botsToAddDetails] = await pool.execute<any[]>(
+        `SELECT id, name, currency_name, normal_days, weekend_days 
+         FROM bots 
+         WHERE id IN (${addPlaceholders})`,
+        botIdsToAdd,
+      );
+
+      if (
+        !Array.isArray(botsToAddDetails) ||
+        botsToAddDetails.length !== botIdsToAdd.length
+      ) {
+        return NextResponse.json(
+          { error: "One or more bots not found" },
+          { status: 404 },
+        );
+      }
+
+      // Create new selected_bot records
+      addedBots = await Promise.all(
+        botsToAddDetails.map(async (bot) => {
+          const selectedBotId = generateHexId(12);
+
+          await pool.execute(
+            `INSERT INTO selected_bot (
+              id, 
+              bot_account_id, 
+              name, 
+              currency_name, 
+              balance, 
+              normal_days, 
+              weekend_days, 
+              last_crosstraded_at, 
+              voted_at, 
+              updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              selectedBotId,
+              botAccountId,
+              bot.name,
+              bot.currency_name,
+              0,
+              bot.normal_days,
+              bot.weekend_days,
+              null,
+              null,
+              now,
+            ],
+          );
+
+          return {
+            id: selectedBotId,
+            bot_id: bot.id,
+            name: bot.name,
+            currency_name: bot.currency_name,
+            normal_days: bot.normal_days,
+            weekend_days: bot.weekend_days,
+          };
+        }),
+      );
+    }
+
+    await pool.execute("UPDATE bot_accounts SET updated_at = ? WHERE id = ?", [
+      now,
+      botAccountId,
+    ]);
+
+    const remainingBots = currentSelectedBots
+      .filter((bot) => !botIdsToRemove.includes(bot.bot_id))
+      .map((bot) => ({
+        id: bot.selected_bot_id,
+        bot_id: bot.bot_id,
+        name: bot.bot_name,
+        currency_name: bot.currency_name,
+        normal_days: bot.normal_days,
+        weekend_days: bot.weekend_days,
+      }));
+
+    const allBots = [...remainingBots, ...addedBots];
 
     const actor: AuditActor = {
       user_id: session.user.id,
@@ -257,29 +249,54 @@ export async function POST(request: NextRequest) {
       name: session.user.username,
     };
 
+    const auditDetails: any = {
+      user_id: session.user.id,
+      total_bots: allBots.length,
+      bot_account_updated_at: now,
+    };
+
+    if (botIdsToAdd.length > 0) {
+      auditDetails.added_bots = botIdsToAdd.length;
+      auditDetails.added_bot_names = addedBots.map((bot) => bot.name);
+    }
+
+    if (botIdsToRemove.length > 0) {
+      auditDetails.removed_bots = botIdsToRemove.length;
+      auditDetails.crosstrades_deleted = crosstradesDeleted;
+    }
+
     await logAudit(
       actor,
       "user_action",
-      `User updated bots associated with account #${botAccountId} (${insertedBots.length} bots)`,
-      {
-        user_id: session.user.id,
-        bot_count: insertedBots.length,
-        bot_names: insertedBots.map((bot) => bot.name),
-        crosstrades_deleted: crosstradesDeleted,
-      }
+      `User updated bots for account #${botAccountId} (Added: ${botIdsToAdd.length}, Removed: ${botIdsToRemove.length})`,
+      auditDetails,
     );
+
+    let message = "";
+    if (botIdsToAdd.length === 0 && botIdsToRemove.length > 0) {
+      message = `Removed ${botIdsToRemove.length} bot(s) and their crosstrades from account`;
+    } else if (botIdsToAdd.length > 0 && botIdsToRemove.length === 0) {
+      message = `Added ${botIdsToAdd.length} new bot(s) to account`;
+    } else if (botIdsToAdd.length > 0 && botIdsToRemove.length > 0) {
+      message = `Updated account: added ${botIdsToAdd.length} bot(s), removed ${botIdsToRemove.length} bot(s) and their crosstrades`;
+    } else {
+      message = "No changes made to bot associations";
+    }
 
     return NextResponse.json(
       {
         success: true,
-        message: `Updated bots association with this account (${insertedBots.length} bots)`,
+        message,
         data: {
-          count: insertedBots.length,
-          bots: insertedBots,
+          total_bots: allBots.length,
+          added_count: botIdsToAdd.length,
+          removed_count: botIdsToRemove.length,
           crosstrades_deleted: crosstradesDeleted,
+          bots: allBots,
+          bot_account_updated_at: now,
         },
       },
-      { status: 201 }
+      { status: 200 },
     );
   } catch (error: unknown) {
     console.error("Error updating selected bots:", error);
@@ -288,14 +305,14 @@ export async function POST(request: NextRequest) {
       if (error.message.includes("foreign key constraint")) {
         return NextResponse.json(
           { error: "Invalid bot account or bot reference" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
       if (error.message.includes("Duplicate entry")) {
         return NextResponse.json(
           { error: "Bot already selected for this account" },
-          { status: 409 }
+          { status: 409 },
         );
       }
     }
@@ -306,8 +323,7 @@ export async function POST(request: NextRequest) {
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-*/
