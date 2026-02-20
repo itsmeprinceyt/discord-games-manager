@@ -15,7 +15,7 @@ export async function PUT(
   request: Request,
   context: {
     params: Promise<{ account_id: string }>;
-  }
+  },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,7 +23,7 @@ export async function PUT(
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -33,7 +33,7 @@ export async function PUT(
     if (!accountId) {
       return NextResponse.json(
         { error: "Account ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -43,21 +43,21 @@ export async function PUT(
     if (!bot_id || typeof bot_id !== "string") {
       return NextResponse.json(
         { error: "Bot ID is required and must be a string" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (typeof balance !== "number" || isNaN(balance)) {
       return NextResponse.json(
         { error: "Balance must be a valid number" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (balance < 0) {
       return NextResponse.json(
         { error: "Balance cannot be negative" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -68,11 +68,13 @@ export async function PUT(
       `SELECT 
         sb.id,
         sb.bot_account_id,
-        ba.user_id
+        sb.name,
+        ba.user_id,
+        ba.name as account_name
        FROM selected_bot sb
        INNER JOIN bot_accounts ba ON sb.bot_account_id = ba.id
        WHERE sb.id = ? AND ba.id = ?`,
-      [bot_id, accountId]
+      [bot_id, accountId],
     );
 
     if (
@@ -84,7 +86,7 @@ export async function PUT(
           error:
             "Bot not found or you don't have permission to update this bot",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -95,7 +97,7 @@ export async function PUT(
         {
           error: "Unauthorized - You are not the owner of this bot",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -105,13 +107,13 @@ export async function PUT(
       `UPDATE selected_bot 
        SET balance = ?, updated_at = ?
        WHERE id = ? AND bot_account_id = ?`,
-      [balance, updatedAt, bot_id, accountId]
+      [balance, updatedAt, bot_id, accountId],
     );
 
     if ((updateResult as any).affectedRows === 0) {
       return NextResponse.json(
         { error: "Failed to update bot balance" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -124,12 +126,12 @@ export async function PUT(
     await logAudit(
       actor,
       "user_action",
-      `User updated bot (${bot_id}) balance of the account (${account_id})`,
+      `@${actor.name} updated balance of bot (${bot.name} - #${bot_id}) of the account (${bot.account_name} - #${account_id})`,
       {
         bot_id: bot_id,
         account_id: accountId,
         new_balance: balance,
-      }
+      },
     );
 
     return NextResponse.json(
@@ -137,7 +139,7 @@ export async function PUT(
         success: true,
         message: "Bot balance updated successfully",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: unknown) {
     console.error("Error updating bot balance:", error);
@@ -146,14 +148,14 @@ export async function PUT(
       if (error.message.includes("JSON")) {
         return NextResponse.json(
           { error: "Invalid request body format" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

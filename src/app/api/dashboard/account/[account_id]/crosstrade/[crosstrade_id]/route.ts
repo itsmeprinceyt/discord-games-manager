@@ -11,7 +11,7 @@ import { CrossTradeRequestAPI } from "../route";
 
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ account_id: string; crosstrade_id: string }> }
+  context: { params: Promise<{ account_id: string; crosstrade_id: string }> },
 ) {
   let connection: PoolConnection | null = null;
 
@@ -21,7 +21,7 @@ export async function PUT(
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -58,7 +58,7 @@ export async function PUT(
         console.error(`Missing required field: ${field}`);
         return NextResponse.json(
           { success: false, error: `Missing required field: ${field}` },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -76,7 +76,7 @@ export async function PUT(
       FROM crosstrades ct
       WHERE ct.id = ? AND ct.user_id = ? AND ct.bot_account_id = ?
     `,
-      [tradeId, session.user.id, accountId]
+      [tradeId, session.user.id, accountId],
     );
 
     if (!Array.isArray(existingTrade) || existingTrade.length === 0) {
@@ -86,7 +86,7 @@ export async function PUT(
           error:
             "Cross trade not found or you don't have permission to edit it",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -99,7 +99,7 @@ export async function PUT(
         SELECT id FROM selected_bot 
         WHERE id = ? AND bot_account_id = ?
       `,
-        [bot_id, accountId]
+        [bot_id, accountId],
       );
 
       if (!Array.isArray(botValidation) || botValidation.length === 0) {
@@ -108,7 +108,7 @@ export async function PUT(
             success: false,
             error: "Bot not found or does not belong to the specified account",
           },
-          { status: 404 }
+          { status: 404 },
         );
       }
       selectedBotId = bot_id;
@@ -119,7 +119,7 @@ export async function PUT(
       console.error("Invalid date format:", crosstrade_date);
       return NextResponse.json(
         { success: false, error: "Invalid date format" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -127,7 +127,7 @@ export async function PUT(
       console.error("Invalid amount_received:", amount_received);
       return NextResponse.json(
         { success: false, error: "Amount received must be a positive number" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -141,7 +141,7 @@ export async function PUT(
           success: false,
           error: "Net amount must be a positive number or null",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -157,7 +157,7 @@ export async function PUT(
           success: false,
           error: "Conversion rate is required and must be positive for USD",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -165,7 +165,7 @@ export async function PUT(
       console.error("Rate too long:", rate.length);
       return NextResponse.json(
         { success: false, error: "Rate must be 10 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -173,7 +173,7 @@ export async function PUT(
       console.error("Traded_with too long:", traded_with.length);
       return NextResponse.json(
         { success: false, error: "Trader ID must be 36 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -181,7 +181,7 @@ export async function PUT(
       console.error("Trade link too long:", trade_link.length);
       return NextResponse.json(
         { success: false, error: "Trade link must be 100 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -189,7 +189,7 @@ export async function PUT(
       console.error("Note too long:", note.length);
       return NextResponse.json(
         { success: false, error: "Note must be 250 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -252,7 +252,7 @@ export async function PUT(
           updated_at = ?
           WHERE id = ? AND bot_account_id = ?
         `,
-          [selectedBotId, now, selectedBotId, accountId]
+          [selectedBotId, now, selectedBotId, accountId],
         );
       }
 
@@ -272,14 +272,12 @@ export async function PUT(
           updated_at = ?
           WHERE id = ? AND bot_account_id = ?
         `,
-          [oldSelectedBotId, now, oldSelectedBotId, accountId]
+          [oldSelectedBotId, now, oldSelectedBotId, accountId],
         );
       }
-      // =============== END FIXED LOGIC ===============
 
       await connection.commit();
 
-      // Log audit
       const actor: AuditActor = {
         user_id: session.user.id,
         email: session.user.email,
@@ -289,13 +287,13 @@ export async function PUT(
       await logAudit(
         actor,
         "user_action",
-        `User updated cross trade #${tradeId}`,
+        `@${actor.name} updated crosstrade #${tradeId}`,
         {
           user_id: session.user.id,
           crosstrade_id: tradeId,
           account_id: accountId,
           bot_id: selectedBotId,
-        }
+        },
       );
 
       return NextResponse.json(
@@ -307,7 +305,7 @@ export async function PUT(
             updated_at: now,
           },
         },
-        { status: 200 }
+        { status: 200 },
       );
     } catch (dbError: unknown) {
       if (connection) {
@@ -326,7 +324,7 @@ export async function PUT(
         message: error instanceof Error ? error.message : "Unknown error",
         details: error instanceof Error ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   } finally {
     if (connection) {

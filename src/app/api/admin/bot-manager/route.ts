@@ -28,14 +28,14 @@ export async function GET() {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (!session.user.is_admin) {
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -83,7 +83,7 @@ export async function GET() {
           timestamp: new Date().toISOString(),
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: unknown) {
     console.error("Error fetching bots for admin:", error);
@@ -94,7 +94,7 @@ export async function GET() {
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -106,14 +106,14 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     if (!session.user.is_admin) {
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
           error:
             "Required fields: name, currency_name, vote_link, normal_days, weekend_days",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -153,21 +153,21 @@ export async function POST(request: NextRequest) {
     if (!trimmedName || !trimmedCurrencyName || !trimmedVoteLink) {
       return NextResponse.json(
         { error: "Bot name, currency name, and vote link are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (trimmedName.length > 30) {
       return NextResponse.json(
         { error: "Bot name must be 30 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (trimmedCurrencyName.length > 30) {
       return NextResponse.json(
         { error: "Currency name must be 30 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -176,14 +176,14 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json(
         { error: "Invalid vote link URL format" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (trimmedVoteLink.length > 100) {
       return NextResponse.json(
         { error: "Vote link must be 100 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -193,13 +193,13 @@ export async function POST(request: NextRequest) {
       } catch {
         return NextResponse.json(
           { error: "Invalid alternate vote link URL format" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       if (trimmedVoteLinkAlternate.length > 100) {
         return NextResponse.json(
           { error: "Alternate vote link must be 100 characters or less" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -207,14 +207,14 @@ export async function POST(request: NextRequest) {
     if (normal_days < 1 || normal_days > 30) {
       return NextResponse.json(
         { error: "Normal days must be between 1 and 30" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (weekend_days < 0 || weekend_days > 7) {
       return NextResponse.json(
         { error: "Weekend days must be between 0 and 7" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -224,32 +224,32 @@ export async function POST(request: NextRequest) {
 
     const [existingBots] = await pool.execute<any[]>(
       "SELECT id FROM bots WHERE name = ?",
-      [trimmedName]
+      [trimmedName],
     );
 
     if (Array.isArray(existingBots) && existingBots.length > 0) {
       return NextResponse.json(
         { error: "A bot with this name already exists" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     const [existingVoteLinks] = await pool.execute<any[]>(
       "SELECT id FROM bots WHERE vote_link = ?",
-      [trimmedVoteLink]
+      [trimmedVoteLink],
     );
 
     if (Array.isArray(existingVoteLinks) && existingVoteLinks.length > 0) {
       return NextResponse.json(
         { error: "A bot with this vote link already exists" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     if (trimmedVoteLinkAlternate) {
       const [existingAlternateVoteLinks] = await pool.execute<any[]>(
         "SELECT id FROM bots WHERE vote_link_alternate = ?",
-        [trimmedVoteLinkAlternate]
+        [trimmedVoteLinkAlternate],
       );
 
       if (
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
       ) {
         return NextResponse.json(
           { error: "A bot with this alternate vote link already exists" },
-          { status: 409 }
+          { status: 409 },
         );
       }
     }
@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
         weekend_days,
         now,
         now,
-      ]
+      ],
     );
 
     const actor: AuditActor = {
@@ -289,10 +289,10 @@ export async function POST(request: NextRequest) {
     await logAudit(
       actor,
       "admin_action",
-      `Bot "${trimmedName}" created successfully`,
+      `@${actor.name} created "${trimmedName}" bot successfully`,
       {
         bot_id: id,
-      }
+      },
     );
 
     return NextResponse.json(
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: "Bot created successfully",
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: unknown) {
     console.error("Bot creation error:", error);
@@ -309,14 +309,14 @@ export async function POST(request: NextRequest) {
       if (error.message.includes("Duplicate entry")) {
         return NextResponse.json(
           { error: "Bot with this name or vote link already exists" },
-          { status: 409 }
+          { status: 409 },
         );
       }
     }
 
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

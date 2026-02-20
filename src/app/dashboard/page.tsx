@@ -1,13 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useState, useEffect } from "react";
-import { Bot, RefreshCw, User, TrendingUp, History } from "lucide-react";
+import {
+  Bot,
+  RefreshCw,
+  User,
+  TrendingUp,
+  History,
+  CoinsIcon,
+} from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../(components)/PageWrapper";
 import getAxiosErrorMessage from "../../utils/Variables/getAxiosError.util";
 import toast from "react-hot-toast";
 import { formatDate, formatDateTime } from "../../utils/main.util";
 import Loader from "../(components)/Loader";
+import Link from "next/link";
 
 interface AuditLog {
   id: string;
@@ -60,7 +68,7 @@ export default function UserDashboard() {
     } catch (err: unknown) {
       const message = getAxiosErrorMessage(
         err,
-        "Error fetching dashboard data"
+        "Error fetching dashboard data",
       );
       toast.error(message);
       setError(message);
@@ -175,35 +183,40 @@ export default function UserDashboard() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               {/* Total Accounts Card */}
-              <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-2 rounded-lg bg-blue-600/20">
-                    <User className="text-blue-400 h-5 w-5" />
+              <Link href={"accounts"} className="block h-full">
+                <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors h-full">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-2 rounded-lg bg-blue-600/20">
+                      <User className="text-blue-400 h-5 w-5" />
+                    </div>
                   </div>
+                  <h3 className="text-2xl font-medium text-white mb-1">
+                    {stats.total_accounts}
+                  </h3>
+                  <p className="text-stone-400 text-sm">Total Accounts</p>
                 </div>
-                <h3 className="text-2xl font-medium text-white mb-1">
-                  {stats.total_accounts}
-                </h3>
-                <p className="text-stone-400 text-sm">Total Accounts</p>
-              </div>
+              </Link>
 
               {/* Total Trades Card */}
-              <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-2 rounded-lg bg-green-600/20">
-                    <TrendingUp className="text-green-400 h-5 w-5" />
+              <Link href={"crosstrade-logs"} className="block h-full">
+                <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors h-full">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-2 rounded-lg bg-green-600/20">
+                      <TrendingUp className="text-green-400 h-5 w-5" />
+                    </div>
                   </div>
+                  <h3 className="text-2xl font-medium text-white mb-1">
+                    {stats.total_trades}
+                  </h3>
+                  <p className="text-stone-400 text-sm">Total Trades</p>
                 </div>
-                <h3 className="text-2xl font-medium text-white mb-1">
-                  {stats.total_trades}
-                </h3>
-                <p className="text-stone-400 text-sm">Total Trades</p>
-              </div>
+              </Link>
 
-              <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors">
+              {/* Auto Vote Card - Keep as is since it already has full height */}
+              <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors h-full">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-2 rounded-lg bg-purple-600/20">
-                    <RefreshCw className="text-purple-400 h-5 w-5" />
+                    <CoinsIcon className="text-purple-400 h-5 w-5" />
                   </div>
                 </div>
                 <h3 className="text-2xl font-medium text-white mb-1">Vote</h3>
@@ -215,7 +228,7 @@ export default function UserDashboard() {
                   disabled={autoVoteLoading}
                   className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <RefreshCw
+                  <CoinsIcon
                     className={`h-4 w-4 ${
                       autoVoteLoading ? "animate-spin" : ""
                     }`}
@@ -251,7 +264,7 @@ export default function UserDashboard() {
                         <div className="flex items-start space-x-3 w-full">
                           <div
                             className={`p-2 rounded shrink-0 ${getActionBg(
-                              log.action_type
+                              log.action_type,
                             )} ${getActionColor(log.action_type)}`}
                           >
                             {getActionIcon(log.action_type)}
@@ -270,10 +283,10 @@ export default function UserDashboard() {
                               </div>
                               <div className="flex items-center">
                                 <span
-                                  className={`rounded p-1 text-xs ${getActionBg(
-                                    log.action_type
+                                  className={`rounded p-1 px-2 text-xs ${getActionBg(
+                                    log.action_type,
                                   )} ${getActionColor(
-                                    log.action_type
+                                    log.action_type,
                                   )} whitespace-nowrap`}
                                 >
                                   {formatActionType(log.action_type)}
@@ -316,7 +329,7 @@ export default function UserDashboard() {
                                         {String(value)}
                                       </span>
                                     </React.Fragment>
-                                  )
+                                  ),
                                 )}
                               </div>
                             )}

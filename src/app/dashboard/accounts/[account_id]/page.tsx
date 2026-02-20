@@ -22,6 +22,7 @@ import {
   X,
   AlertTriangle,
   FileSpreadsheet,
+  Loader2Icon,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -78,7 +79,6 @@ export default function GameAccountManager() {
   const [loading, setLoading] = useState<boolean>(true);
   const [account, setAccount] = useState<BotAccountResponse | null>(null);
 
-  // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
 
@@ -185,7 +185,7 @@ export default function GameAccountManager() {
     currency: bot.currency_name,
     lastTrade: bot.last_crosstraded_at
       ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(
-          bot.last_crosstraded_at
+          bot.last_crosstraded_at,
         )})`
       : "--",
     cooldown: bot.last_crosstraded_at || "",
@@ -642,7 +642,7 @@ export default function GameAccountManager() {
                 >
                   {deleting ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <Loader2Icon size={16} className="animate-spin" />
                       Deleting...
                     </>
                   ) : (

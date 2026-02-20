@@ -3,7 +3,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import PageWrapper from "../../../../(components)/PageWrapper";
 import Link from "next/link";
-import { ArrowLeft, CreditCard, RefreshCw, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  CreditCard,
+  RefreshCw,
+  AlertCircle,
+  CoinsIcon,
+  Edit,
+} from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../../../utils/Variables/getAxiosError.util";
@@ -224,14 +231,16 @@ export default function AccountWalletPage() {
                 <div className="pt-3 border-t border-stone-800 flex justify-center gap-2">
                   <button
                     onClick={() => handleEditClick(bot)}
-                    className={`w-full px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer`}
+                    className={`w-full px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-2`}
                   >
+                    <Edit size={14} />
                     Edit
                   </button>
                   <button
                     onClick={() => handleVotedClick(bot.id)}
-                    className={`w-full px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer`}
+                    className={`w-full px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-2`}
                   >
+                    <CoinsIcon size={14} />
                     I&apos;ve Voted
                   </button>
                 </div>

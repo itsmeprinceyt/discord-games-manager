@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
     await logAudit(
       actor,
       "user_action",
-      `User updated bots for account #${botAccountId} (Added: ${botIdsToAdd.length}, Removed: ${botIdsToRemove.length})`,
+      `@${actor.name} updated selected bots for account #${botAccountId} (Added: ${botIdsToAdd.length}, Removed: ${botIdsToRemove.length})`,
       auditDetails,
     );
 

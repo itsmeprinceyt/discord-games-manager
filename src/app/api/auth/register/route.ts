@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     if (!username || !email || !password) {
       return NextResponse.json(
         { error: "All fields are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -28,21 +28,21 @@ export async function POST(request: NextRequest) {
     if (!trimmedUsername || !trimmedEmail || !trimmedPassword) {
       return NextResponse.json(
         { error: "All fields are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!isValidEmail(trimmedEmail)) {
       return NextResponse.json(
         { error: "Invalid email format" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (trimmedPassword.length < 8) {
       return NextResponse.json(
         { error: "Password must be at least 8 characters long" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (preparedUsername.length < 3 || preparedUsername.length > 50) {
       return NextResponse.json(
         { error: "Username must be between 3 and 50 characters" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     if (!passwordRegex.test(trimmedPassword)) {
       return NextResponse.json(
         { error: "Password must contain at least one letter and one number" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -69,13 +69,13 @@ export async function POST(request: NextRequest) {
 
     const [existingUsers] = await pool.execute<any[]>(
       "SELECT id FROM users WHERE email = ? OR username = ?",
-      [trimmedEmail, preparedUsername]
+      [trimmedEmail, preparedUsername],
     );
 
     if (Array.isArray(existingUsers) && existingUsers.length > 0) {
       return NextResponse.json(
         { error: "Email or username already exists" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     await pool.execute(
       "INSERT INTO users (id, username, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)",
-      [id, preparedUsername, trimmedEmail, passwordHash, now]
+      [id, preparedUsername, trimmedEmail, passwordHash, now],
     );
 
     const newUser: AuditActor = {
@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
     await logAudit(
       newUser,
       "user_signup",
-      "New user registered successfully",
-      {}
+      `@${preparedUsername} registered successfully`,
+      {},
     );
 
     return NextResponse.json(
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         message: "User registered successfully",
         userId: id,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: unknown) {
     console.error("Registration error:", error);

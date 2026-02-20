@@ -16,6 +16,7 @@ import PageWrapper from "../(components)/PageWrapper";
 import getAxiosErrorMessage from "../../utils/Variables/getAxiosError.util";
 import toast from "react-hot-toast";
 import { formatDate, formatDateTime } from "../../utils/main.util";
+import Loader from "../(components)/Loader";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -35,7 +36,7 @@ export default function AdminDashboard() {
       setError(null);
 
       const response = await axios.get<AdminDashboardResponse>(
-        "/api/admin/dashboard"
+        "/api/admin/dashboard",
       );
 
       if (response.data.success) {
@@ -45,7 +46,7 @@ export default function AdminDashboard() {
     } catch (err: unknown) {
       const message = getAxiosErrorMessage(
         err,
-        "Error fetching dashboard data"
+        "Error fetching dashboard data",
       );
       toast.error(message);
       setError(message);
@@ -139,11 +140,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Loading State */}
-        {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          </div>
-        )}
+        {loading && <Loader />}
 
         {/* Error State */}
         {error && !loading && (
@@ -203,7 +200,7 @@ export default function AdminDashboard() {
                         <div className="flex items-start space-x-3 w-full">
                           <div
                             className={`p-2 rounded shrink-0 ${getStatusBg(
-                              status
+                              status,
                             )} ${getStatusColor(status)}`}
                           >
                             {getActionIcon(log.action_type)}
@@ -222,10 +219,10 @@ export default function AdminDashboard() {
                               </div>
                               <div className="flex items-center">
                                 <span
-                                  className={`rounded p-1 text-xs ${getStatusBg(
-                                    status
+                                  className={`rounded p-1 px-2 text-xs ${getStatusBg(
+                                    status,
                                   )} ${getStatusColor(
-                                    status
+                                    status,
                                   )} whitespace-nowrap`}
                                 >
                                   {formatActionType(log.action_type)}
@@ -268,7 +265,7 @@ export default function AdminDashboard() {
                                         {String(value)}
                                       </span>
                                     </React.Fragment>
-                                  )
+                                  ),
                                 )}
                               </div>
                             )}

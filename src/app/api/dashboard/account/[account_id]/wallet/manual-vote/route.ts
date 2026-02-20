@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../auth/[...nextauth]/route";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
+import { getCurrentDateTime } from "../../../../../../../utils/Variables/getDateTime.util";
 
 interface AddDailyRewardRequest {
   bot_id: string;
@@ -14,7 +15,7 @@ export async function POST(
   request: Request,
   context: {
     params: Promise<{ account_id: string }>;
-  }
+  },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -22,7 +23,7 @@ export async function POST(
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -32,7 +33,7 @@ export async function POST(
     if (!accountId) {
       return NextResponse.json(
         { error: "Account ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -42,7 +43,7 @@ export async function POST(
     if (!bot_id || typeof bot_id !== "string") {
       return NextResponse.json(
         { error: "Bot ID is required and must be a string" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -56,11 +57,12 @@ export async function POST(
         sb.balance,
         sb.name,
         sb.currency_name,
-        ba.user_id
+        ba.user_id,
+        ba.name as account_name
        FROM selected_bot sb
        INNER JOIN bot_accounts ba ON sb.bot_account_id = ba.id
        WHERE sb.id = ? AND ba.id = ?`,
-      [bot_id, accountId]
+      [bot_id, accountId],
     );
 
     if (
@@ -70,9 +72,9 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Bot not found or you don't have permission to access this bot",
+            "Account not found or you don't have permission to access this account",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -81,9 +83,9 @@ export async function POST(
     if (bot.user_id !== session.user.id) {
       return NextResponse.json(
         {
-          error: "Unauthorized - You are not the owner of this bot",
+          error: "Unauthorized - You are not the owner of this account",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -98,7 +100,7 @@ export async function POST(
         updated_at
        FROM bots 
        WHERE name = ?`,
-      [bot.name]
+      [bot.name],
     );
 
     if (!Array.isArray(botsResults) || botsResults.length === 0) {
@@ -106,37 +108,38 @@ export async function POST(
         {
           error: "Bot configuration not found in system",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const botConfig = botsResults[0];
 
     const now = new Date();
-    const currentDay = now.getDay();
+    const utcDay = now.getUTCDay(); // 0 = Sunday, 6 = Saturday in UTC
 
     let rewardAmount: number;
 
-    if (currentDay === 0 || currentDay === 6) {
+    // Check if it's weekend in UTC (0 = Sunday, 6 = Saturday)
+    if (utcDay === 0 || utcDay === 6) {
       rewardAmount = botConfig.weekend_days;
     } else {
       rewardAmount = botConfig.normal_days;
     }
 
-    const updatedAt = new Date().toISOString();
+    const updatedAt = getCurrentDateTime();
     const newBalance = (bot.balance || 0) + rewardAmount;
 
     const [updateResult] = await pool.execute<any[]>(
       `UPDATE selected_bot 
        SET balance = ?, voted_at = ?, updated_at = ?
        WHERE id = ? AND bot_account_id = ?`,
-      [newBalance, updatedAt, updatedAt, bot_id, accountId]
+      [newBalance, updatedAt, updatedAt, bot_id, accountId],
     );
 
     if ((updateResult as any).affectedRows === 0) {
       return NextResponse.json(
         { error: "Failed to add daily reward to bot balance" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -149,17 +152,18 @@ export async function POST(
     await logAudit(
       actor,
       "user_action",
-      `User added vote reward manually to bot (${bot_id}) for account (${account_id})`,
+      `@${actor.name} added vote reward manually to bot (${botConfig.name} - #${bot_id}) for account (${bot.account_name} - #${account_id})`,
       {
         bot_id: bot_id,
         account_id: accountId,
         bot_name: bot.name,
-        day_type: currentDay === 0 || currentDay === 6 ? "weekend" : "normal",
-        day_of_week: currentDay,
+        day_type: utcDay === 0 || utcDay === 6 ? "weekend" : "normal",
+        day_of_week_utc: utcDay,
+        timestamp_utc: updatedAt,
         reward_amount: rewardAmount,
         previous_balance: bot.balance,
         new_balance: newBalance,
-      }
+      },
     );
 
     return NextResponse.json(
@@ -168,9 +172,11 @@ export async function POST(
         message: `Vote reward added for ${bot.name}`,
         data: {
           new_balance: newBalance,
+          day_type: utcDay === 0 || utcDay === 6 ? "weekend" : "normal",
+          day_of_week_utc: utcDay,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: unknown) {
     console.error("Error adding daily reward:", error);
@@ -179,14 +185,14 @@ export async function POST(
       if (error.message.includes("JSON")) {
         return NextResponse.json(
           { error: "Invalid request body format" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

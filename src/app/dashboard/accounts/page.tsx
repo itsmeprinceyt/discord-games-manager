@@ -15,6 +15,7 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  Loader2Icon,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../../(components)/PageWrapper";
@@ -120,11 +121,11 @@ export default function ManageAccounts() {
   const totalAccounts = accounts.length;
 
   const filteredAccounts = accounts.filter((account) =>
-    account.name.toLowerCase().includes(searchQuery.toLowerCase())
+    account.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const accountsWithTodos = accounts.filter(
-    (account) => account.todo_exists && account.todo
+    (account) => account.todo_exists && account.todo,
   );
 
   const hasSearchResults =
@@ -319,8 +320,8 @@ export default function ManageAccounts() {
           checked
             ? "text-green-400"
             : error
-            ? "text-yellow-400"
-            : "text-stone-400"
+              ? "text-yellow-400"
+              : "text-stone-400"
         }
       >
         {label}
@@ -757,7 +758,7 @@ export default function ManageAccounts() {
                   >
                     {submitting ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <Loader2Icon size={16} className="animate-spin" />
                         Creating...
                       </>
                     ) : (
@@ -836,7 +837,7 @@ export default function ManageAccounts() {
                   >
                     {deleting ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <Loader2Icon size={16} className="animate-spin" />
                         Deleting...
                       </>
                     ) : (

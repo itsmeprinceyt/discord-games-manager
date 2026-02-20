@@ -11,6 +11,7 @@ import {
   Calendar,
   Clock,
   GamepadDirectionalIcon,
+  Loader2Icon,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -23,6 +24,7 @@ import {
 } from "../../../utils/CSS/Button.util";
 import { BotFormData } from "../../../types/Admin/BotManager/BotManager.type";
 import { formatDateTime } from "../../../utils/main.util";
+import Loader from "../../(components)/Loader";
 
 // TODO: put this in a file
 interface AdminBot {
@@ -217,7 +219,7 @@ export default function AddBotForm() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value, type } = e.target;
 
@@ -443,8 +445,8 @@ export default function AddBotForm() {
           checked
             ? "text-green-400"
             : error
-            ? "text-yellow-400"
-            : "text-stone-400"
+              ? "text-yellow-400"
+              : "text-stone-400"
         }
       >
         {label}
@@ -456,7 +458,7 @@ export default function AddBotForm() {
     <PageWrapper withSidebar sidebarRole="admin">
       <div className="min-h-screen p-4 md:p-6">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-blue-600/20 rounded-lg">
               <Bot className="h-6 w-6 text-blue-400" />
@@ -474,13 +476,6 @@ export default function AddBotForm() {
 
         {/* Add New Bot Form */}
         <div className="mx-auto mb-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-medium text-white mb-2">Add New Bot</h2>
-            <p className="text-stone-400 text-sm">
-              Configure a new bot with custom settings and currency system
-            </p>
-          </div>
-
           <div className="p-6 bg-black/30 border border-stone-800 rounded-lg">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Bot Name Field */}
@@ -745,7 +740,7 @@ export default function AddBotForm() {
                 >
                   {loading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <Loader2Icon size={18} className="animate-spin" />
                       Creating...
                     </>
                   ) : (
@@ -770,10 +765,7 @@ export default function AddBotForm() {
           </div>
 
           {botsLoading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-stone-400 mt-2">Loading bots...</p>
-            </div>
+            <Loader />
           ) : bots.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-stone-700 rounded-lg">
               <Bot className="h-12 w-12 text-stone-600 mx-auto mb-4" />
