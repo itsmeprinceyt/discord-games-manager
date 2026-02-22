@@ -88,7 +88,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
         'game_account_delete',
         'system',
         'admin_action',
-        'user_action'
+        'user_action',
+        'crosstrade_entry',
+        'wallet_update',
+        'crosstrade_update',
+        'vote_trigger'
     ) NOT NULL,
     actor_user_id CHAR(36),
     target_user_id CHAR(36),

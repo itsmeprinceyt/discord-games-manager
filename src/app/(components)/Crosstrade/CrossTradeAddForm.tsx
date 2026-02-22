@@ -8,12 +8,14 @@ import {
   Check,
   Loader2,
   AlertCircle,
+  Wallet,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../utils/Variables/getAxiosError.util";
 import { CrossTradeRequestAPI } from "../../api/dashboard/account/[account_id]/crosstrade/route";
 import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
+import { SingleBotWalletResponse } from "../../api/dashboard/account/[account_id]/wallet/single-balance/route";
 
 // TODO: put in the file
 interface BotAssociated {
@@ -61,6 +63,8 @@ interface CrossTradeFormData {
   paid: boolean;
   note: string;
   selected_bot_id?: string;
+  deduct_from_wallet?: boolean;
+  deducted_amount?: number;
 }
 
 const getLocalDateTimeString = () => {
@@ -107,6 +111,15 @@ export default function CrossTradeForm({
 }: CrossTradeFormProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // State for wallet deduction
+  const [showWalletDeduction, setShowWalletDeduction] =
+    useState<boolean>(false);
+  const [walletInfo, setWalletInfo] = useState<SingleBotWalletResponse | null>(
+    null
+  );
+  const [loadingWalletInfo, setLoadingWalletInfo] = useState<boolean>(false);
+  const [deductAmount, setDeductAmount] = useState<string>("");
 
   const [amountChecks, setAmountChecks] = useState({
     required: false,
@@ -170,6 +183,8 @@ export default function CrossTradeForm({
         paid: tradeToEdit.paid,
         note: tradeToEdit.note || "",
         selected_bot_id: selectedBotId,
+        deduct_from_wallet: false,
+        deducted_amount: 0,
       };
     }
 
@@ -187,12 +202,70 @@ export default function CrossTradeForm({
       paid: true,
       note: "",
       selected_bot_id: bot_associated.length > 0 ? bot_associated[0].id : "",
+      deduct_from_wallet: false,
+      deducted_amount: 0,
     };
   };
 
   const [formData, setFormData] = useState<CrossTradeFormData>(
     getInitialFormData()
   );
+
+  // Fetch wallet info when toggle is enabled and bot is selected
+  useEffect(() => {
+    const fetchWalletInfo = async () => {
+      if (!showWalletDeduction || !formData.selected_bot_id || isEditing) {
+        setWalletInfo(null);
+        setDeductAmount("");
+        return;
+      }
+
+      setLoadingWalletInfo(true);
+      try {
+        const response = await axios.post(
+          `/api/dashboard/account/${accountId}/wallet/single-balance`,
+          { botAccount: formData.selected_bot_id }
+        );
+
+        if (response.data.success) {
+          setWalletInfo({
+            currency_name: response.data.data.currency_name,
+            balance: response.data.data.balance,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching wallet info:", error);
+        toast.error("Failed to fetch wallet information");
+        setWalletInfo(null);
+      } finally {
+        setLoadingWalletInfo(false);
+      }
+    };
+
+    fetchWalletInfo();
+  }, [showWalletDeduction, formData.selected_bot_id, accountId, isEditing]);
+
+  const handleDeductAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    if (value === "" || /^\d+$/.test(value)) {
+      const numValue = value === "" ? 0 : parseInt(value, 10);
+
+      if (walletInfo && numValue > walletInfo.balance) {
+        setDeductAmount(walletInfo.balance.toString());
+        setFormData((prev) => ({
+          ...prev,
+          deducted_amount: walletInfo.balance,
+        }));
+      } else {
+        setDeductAmount(value);
+        setFormData((prev) => ({
+          ...prev,
+          deducted_amount: numValue,
+        }));
+      }
+    }
+  };
 
   // Validate datetime input
   const validateDateTime = (dateTimeString: string) => {
@@ -422,7 +495,14 @@ export default function CrossTradeForm({
       selected_bot_id:
         formData.selected_bot_id ||
         (bot_associated.length > 0 ? bot_associated[0].id : ""),
+      deduct_from_wallet: false,
+      deducted_amount: 0,
     });
+
+    // Reset wallet deduction state
+    setShowWalletDeduction(false);
+    setWalletInfo(null);
+    setDeductAmount("");
 
     setAmountChecks({ required: false, positive: false });
     setNetAmountChecks({ required: false, positive: false });
@@ -466,6 +546,13 @@ export default function CrossTradeForm({
         ...prev,
         [name]: checkbox.checked,
       }));
+
+      if (name === "deduct_from_wallet") {
+        setShowWalletDeduction(checkbox.checked);
+        if (!checkbox.checked) {
+          setDeductAmount("");
+        }
+      }
     } else if (type === "number") {
       const numValue = Number(value);
       setFormData((prev) => ({
@@ -528,6 +615,20 @@ export default function CrossTradeForm({
       return;
     }
 
+    if (showWalletDeduction && walletInfo) {
+      const amount = parseInt(deductAmount, 10);
+      if (!amount || amount <= 0) {
+        toast.error("Please enter a valid positive amount to deduct");
+        return;
+      }
+      if (amount > walletInfo.balance) {
+        toast.error(
+          `Insufficient balance. Available: ${walletInfo.balance} ${walletInfo.currency_name}`
+        );
+        return;
+      }
+    }
+
     validateAmountReceived(formData.amount_received);
     validateNetAmount(formData.net_amount);
     validateRate(formData.rate);
@@ -577,6 +678,8 @@ export default function CrossTradeForm({
         traded: formData.traded,
         paid: formData.paid,
         note: formData.note.trim() || null,
+        deduct_from_wallet: showWalletDeduction,
+        deducted_amount: deductAmount ? parseInt(deductAmount, 10) : null,
       };
 
       if (formData.selected_bot_id) {
@@ -680,11 +783,7 @@ export default function CrossTradeForm({
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Currency <span className="text-red-400">*</span>
             </label>
-            <div
-              className="flex gap
-
-3"
-            >
+            <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => handleCurrencyChange("inr")}
@@ -762,6 +861,111 @@ export default function CrossTradeForm({
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* Wallet Deduction Toggle - Only show in add mode */}
+          {!isEditing && bot_associated.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-stone-900/50 border border-stone-700 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Wallet className="h-5 w-5 text-stone-400" />
+                  <div>
+                    <label className="text-sm font-medium text-white">
+                      Deduct amount from wallet
+                    </label>
+                    <p className="text-xs text-stone-500">
+                      Automatically deduct from selected bot&apos;s wallet
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWalletDeduction(!showWalletDeduction);
+                    setFormData((prev) => ({
+                      ...prev,
+                      deduct_from_wallet: !showWalletDeduction,
+                    }));
+                    if (!showWalletDeduction) {
+                      setDeductAmount("");
+                    }
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                    showWalletDeduction ? "bg-blue-700" : "bg-stone-700"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      showWalletDeduction ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Wallet Deduction Input - Shown when toggle is on */}
+              {showWalletDeduction && (
+                <div className="space-y-3 p-3 bg-stone-900/50 border border-stone-700 rounded-lg">
+                  {loadingWalletInfo ? (
+                    <div className="flex items-center gap-2 text-stone-400">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">Fetching wallet info...</span>
+                    </div>
+                  ) : walletInfo ? (
+                    <>
+                      <div className="flex items-center justify-between border-b border-stone-700 pb-2.5">
+                        <span className="text-sm text-stone-400">
+                          Available in wallet:
+                        </span>
+                        <span className="text-lg font-medium text-white">
+                          {walletInfo.balance}{" "}
+                          {walletInfo.balance > 1
+                            ? `${walletInfo.currency_name}s`
+                            : walletInfo.currency_name}
+                        </span>
+                      </div>
+
+                      {walletInfo.balance === 0 ? (
+                        <div>
+                          <p className="text-xs text-red-500">
+                            Insufficient balance.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-stone-300">
+                            Amount to deduct
+                          </label>
+                          <input
+                            type="text"
+                            value={deductAmount}
+                            onChange={handleDeductAmountChange}
+                            className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600"
+                            placeholder="Enter amount"
+                          />
+                          {deductAmount && walletInfo && (
+                            <p className="text-xs text-blue-500">
+                              New Wallet Balance:{" "}
+                              {parseInt(deductAmount, 10) > walletInfo.balance
+                                ? "0"
+                                : `${
+                                    walletInfo.balance - Number(deductAmount)
+                                  }`}{" "}
+                              {walletInfo.balance > 1
+                                ? `${walletInfo.currency_name}s`
+                                : walletInfo.currency_name}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-yellow-500">
+                      No wallet found for this bot
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

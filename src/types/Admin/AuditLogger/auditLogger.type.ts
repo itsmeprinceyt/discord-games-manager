@@ -14,4 +14,8 @@ export type AuditActionType =
   | "game_account_delete"
   | "system"
   | "admin_action"
-  | "user_action";
+  | "user_action"
+  | "crosstrade_entry"
+  | "wallet_update"
+  | "crosstrade_update"
+  | "vote_trigger";
