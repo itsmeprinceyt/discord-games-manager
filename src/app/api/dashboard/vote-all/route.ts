@@ -13,7 +13,7 @@ export async function POST() {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -38,7 +38,7 @@ export async function POST() {
        INNER JOIN bot_accounts ba ON sb.bot_account_id = ba.id
        INNER JOIN bots b ON sb.name = b.name
        WHERE ba.user_id = ?`,
-      [session.user.id],
+      [session.user.id]
     );
 
     if (!Array.isArray(userBots) || userBots.length === 0) {
@@ -48,7 +48,7 @@ export async function POST() {
           message: "No bots found for this user",
           data: { updated_bots: 0, total_reward: 0 },
         },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -68,8 +68,8 @@ export async function POST() {
           `UPDATE selected_bot 
            SET balance = ?, voted_at = ?, updated_at = ?
            WHERE id = ?`,
-          [newBalance, updatedAt, updatedAt, bot.id],
-        ),
+          [newBalance, updatedAt, updatedAt, bot.id]
+        )
       );
     }
 
@@ -83,7 +83,7 @@ export async function POST() {
 
     await logAudit(
       actor,
-      "user_action",
+      "vote_trigger",
       `@${actor.name} triggered Vote All for ${userBots.length} bot(s)`,
       {
         user_id: session.user.id,
@@ -92,7 +92,7 @@ export async function POST() {
         day_type: utcDay === 0 || utcDay === 6 ? "weekend" : "normal",
         day_of_week_utc: utcDay,
         timestamp_utc: updatedAt,
-      },
+      }
     );
 
     return NextResponse.json(
@@ -106,14 +106,14 @@ export async function POST() {
           day_of_week_utc: utcDay,
         },
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error: unknown) {
     console.error("Error in auto-vote:", error);
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
