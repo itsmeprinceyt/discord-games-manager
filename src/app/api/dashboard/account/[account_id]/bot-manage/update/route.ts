@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -51,14 +51,14 @@ export async function POST(request: NextRequest) {
     if (!botAccountId) {
       return NextResponse.json(
         { error: "Missing required field: botAccountId" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     if (!Array.isArray(botIds)) {
       return NextResponse.json(
         { error: "botIds must be an array" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -68,14 +68,14 @@ export async function POST(request: NextRequest) {
 
     // Check if bot account exists and belongs to the user
     const [accountExists] = await pool.execute<any[]>(
-      "SELECT id, user_id FROM bot_accounts WHERE id = ?",
-      [botAccountId],
+      "SELECT id, name as account_name, user_id FROM bot_accounts WHERE id = ?",
+      [botAccountId]
     );
 
     if (!Array.isArray(accountExists) || accountExists.length === 0) {
       return NextResponse.json(
         { error: "Bot account not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     if (accountExists[0].user_id !== session.user.id) {
       return NextResponse.json(
         { error: "Unauthorized - You don't own this bot account" },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
        FROM selected_bot sb
        JOIN bots b ON sb.name = b.name
        WHERE sb.bot_account_id = ?`,
-      [botAccountId],
+      [botAccountId]
     );
 
     const currentBotIds = currentSelectedBots.map((bot) => bot.bot_id);
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
             bots: remainingBots,
           },
         },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -148,13 +148,13 @@ export async function POST(request: NextRequest) {
         // First delete crosstrades associated with these selected_bots
         await pool.execute(
           `DELETE FROM crosstrades WHERE selected_bot_id IN (${deletePlaceholders})`,
-          selectedBotsToRemove,
+          selectedBotsToRemove
         );
 
         // Then delete the selected_bot records
         await pool.execute(
           `DELETE FROM selected_bot WHERE id IN (${deletePlaceholders})`,
-          selectedBotsToRemove,
+          selectedBotsToRemove
         );
 
         crosstradesDeleted = true;
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         `SELECT id, name, currency_name, normal_days, weekend_days 
          FROM bots 
          WHERE id IN (${addPlaceholders})`,
-        botIdsToAdd,
+        botIdsToAdd
       );
 
       if (
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       ) {
         return NextResponse.json(
           { error: "One or more bots not found" },
-          { status: 404 },
+          { status: 404 }
         );
       }
 
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
               null,
               null,
               now,
-            ],
+            ]
           );
 
           return {
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
             normal_days: bot.normal_days,
             weekend_days: bot.weekend_days,
           };
-        }),
+        })
       );
     }
 
@@ -251,25 +251,21 @@ export async function POST(request: NextRequest) {
 
     const auditDetails: any = {
       user_id: session.user.id,
-      total_bots: allBots.length,
-      bot_account_updated_at: now,
     };
 
     if (botIdsToAdd.length > 0) {
-      auditDetails.added_bots = botIdsToAdd.length;
       auditDetails.added_bot_names = addedBots.map((bot) => bot.name);
     }
 
     if (botIdsToRemove.length > 0) {
-      auditDetails.removed_bots = botIdsToRemove.length;
       auditDetails.crosstrades_deleted = crosstradesDeleted;
     }
 
     await logAudit(
       actor,
       "user_action",
-      `@${actor.name} updated selected bots for account #${botAccountId} (Added: ${botIdsToAdd.length}, Removed: ${botIdsToRemove.length})`,
-      auditDetails,
+      `@${actor.name} updated bots of account (${accountExists[0].account_name} - #${botAccountId}) (Added: ${botIdsToAdd.length}, Removed: ${botIdsToRemove.length})`,
+      auditDetails
     );
 
     let message = "";
@@ -296,7 +292,7 @@ export async function POST(request: NextRequest) {
           bot_account_updated_at: now,
         },
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error: unknown) {
     console.error("Error updating selected bots:", error);
@@ -305,14 +301,14 @@ export async function POST(request: NextRequest) {
       if (error.message.includes("foreign key constraint")) {
         return NextResponse.json(
           { error: "Invalid bot account or bot reference" },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
       if (error.message.includes("Duplicate entry")) {
         return NextResponse.json(
           { error: "Bot already selected for this account" },
-          { status: 409 },
+          { status: 409 }
         );
       }
     }
@@ -323,7 +319,7 @@ export async function POST(request: NextRequest) {
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
