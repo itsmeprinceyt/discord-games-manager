@@ -1016,7 +1016,10 @@ export default function CrossTradeForm({
                   <option value="wise">Wise</option>
                 </>
               ) : (
-                <option value="paypal">PayPal</option>
+                <>
+                  <option value="paypal">PayPal</option>
+                  <option value="wise">Wise</option>
+                </>
               )}
             </select>
           </div>
