@@ -68,7 +68,7 @@ export default function UserDashboard() {
     } catch (err: unknown) {
       const message = getAxiosErrorMessage(
         err,
-        "Error fetching dashboard data",
+        "Error fetching dashboard data"
       );
       toast.error(message);
       setError(message);
@@ -233,7 +233,7 @@ export default function UserDashboard() {
                       autoVoteLoading ? "animate-spin" : ""
                     }`}
                   />
-                  {autoVoteLoading ? "Processing..." : "Trigger Auto Vote"}
+                  {autoVoteLoading ? "Processing..." : "I've Voted"}
                 </button>
               </div>
             </div>
@@ -264,7 +264,7 @@ export default function UserDashboard() {
                         <div className="flex items-start space-x-3 w-full">
                           <div
                             className={`p-2 rounded shrink-0 ${getActionBg(
-                              log.action_type,
+                              log.action_type
                             )} ${getActionColor(log.action_type)}`}
                           >
                             {getActionIcon(log.action_type)}
@@ -284,9 +284,9 @@ export default function UserDashboard() {
                               <div className="flex items-center">
                                 <span
                                   className={`rounded p-1 px-2 text-xs ${getActionBg(
-                                    log.action_type,
+                                    log.action_type
                                   )} ${getActionColor(
-                                    log.action_type,
+                                    log.action_type
                                   )} whitespace-nowrap`}
                                 >
                                   {formatActionType(log.action_type)}
@@ -329,7 +329,7 @@ export default function UserDashboard() {
                                         {String(value)}
                                       </span>
                                     </React.Fragment>
-                                  ),
+                                  )
                                 )}
                               </div>
                             )}
