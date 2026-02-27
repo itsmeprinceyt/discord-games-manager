@@ -1,25 +1,55 @@
 "use client";
+
 import Link from "next/link";
+import Image from "next/image";
 import PageWrapper from "./(components)/PageWrapper";
 import { BLUE_Button, BLUE_Text } from "../utils/CSS/Button.util";
 
 export default function MinimalHero() {
   return (
     <PageWrapper>
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-5xl md:text-7xl text-white mb-6">
-            Games Manager{" "}
-            <span className={`${BLUE_Text} font-extralight`}>Pro</span>
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Glow Background */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {/* Blue glow */}
+          <div className="absolute w-105 h-105 bg-blue-500/30 blur-[140px] rounded-full animate-[pulse_12s_ease-in-out_infinite]" />
+
+          {/* Yellow glow */}
+          <div className="absolute w-75 h-75 bg-yellow-400/30 blur-[120px] rounded-full translate-x-24 translate-y-10 animate-[pulse_18s_ease-in-out_infinite]" />
+        </div>
+
+        {/* Content */}
+        <div className="relative text-center px-4">
+          {/* Logo */}
+          <div className="flex justify-center">
+            <div className="relative w-30 sm:w-37.5 md:w-45 lg:w-55 xl:w-65 aspect-square">
+              {/* subtle glow behind logo */}
+              <div className="absolute inset-0 bg-white/5 blur-2xl rounded-full scale-125 animate-[pulse_30s_ease-in-out_infinite]" />
+
+              <Image
+                src="/logo/logo3.svg"
+                alt="Games Manager Pro Logo"
+                fill
+                className="object-contain drop-shadow-[0_0_35px_rgba(59,130,246,0.55)]"
+                priority
+              />
+            </div>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-5xl md:text-7xl text-white mb-4 tracking-tight">
+            Games Manager <span className={`${BLUE_Text} font-light`}>Pro</span>
           </h1>
 
-          <p className="text-stone-500 mb-6 animate-pulse text-[10px]">
-            Work in progress...
+          {/* Subtitle */}
+          <p className="text-stone-400 mb-8 text-sm md:text-base">
+            Manage all your gaming accounts in one place.
           </p>
 
+          {/* CTA */}
           <Link
             href="/login"
-            className={`inline-block px-6 py-3 text-sm font-medium text-white ${BLUE_Button} rounded-full transition-colors`}
+            className={`inline-block px-7 py-3 text-sm font-medium text-white ${BLUE_Button} rounded-full transition-all hover:scale-105 active:scale-95`}
           >
             Get Started
           </Link>
