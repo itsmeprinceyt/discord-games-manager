@@ -1,6 +1,7 @@
 "use client";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { MyJWT } from "../../types/User/JWT.type";
 import {
@@ -36,12 +37,32 @@ export default function Navbar() {
   if (status === "loading") {
     return (
       <nav className="sticky top-0 z-50 border-b border-stone-800 bg-black backdrop-blur-sm">
-        <div className="mx-auto px-4">
+        <div className="mx-auto">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="animate-pulse bg-stone-800 h-6 w-20 rounded"></div>
+            {/* Logo skeleton */}
+            <div className="flex items-center px-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-linear-to-r from-blue-500/20 to-yellow-400/20 blur-xl rounded-full animate-pulse" />
+                <div className="w-12.5 h-12.5 bg-stone-800 rounded-lg animate-pulse" />
+              </div>
             </div>
-            <div className="animate-pulse bg-stone-800 h-8 w-8 rounded-full"></div>
+
+            {/* Desktop skeleton */}
+            <div className="hidden md:block">
+              <div className="relative px-4">
+                <div className="flex items-center space-x-2">
+                  {/* Avatar skeleton */}
+                  <div className="h-8 w-8 rounded-full bg-stone-800 border border-stone-700 animate-pulse" />
+                  {/* Chevron skeleton */}
+                  <div className="h-4 w-4 bg-stone-800 rounded animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile menu button skeleton */}
+            <div className="md:hidden px-4">
+              <div className="h-9 w-9 bg-stone-800 rounded-md animate-pulse" />
+            </div>
           </div>
         </div>
       </nav>
@@ -54,8 +75,19 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center px-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <span className="text-xl font-semibold text-white">GMP</span>
+            <Link
+              href="/"
+              className="flex items-center space-x-2 relative hover:scale-105 transition-all ease-in-out duration-1000"
+            >
+              <div className="absolute inset-0 bg-linear-to-r from-blue-500/30 to-yellow-400/30 blur-xl rounded-full animate-[pulse_30s_ease-in-out_infinite]" />
+              <Image
+                src="/logo/logo3.svg"
+                alt="Games Manager Pro Logo"
+                width={50}
+                height={50}
+                className="relative drop-shadow-[0_0_25px_rgba(59,130,246,0.6)]"
+                priority
+              />
             </Link>
           </div>
 
@@ -227,7 +259,7 @@ export default function Navbar() {
                   <>
                     <Link
                       href={"/admin"}
-                      onClick={() => setIsUserMenuOpen(false)}
+                      onClick={() => setIsMobileMenuOpen(false)}
                       className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
                     >
                       <LayoutDashboard className="h-4 w-4 mr-3" />
@@ -235,7 +267,7 @@ export default function Navbar() {
                     </Link>
                     <Link
                       href={"/dashboard"}
-                      onClick={() => setIsUserMenuOpen(false)}
+                      onClick={() => setIsMobileMenuOpen(false)}
                       className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
                     >
                       <LayoutDashboard className="h-4 w-4 mr-3" />
@@ -245,7 +277,7 @@ export default function Navbar() {
                 ) : (
                   <Link
                     href={"/dashboard"}
-                    onClick={() => setIsUserMenuOpen(false)}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
                   >
                     <LayoutDashboard className="h-4 w-4 mr-3" />
@@ -267,7 +299,7 @@ export default function Navbar() {
                 <div className="border-t border-stone-800">
                   <button
                     onClick={async () => {
-                      setIsUserMenuOpen(false);
+                      setIsMobileMenuOpen(false);
                       await signOut({ callbackUrl: "/login" });
                     }}
                     className="w-full flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors cursor-pointer"
