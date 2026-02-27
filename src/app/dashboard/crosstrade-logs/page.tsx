@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import PageWrapper from "../../(components)/PageWrapper";
 import Link from "next/link";
 import {
-  ArrowLeft,
   RefreshCw,
   DollarSign,
   IndianRupee,
@@ -200,21 +199,13 @@ export default function UserCrossTradeLogs() {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Link
-                href={`/dashboard`}
-                className="p-2 hover:bg-stone-800 rounded-lg transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="h-5 w-5 text-stone-400" />
-              </Link>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-medium text-white">
-                  Cross Trade Logs
-                </h1>
-                <p className="text-stone-400 text-sm">
-                  View all cross trades across all your accounts
-                </p>
-              </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
+                Crosstrade Logs
+              </h1>
+              <p className="text-stone-400 text-sm">
+                View all crosstrades at one place!
+              </p>
             </div>
 
             <div className="flex justify-end flex-wrap gap-3">
