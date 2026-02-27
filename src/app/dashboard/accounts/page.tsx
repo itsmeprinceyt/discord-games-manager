@@ -50,7 +50,7 @@ function Tooltip({
     <div className="relative group flex items-center justify-center">
       {children}
 
-      <div className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-black px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-all duration-150 group-hover:opacity-100 group-hover:-translate-y-1 border border-stone-900">
+      <div className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-950 px-3 py-1.5 text-xs text-white opacity-0 shadow-lg transition-all duration-150 group-hover:opacity-100 group-hover:-translate-y-1 border border-stone-900">
         {label}
       </div>
     </div>
@@ -121,11 +121,11 @@ export default function ManageAccounts() {
   const totalAccounts = accounts.length;
 
   const filteredAccounts = accounts.filter((account) =>
-    account.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    account.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const accountsWithTodos = accounts.filter(
-    (account) => account.todo_exists && account.todo,
+    (account) => account.todo_exists && account.todo
   );
 
   const hasSearchResults =
@@ -320,8 +320,8 @@ export default function ManageAccounts() {
           checked
             ? "text-green-400"
             : error
-              ? "text-yellow-400"
-              : "text-stone-400"
+            ? "text-yellow-400"
+            : "text-stone-400"
         }
       >
         {label}
@@ -878,7 +878,7 @@ const AccountCard = ({
   onDeleteClick: (id: string, name: string) => void;
   onTodoClick: (id: string, name: string) => void;
 }) => (
-  <div className="flex flex-col justify-between gap-4 bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800 hover:scale-101 transition-all ease-in-out duration-150">
+  <div className="flex flex-col justify-between gap-4 bg-stone-950 border border-stone-900 rounded-xl p-4 hover:border-stone-800">
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="bg-stone-900 border border-stone-800 text-stone-300 rounded-full font-bold w-10 h-10 flex items-center justify-center">

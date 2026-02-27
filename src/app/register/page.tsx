@@ -31,6 +31,14 @@ export default function RegisterPage() {
   const [passwordError, setPasswordError] = useState<string>("");
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
 
+  const [passwordChecks, setPasswordChecks] = useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+  });
+
   const [usernameValidation, setUsernameValidation] = useState({
     checking: false,
     available: null as boolean | null,
@@ -170,8 +178,24 @@ export default function RegisterPage() {
     const trimmed = value.trim();
     if (!trimmed) {
       setPasswordError("");
+      setPasswordChecks({
+        minLength: false,
+        hasUpperCase: false,
+        hasLowerCase: false,
+        hasNumber: false,
+        hasSpecialChar: false,
+      });
       return;
     }
+
+    // Update password checks
+    setPasswordChecks({
+      minLength: trimmed.length >= 8,
+      hasUpperCase: /[A-Z]/.test(trimmed),
+      hasLowerCase: /[a-z]/.test(trimmed),
+      hasNumber: /[0-9]/.test(trimmed),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(trimmed),
+    });
 
     if (trimmed.length < 8) {
       setPasswordError("Password must be at least 8 characters");
@@ -314,6 +338,13 @@ export default function RegisterPage() {
         setEmailError("");
         setPasswordError("");
         setConfirmPasswordError("");
+        setPasswordChecks({
+          minLength: false,
+          hasUpperCase: false,
+          hasLowerCase: false,
+          hasNumber: false,
+          hasSpecialChar: false,
+        });
         setUsernameValidation({
           checking: false,
           available: null,
@@ -331,6 +362,10 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const isPasswordValid = () => {
+    return Object.values(passwordChecks).every(Boolean);
   };
 
   const isFormValid = () => {
@@ -353,6 +388,10 @@ export default function RegisterPage() {
     }
 
     if (!Object.values(usernameChecks).every(Boolean)) {
+      return false;
+    }
+
+    if (!isPasswordValid()) {
       return false;
     }
 
@@ -559,14 +598,56 @@ export default function RegisterPage() {
               )}
             </div>
 
+            {/* Password Requirements Checklist */}
+            {password.length > 0 && (
+              <div className="mt-2 p-4 bg-stone-900/30 border border-stone-800 rounded-lg">
+                <p className="text-xs text-stone-400 mb-3">
+                  Password requirements:
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <ChecklistItem
+                    checked={passwordChecks.minLength}
+                    label="At least 8 characters"
+                    error={password.length > 0 && !passwordChecks.minLength}
+                  />
+                  <ChecklistItem
+                    checked={passwordChecks.hasUpperCase}
+                    label="One uppercase letter"
+                    error={password.length > 0 && !passwordChecks.hasUpperCase}
+                  />
+                  <ChecklistItem
+                    checked={passwordChecks.hasLowerCase}
+                    label="One lowercase letter"
+                    error={password.length > 0 && !passwordChecks.hasLowerCase}
+                  />
+                  <ChecklistItem
+                    checked={passwordChecks.hasNumber}
+                    label="One number"
+                    error={password.length > 0 && !passwordChecks.hasNumber}
+                  />
+                  <ChecklistItem
+                    checked={passwordChecks.hasSpecialChar}
+                    label="One special character"
+                    error={
+                      password.length > 0 && !passwordChecks.hasSpecialChar
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="relative">
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={handleConfirmPasswordChange}
-                className={`w-full p-3 bg-stone-900/50 border ${
-                  confirmPasswordError ? "border-red-600" : "border-stone-700"
-                } rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 pr-10`}
+                className={`w-full p-3 bg-stone-900/50 border rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 pr-10 ${
+                  confirmPasswordError
+                    ? "border-red-600"
+                    : confirmPassword.length > 0 && confirmPassword === password
+                    ? "border-green-600"
+                    : "border-stone-700"
+                }`}
                 placeholder="Confirm Password"
               />
               <button
@@ -585,6 +666,16 @@ export default function RegisterPage() {
                   {confirmPasswordError}
                 </p>
               )}
+              {confirmPassword.length > 0 &&
+                !confirmPasswordError &&
+                confirmPassword === password && (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Check className="h-3 w-3 text-green-500" />
+                    <span className="text-xs text-green-500">
+                      Passwords match
+                    </span>
+                  </div>
+                )}
             </div>
 
             {error && (
