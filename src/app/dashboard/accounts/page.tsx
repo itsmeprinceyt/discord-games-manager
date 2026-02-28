@@ -125,11 +125,11 @@ export default function ManageAccounts() {
   const totalAccounts = accounts.length;
 
   const filteredAccounts = accounts.filter((account) =>
-    account.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    account.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const accountsWithTodos = accounts.filter(
-    (account) => account.todo_exists && account.todo,
+    (account) => account.todo_exists && account.todo
   );
 
   const hasSearchResults =
@@ -324,8 +324,8 @@ export default function ManageAccounts() {
           checked
             ? "text-green-400"
             : error
-              ? "text-yellow-400"
-              : "text-stone-400"
+            ? "text-yellow-400"
+            : "text-stone-400"
         }
       >
         {label}
@@ -440,10 +440,13 @@ export default function ManageAccounts() {
                               {account?.name?.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <h3 className="text-white font-medium">
+                              <Link
+                                href={`${account.id}`}
+                                className="text-white hover:text-blue-500 transition-all ease-in-out duration-150 font-semibold text-base leading-tight truncate"
+                              >
                                 {account.name}
-                              </h3>
-                              <p className="text-stone-400 text-xs">
+                              </Link>
+                              <p className="text-stone-500 text-xs mt-0.5 font-mono truncate">
                                 {account.account_uid || "No UID"}
                               </p>
                             </div>
@@ -951,7 +954,7 @@ const AccountCard = ({
                      regardless of isExpanded ──
                 */}
                 {hasAnyCooldown && (
-                  <div className="px-3 pb-2 pt-1 border-t border-stone-800/50 space-y-1">
+                  <div className="px-3 pb-2 pt-2 border-t border-stone-800/50 space-y-1">
                     {hasCrosstradeCooldown && (
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] text-stone-500">
@@ -989,9 +992,11 @@ const AccountCard = ({
                       </span>
                       <span className="text-[10px] text-stone-500">
                         {bot.last_crosstraded_at ? (
-                          `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(bot.last_crosstraded_at)})`
+                          `${formatDateTime(
+                            bot.last_crosstraded_at
+                          )} (${formatDate(bot.last_crosstraded_at)})`
                         ) : (
-                          <span className="text-stone-700">—</span>
+                          <span className="text-stone-700">--</span>
                         )}
                       </span>
                     </div>
@@ -1001,9 +1006,11 @@ const AccountCard = ({
                       </span>
                       <span className="text-[10px] text-stone-500">
                         {bot.last_currency_crosstraded_at ? (
-                          `${formatDateTime(bot.last_currency_crosstraded_at)} (${formatDate(bot.last_currency_crosstraded_at)})`
+                          `${formatDateTime(
+                            bot.last_currency_crosstraded_at
+                          )} (${formatDate(bot.last_currency_crosstraded_at)})`
                         ) : (
-                          <span className="text-stone-700">—</span>
+                          <span className="text-stone-700">--</span>
                         )}
                       </span>
                     </div>
@@ -1015,7 +1022,7 @@ const AccountCard = ({
                         {bot.voted_at ? (
                           formatDateTime(bot.voted_at)
                         ) : (
-                          <span className="text-stone-700">—</span>
+                          <span className="text-stone-700">--</span>
                         )}
                       </span>
                     </div>

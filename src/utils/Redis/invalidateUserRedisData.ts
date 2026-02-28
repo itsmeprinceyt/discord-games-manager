@@ -2,6 +2,7 @@ import { getRedis } from "../../lib/Redis/redis";
 import getAnalyticsLogsRedisKey from "./getAnalyticsLogsRedisKey";
 import getCrosstradeLogsRedisKey from "./getCrosstradeLogsRedisKey";
 import getCrosstrades from "./getCrosstrades";
+import getCurrencyCrosstradeLogsRedisKey from "./getCurrencyCrosstradeLogsRedisKey";
 import getSingleAnalyticsLogsRedisKey from "./getSingleAnalyticsLogsRedisKey";
 import getUserDashboardRedisKey from "./getUserDashboardRedisKey";
 import getUserSingleAccountDashboardRedisKey from "./getUserSingleAccountDashboardRedisKey";
@@ -13,6 +14,7 @@ export async function invalidateUserCache(userId: string): Promise<void> {
   const keys = [
     `${getAnalyticsLogsRedisKey()}:${userId}`,
     `${getUserDashboardRedisKey()}:${userId}`,
+    `${getCurrencyCrosstradeLogsRedisKey()}:${userId}`,
   ];
 
   const crosstradeKeys = await redis.keys(

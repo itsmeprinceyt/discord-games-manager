@@ -61,12 +61,6 @@ interface OptionCard {
   hoverBgColor: string;
 }
 
-interface TradeStat {
-  label: string;
-  value: string;
-  valueColor: string;
-}
-
 function BotCard({ bot }: { bot: BotInfo }) {
   const hasTraded = !!bot.last_crosstraded_at;
 
@@ -93,22 +87,6 @@ function BotCard({ bot }: { bot: BotInfo }) {
 
       {/* Trade info grid */}
       <div className="grid grid-cols-1 gap-3">
-        {/* Last Crosstrade */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[11px] text-stone-500 whitespace-nowrap">
-              Last Crosstrade
-            </span>
-          </div>
-          <span className="text-[11px] text-stone-300 text-right truncate max-w-[60%]">
-            {hasTraded ? (
-              bot.lastTrade
-            ) : (
-              <span className="text-stone-600">--</span>
-            )}
-          </span>
-        </div>
-
         {/* Crosstrade Cooldown */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5 shrink-0">
@@ -133,6 +111,39 @@ function BotCard({ bot }: { bot: BotInfo }) {
               cooldownDays={CURRENCY_COOLDOWN_DAYS}
               startDate={bot.last_currency_crosstraded_at}
             />
+          </span>
+        </div>
+
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[11px] text-stone-500 whitespace-nowrap">
+              Last Crosstrade
+            </span>
+          </div>
+          <span className="text-[11px] text-stone-600 text-right truncate max-w-[60%]">
+            {hasTraded ? (
+              bot.lastTrade
+            ) : (
+              <span className="text-stone-600">--</span>
+            )}
+          </span>
+        </div>
+
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[11px] text-stone-500 whitespace-nowrap">
+              Last Currency Crosstrade
+            </span>
+          </div>
+          <span className="text-[11px] text-stone-600 text-right truncate max-w-[60%]">
+            {bot.last_currency_crosstraded_at ? (
+              <>
+                {formatDateTime(bot.last_currency_crosstraded_at)} (
+                {formatDate(bot.last_currency_crosstraded_at)})
+              </>
+            ) : (
+              <span className="text-stone-600">--</span>
+            )}
           </span>
         </div>
       </div>
@@ -246,7 +257,9 @@ export default function GameAccountManager() {
     balance: bot.balance || 0,
     currency: bot.currency_name,
     lastTrade: bot.last_crosstraded_at
-      ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(bot.last_crosstraded_at)})`
+      ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(
+          bot.last_crosstraded_at
+        )})`
       : "--",
     cooldown: bot.last_crosstraded_at || "",
     last_crosstraded_at: bot.last_crosstraded_at,
@@ -277,12 +290,22 @@ export default function GameAccountManager() {
     {
       href: `/dashboard/accounts/${account_id}/crosstrade`,
       icon: FileSpreadsheet,
-      title: "Cross Trade Manager",
-      description: "Manage all cross trades",
+      title: "Crosstrade Manager",
+      description: "Manage all crosstrades",
       color: "purple",
       iconColor: "text-purple-400",
       hoverBorderColor: "hover:border-purple-600",
       hoverBgColor: "hover:bg-purple-900/10",
+    },
+    {
+      href: `/dashboard/accounts/${account_id}/currency-crosstrade`,
+      icon: FileSpreadsheet,
+      title: "Currency Crosstrade Manager",
+      description: "Manage all currency crosstrades",
+      color: "orange",
+      iconColor: "text-orange-400",
+      hoverBorderColor: "hover:border-orange-600",
+      hoverBgColor: "hover:bg-orange-900/10",
     },
     {
       href: `/dashboard/accounts/${account_id}/bots`,
@@ -303,24 +326,6 @@ export default function GameAccountManager() {
       iconColor: "text-emerald-400",
       hoverBorderColor: "hover:border-emerald-600",
       hoverBgColor: "hover:bg-emerald-900/10",
-    },
-  ];
-
-  const tradeStats: TradeStat[] = [
-    {
-      label: "Total Trades",
-      value: account.trade_count.toString(),
-      valueColor: "text-white",
-    },
-    {
-      label: "Net Profit ($)",
-      value: "--",
-      valueColor: "text-green-400",
-    },
-    {
-      label: "Net Profit (₹)",
-      value: "--",
-      valueColor: "text-green-400",
     },
   ];
 
@@ -454,31 +459,6 @@ export default function GameAccountManager() {
                     </p>
                   </div>
 
-                  {/* Trade Statistics */}
-                  <div className="bg-black/30 border border-stone-800 rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <BarChart3 className="h-4 w-4 text-stone-500" />
-                      <span className="text-sm text-stone-400">
-                        Trade Statistics
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {tradeStats.map((stat, index) => (
-                        <div
-                          key={index}
-                          className="flex justify-between items-center"
-                        >
-                          <span className="text-stone-400 text-sm">
-                            {stat.label}
-                          </span>
-                          <span className={`font-medium ${stat.valueColor}`}>
-                            {stat.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                   {/* Dates */}
                   <div className="bg-black/30 border border-stone-800 rounded-lg p-4 space-y-4">
                     <div className="flex items-center gap-3 mb-2">
@@ -520,7 +500,9 @@ export default function GameAccountManager() {
                       />
                       <span className="text-white text-sm">
                         {botsData.length > 0
-                          ? `${botsData.length} bot${botsData.length > 1 ? "s" : ""} active`
+                          ? `${botsData.length} bot${
+                              botsData.length > 1 ? "s" : ""
+                            } active`
                           : "No bots configured"}
                       </span>
                     </div>
@@ -550,7 +532,7 @@ export default function GameAccountManager() {
                       >
                         <div className="flex items-center justify-between mb-4">
                           <div
-                            className={`p-2 rounded-lg bg-${option.color}-600/20 group-hover:bg-${option.color}-600/30 transition-colors`}
+                            className={`p-2 rounded-lg group-hover:bg-${option.color}-600/30 transition-colors`}
                           >
                             <Icon className={`h-5 w-5 ${option.iconColor}`} />
                           </div>
