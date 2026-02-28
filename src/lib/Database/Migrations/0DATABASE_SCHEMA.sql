@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS selected_bot (
     normal_days TINYINT UNSIGNED NOT NULL,
     weekend_days TINYINT UNSIGNED NOT NULL,
     last_crosstraded_at VARCHAR(30),
+    last_currency_crosstraded_at VARCHAR(30),
     voted_at VARCHAR(30),
     updated_at VARCHAR(30) NOT NULL,
     FOREIGN KEY (bot_account_id) REFERENCES bot_accounts(id) ON DELETE CASCADE,
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS crosstrades (
     rate VARCHAR(10) DEFAULT NULL,
     conversion_rate DECIMAL(18, 12) NULL,
     net_amount DECIMAL(10, 2) NULL,
+    -- Meta
     traded_with CHAR(36) DEFAULT NULL,
     trade_link VARCHAR(100) DEFAULT NULL,
     traded BOOLEAN NOT NULL DEFAULT TRUE,
@@ -75,6 +77,31 @@ CREATE TABLE IF NOT EXISTS crosstrades (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (bot_account_id) REFERENCES bot_accounts(id) ON DELETE CASCADE,
     FOREIGN KEY (selected_bot_id) REFERENCES selected_bot(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS currency_crosstrades (
+    id CHAR(12) PRIMARY KEY,
+    user_id CHAR(12) NOT NULL,
+    -- Giving side
+    from_bot_account_id CHAR(12) NOT NULL,
+    from_selected_bot_id CHAR(12) NOT NULL,
+    from_currency_name VARCHAR(30) NOT NULL,
+    from_amount INT NOT NULL,
+    -- Receiving side
+    to_bot_account_id CHAR(12) NOT NULL,
+    to_selected_bot_id CHAR(12) NOT NULL,
+    to_currency_name VARCHAR(30) NOT NULL,
+    to_amount INT NOT NULL,
+    -- Meta
+    traded_with CHAR(36) DEFAULT NULL,
+    trade_link VARCHAR(100) DEFAULT NULL,
+    note VARCHAR(250) DEFAULT NULL,
+    created_at VARCHAR(30) NOT NULL,
+    updated_at VARCHAR(30) NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_bot_account_id) REFERENCES bot_accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_selected_bot_id) REFERENCES selected_bot(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_bot_account_id) REFERENCES bot_accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_selected_bot_id) REFERENCES selected_bot(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS audit_logs (
     id CHAR(12) NOT NULL PRIMARY KEY,

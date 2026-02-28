@@ -21,6 +21,7 @@ interface SelectedBotResponse {
   currency_name: string;
   balance: number;
   last_crosstraded_at: string | null;
+  last_currency_crosstraded_at: string | null;
   voted_at: string | null;
 }
 
@@ -31,7 +32,7 @@ export async function GET() {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -50,12 +51,13 @@ export async function GET() {
         sb.currency_name,
         sb.balance,
         sb.last_crosstraded_at,
+        sb.last_currency_crosstraded_at,
         sb.voted_at
        FROM bot_accounts ba
        LEFT JOIN selected_bot sb ON ba.id = sb.bot_account_id
        WHERE ba.user_id = ?
        ORDER BY ba.name ASC, sb.name ASC`,
-      [session.user.id]
+      [session.user.id],
     );
 
     if (!Array.isArray(results)) {
@@ -65,7 +67,7 @@ export async function GET() {
           data: [],
           count: 0,
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -97,6 +99,7 @@ export async function GET() {
           currency_name: row.currency_name,
           balance: row.balance || 0,
           last_crosstraded_at: row.last_crosstraded_at,
+          last_currency_crosstraded_at: row.last_currency_crosstraded_at,
           voted_at: row.voted_at,
         });
       }
@@ -110,14 +113,14 @@ export async function GET() {
         data: formattedAccounts,
         count: formattedAccounts.length,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: unknown) {
     console.error("Error fetching bot accounts:", error);
 
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

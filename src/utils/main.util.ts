@@ -1,3 +1,7 @@
+const COOLDOWN_DAYS: number = 14;
+const CURRENCY_COOLDOWN_DAYS: number = 7;
+//===================================================================================//
+
 /**
  * Formats a timestamp string into a localized time string (HH:MM format).
  * If the input is null or invalid, returns a fallback value.
@@ -78,24 +82,26 @@ const formatDateTime = (timestamp: string | null): string => {
 
   try {
     const date = new Date(timestamp);
-    
+
     // Check if date is valid
     if (isNaN(date.getTime())) {
       return "--";
     }
 
     // Format date part: "24 Jan, 2026"
-    const dateStr = date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    }).replace(',', ''); // Removes the comma after year
+    const dateStr = date
+      .toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+      .replace(",", ""); // Removes the comma after year
 
     // Format time part: "21:12"
-    const timeStr = date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false // Use 24-hour format
+    const timeStr = date.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false, // Use 24-hour format
     });
 
     return `${dateStr} • ${timeStr}`;
@@ -104,4 +110,10 @@ const formatDateTime = (timestamp: string | null): string => {
   }
 };
 
-export { formatTime, formatDate, formatDateTime };
+export {
+  formatTime,
+  formatDate,
+  formatDateTime,
+  COOLDOWN_DAYS,
+  CURRENCY_COOLDOWN_DAYS,
+};

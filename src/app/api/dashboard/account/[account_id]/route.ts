@@ -22,12 +22,13 @@ interface SelectedBotResponse {
   currency_name: string;
   balance: number;
   last_crosstraded_at: string | null;
+  last_currency_crosstraded_at: string | null;
   voted_at: string | null;
 }
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ account_id: string }> }
+  context: { params: Promise<{ account_id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -35,7 +36,7 @@ export async function GET(
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -45,7 +46,7 @@ export async function GET(
     if (!accountId) {
       return NextResponse.json(
         { error: "Account ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -59,7 +60,7 @@ export async function GET(
     if (cached) {
       return NextResponse.json(
         { success: true, data: cached },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -76,12 +77,13 @@ export async function GET(
         sb.currency_name,
         sb.balance,
         sb.last_crosstraded_at,
+        sb.last_currency_crosstraded_at,
         sb.voted_at
        FROM bot_accounts ba
        LEFT JOIN selected_bot sb ON ba.id = sb.bot_account_id
        WHERE ba.user_id = ? AND ba.id = ?
        ORDER BY sb.name ASC`,
-      [session.user.id, accountId]
+      [session.user.id, accountId],
     );
 
     if (!Array.isArray(results) || results.length === 0) {
@@ -90,13 +92,13 @@ export async function GET(
           success: false,
           error: "Account not found or you don't have permission to access it",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const [tradeCountResult] = await pool.execute<any[]>(
       `SELECT COUNT(*) as total_trades FROM crosstrades WHERE bot_account_id = ?`,
-      [accountId]
+      [accountId],
     );
 
     const trade_count =
@@ -121,6 +123,7 @@ export async function GET(
           currency_name: row.currency_name,
           balance: row.balance || 0,
           last_crosstraded_at: row.last_crosstraded_at,
+          last_currency_crosstraded_at: row.last_currency_crosstraded_at,
           voted_at: row.voted_at,
         });
       }
@@ -133,7 +136,7 @@ export async function GET(
     console.error("Error fetching bot account:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
