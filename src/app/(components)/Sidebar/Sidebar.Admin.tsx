@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Users,
   BarChart3,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -36,11 +35,6 @@ const adminNavItems = [
     title: "Bot Management",
     href: "/admin/bot-manager",
     icon: <Bot className="h-5 w-5" />,
-  },
-  {
-    title: "Settings",
-    href: "/admin/settings",
-    icon: <Settings className="h-5 w-5" />,
   },
   {
     title: "User Management",

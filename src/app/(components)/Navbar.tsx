@@ -168,7 +168,7 @@ export default function Navbar() {
 
                       {/* Settings */}
                       <Link
-                        href="/settings"
+                        href="/dashboard/settings"
                         onClick={() => setIsUserMenuOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
                       >

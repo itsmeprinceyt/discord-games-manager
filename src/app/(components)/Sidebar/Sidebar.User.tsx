@@ -12,6 +12,7 @@ import {
   X,
   Bookmark,
   FileSpreadsheet,
+  BarChart3,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -20,6 +21,11 @@ const userNavItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
+  },
+  {
+    title: "Analytics Logs",
+    href: "/dashboard/analytics-logs",
+    icon: <BarChart3 className="h-5 w-5" />,
   },
   {
     title: "Crosstrade Logs",

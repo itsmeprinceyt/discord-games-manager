@@ -8,6 +8,10 @@ import { getCurrentDateTime } from "../../../../../../utils/Variables/getDateTim
 import { PoolConnection } from "mysql2/promise";
 import { AuditActor } from "../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { logAudit } from "../../../../../../utils/Variables/AuditLogger.util";
+import { invalidateUserCache } from "../../../../../../utils/Redis/invalidateUserRedisData";
+import { getRedis } from "../../../../../../lib/Redis/redis";
+import getCrosstrades from "../../../../../../utils/Redis/getCrosstrades";
+import { SINGLE_USER_CROSSTRADES_TTL } from "../../../../../../utils/Redis/redisTTL";
 
 interface BotAssociated {
   id: string;
@@ -37,6 +41,7 @@ export interface CombinedResponse {
   bot_associated: BotAssociated[];
   cross_trade_logs: CrossTradeLog[];
 }
+
 export async function GET(
   request: Request,
   context: { params: Promise<{ account_id: string }> }
@@ -55,13 +60,21 @@ export async function GET(
     const accountId = account_id;
 
     await initServer();
+    const redis = getRedis();
+    const cacheKey = `${getCrosstrades()}:${session.user.id}:${accountId}`;
+
+    const cached = await redis.get<CombinedResponse>(cacheKey);
+    if (cached) {
+      return NextResponse.json(
+        { success: true, data: cached },
+        { status: 200 }
+      );
+    }
+
     const pool = db();
 
     const [accountOwnership] = await pool.execute<any[]>(
-      `
-      SELECT id FROM bot_accounts 
-      WHERE id = ? AND user_id = ?
-    `,
+      `SELECT id FROM bot_accounts WHERE id = ? AND user_id = ?`,
       [accountId, session.user.id]
     );
 
@@ -77,20 +90,12 @@ export async function GET(
     }
 
     const [selectedBots] = await pool.execute<any[]>(
-      `
-      SELECT 
-        id,
-        name
-      FROM selected_bot
-      WHERE bot_account_id = ?
-      ORDER BY name ASC
-    `,
+      `SELECT id, name FROM selected_bot WHERE bot_account_id = ? ORDER BY name ASC`,
       [accountId]
     );
 
     const [crossTrades] = await pool.execute<any[]>(
-      `
-      SELECT
+      `SELECT
         ct.id,
         ct.crosstrade_date,
         ct.currency,
@@ -107,20 +112,15 @@ export async function GET(
         ct.created_at,
         ct.updated_at,
         sb.name AS bot_name
-      FROM crosstrades ct
-      JOIN selected_bot sb
-      ON ct.selected_bot_id = sb.id
-      WHERE ct.bot_account_id = ? AND ct.user_id = ?
-      ORDER BY ct.crosstrade_date DESC
-    `,
-      [accountId, session.user.id] // Added user_id check here too
+       FROM crosstrades ct
+       JOIN selected_bot sb ON ct.selected_bot_id = sb.id
+       WHERE ct.bot_account_id = ? AND ct.user_id = ?
+       ORDER BY ct.crosstrade_date DESC`,
+      [accountId, session.user.id]
     );
 
     const botAssociated: BotAssociated[] = Array.isArray(selectedBots)
-      ? selectedBots.map((bot) => ({
-          id: bot.id,
-          name: bot.name,
-        }))
+      ? selectedBots.map((bot) => ({ id: bot.id, name: bot.name }))
       : [];
 
     const crossTradeLogs: CrossTradeLog[] = Array.isArray(crossTrades)
@@ -151,16 +151,16 @@ export async function GET(
       cross_trade_logs: crossTradeLogs,
     };
 
+    await redis.set(cacheKey, responseData, {
+      ex: SINGLE_USER_CROSSTRADES_TTL,
+    });
+
     return NextResponse.json(
-      {
-        success: true,
-        data: responseData,
-      },
+      { success: true, data: responseData },
       { status: 200 }
     );
   } catch (error: unknown) {
     console.error("Error fetching admin data:", error);
-
     return NextResponse.json(
       {
         success: false,
@@ -171,6 +171,7 @@ export async function GET(
     );
   }
 }
+
 // TODO: put in the file
 export interface CrossTradeRequestAPI {
   crosstrade_date: string;
@@ -494,6 +495,7 @@ export async function POST(request: NextRequest) {
       }
 
       await connection.commit();
+      await invalidateUserCache(session.user.id);
 
       const actor: AuditActor = {
         user_id: session.user.id,

@@ -3,8 +3,10 @@ import { NextResponse } from "next/server";
 import { initServer, db } from "../../../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
+import { getRedis } from "../../../../../lib/Redis/redis";
+import { SINGLE_USER_DASHBOARD_TTL } from "../../../../../utils/Redis/redisTTL";
+import getUserSingleAccountDashboardRedisKey from "../../../../../utils/Redis/getUserSingleAccountDashboardRedisKey";
 
-// TODO: put in a file
 export interface BotAccountResponse {
   id: string;
   name: string;
@@ -48,6 +50,19 @@ export async function GET(
     }
 
     await initServer();
+    const redis = getRedis();
+    const cacheKey = `${getUserSingleAccountDashboardRedisKey()}:${
+      session.user.id
+    }:${accountId}`;
+
+    const cached = await redis.get<BotAccountResponse>(cacheKey);
+    if (cached) {
+      return NextResponse.json(
+        { success: true, data: cached },
+        { status: 200 }
+      );
+    }
+
     const pool = db();
 
     const [results] = await pool.execute<any[]>(
@@ -80,9 +95,7 @@ export async function GET(
     }
 
     const [tradeCountResult] = await pool.execute<any[]>(
-      `SELECT COUNT(*) as total_trades
-       FROM crosstrades
-       WHERE bot_account_id = ?`,
+      `SELECT COUNT(*) as total_trades FROM crosstrades WHERE bot_account_id = ?`,
       [accountId]
     );
 
@@ -98,7 +111,7 @@ export async function GET(
       created_at: results[0].created_at,
       updated_at: results[0].updated_at,
       selected_bots: [],
-      trade_count: trade_count,
+      trade_count,
     };
 
     results.forEach((row) => {
@@ -113,16 +126,11 @@ export async function GET(
       }
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: account,
-      },
-      { status: 200 }
-    );
+    await redis.set(cacheKey, account, { ex: SINGLE_USER_DASHBOARD_TTL });
+
+    return NextResponse.json({ success: true, data: account }, { status: 200 });
   } catch (error: unknown) {
     console.error("Error fetching bot account:", error);
-
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

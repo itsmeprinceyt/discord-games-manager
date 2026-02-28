@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../auth/[...nextauth]/route";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
+import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
 
 interface RequestBody {
   botIds: string[];
@@ -242,6 +243,8 @@ export async function POST(request: NextRequest) {
       }));
 
     const allBots = [...remainingBots, ...addedBots];
+
+    await invalidateUserCache(session.user.id);
 
     const actor: AuditActor = {
       user_id: session.user.id,
