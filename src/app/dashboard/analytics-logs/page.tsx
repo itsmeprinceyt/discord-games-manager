@@ -366,7 +366,7 @@ export default function AnalyticsLogs() {
               Analytics & Reports
             </h1>
             <p className="text-stone-400 text-sm">
-              Track your cross-trade performance and earnings
+              Track your crosstrade performance and earnings
             </p>
           </div>
           <div className="flex items-center gap-2">
