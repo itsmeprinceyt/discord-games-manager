@@ -63,7 +63,7 @@ export default function AccountWalletPage() {
         else setRefreshing(true);
 
         const response = await axios.get<WalletResponse>(
-          `/api/dashboard/account/${account_id}/wallet`
+          `/api/dashboard/account/${account_id}/wallet`,
         );
 
         if (response.data.success) {
@@ -74,7 +74,7 @@ export default function AccountWalletPage() {
       } catch (err: unknown) {
         const message = getAxiosErrorMessage(
           err,
-          "Error fetching balance data"
+          "Error fetching balance data",
         );
         toast.error(message);
         console.error("Error fetching balance data:", err);
@@ -83,7 +83,7 @@ export default function AccountWalletPage() {
         setRefreshing(false);
       }
     },
-    [account_id]
+    [account_id],
   );
 
   useEffect(() => {
@@ -113,8 +113,8 @@ export default function AccountWalletPage() {
   const handleUpdateBalance = async (botId: string, newBalance: number) => {
     setWalletData((prev) =>
       prev.map((bot) =>
-        bot.id === botId ? { ...bot, balance: newBalance } : bot
-      )
+        bot.id === botId ? { ...bot, balance: newBalance } : bot,
+      ),
     );
     toast.success("Balance updated successfully!");
     fetchWalletData();
@@ -124,14 +124,14 @@ export default function AccountWalletPage() {
     try {
       const response = await axios.post(
         `/api/dashboard/account/${account_id}/wallet/manual-vote`,
-        { bot_id: botId }
+        { bot_id: botId },
       );
       if (response.data.success) {
         const { new_balance } = response.data.data;
         setWalletData((prev) =>
           prev.map((bot) =>
-            bot.id === botId ? { ...bot, balance: new_balance } : bot
-          )
+            bot.id === botId ? { ...bot, balance: new_balance } : bot,
+          ),
         );
         toast.success(response.data.message);
       }
@@ -214,7 +214,7 @@ export default function AccountWalletPage() {
                 className={`px-4 py-2 ${AMBER_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
               >
                 <Plus className="h-4 w-4" />
-                New Currency CT
+                New Crosstrade
               </button>
             </div>
           </div>

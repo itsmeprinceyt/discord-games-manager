@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import PageWrapper from "../../../(components)/PageWrapper";
 import Link from "next/link";
 import {
-  RefreshCw,
   Calendar,
   Clock,
   User,
@@ -14,7 +13,6 @@ import {
   ChevronRight,
   History,
   CreditCard,
-  BotMessageSquare,
   BotIcon,
   ArrowLeft,
   LucideIcon,
@@ -28,7 +26,11 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../../utils/Variables/getAxiosError.util";
 import CountdownTimer from "../../../(components)/CountdownTimer";
-import { formatDateTime, formatDate } from "@/utils/main.util";
+import {
+  formatDateTime,
+  formatDate,
+  CURRENCY_COOLDOWN_DAYS,
+} from "@/utils/main.util";
 import {
   BLUE_Button,
   RED_Button,
@@ -45,6 +47,7 @@ interface BotInfo {
   cooldown: string;
   isReady?: boolean;
   last_crosstraded_at: string | null;
+  last_currency_crosstraded_at: string | null;
 }
 
 interface OptionCard {
@@ -58,20 +61,83 @@ interface OptionCard {
   hoverBgColor: string;
 }
 
-interface StatCard {
-  title: string;
-  icon: LucideIcon;
-  iconBgColor: string;
-  iconColor: string;
-  badgeColor: string;
-  content: React.ReactNode;
-  description?: string;
-}
-
 interface TradeStat {
   label: string;
   value: string;
   valueColor: string;
+}
+
+function BotCard({ bot }: { bot: BotInfo }) {
+  const hasTraded = !!bot.last_crosstraded_at;
+
+  return (
+    <div className="group relative bg-stone-950 border border-stone-800 rounded-lg p-5 hover:border-stone-600 transition-all duration-300 hover:shadow-lg hover:shadow-black/40 overflow-hidden">
+      {/* Bot header */}
+      <div className="flex items-start justify-between mb-4">
+        <h3 className="text-sm font-semibold text-white leading-tight">
+          {bot.name}
+        </h3>
+        {/* Balance badge */}
+        <div className="flex flex-col items-end">
+          <span className="text-lg font-bold text-green-400 leading-tight">
+            {bot.balance.toLocaleString()}
+          </span>
+          <span className="text-[10px] text-stone-500 leading-tight">
+            {bot.balance === 1 ? bot.currency : `${bot.currency}s`}
+          </span>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="h-px bg-stone-800 mb-4" />
+
+      {/* Trade info grid */}
+      <div className="grid grid-cols-1 gap-3">
+        {/* Last Crosstrade */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[11px] text-stone-500 whitespace-nowrap">
+              Last Crosstrade
+            </span>
+          </div>
+          <span className="text-[11px] text-stone-300 text-right truncate max-w-[60%]">
+            {hasTraded ? (
+              bot.lastTrade
+            ) : (
+              <span className="text-stone-600">--</span>
+            )}
+          </span>
+        </div>
+
+        {/* Crosstrade Cooldown */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[11px] text-stone-500 whitespace-nowrap">
+              Crosstrade Cooldown
+            </span>
+          </div>
+          <span className="text-[11px] text-right">
+            <CountdownTimer startDate={bot.last_crosstraded_at} />
+          </span>
+        </div>
+
+        {/* Currency Cooldown */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[11px] text-stone-500 whitespace-nowrap">
+              Currency Crosstrade Cooldown
+            </span>
+          </div>
+          <span className="text-[11px] text-right">
+            <CountdownTimer
+              cooldownDays={CURRENCY_COOLDOWN_DAYS}
+              startDate={bot.last_currency_crosstraded_at}
+            />
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function GameAccountManager() {
@@ -107,9 +173,7 @@ export default function GameAccountManager() {
     fetchAccountData();
   }, [fetchAccountData]);
 
-  const handleDeleteClick = () => {
-    setShowDeleteModal(true);
-  };
+  const handleDeleteClick = () => setShowDeleteModal(true);
 
   const confirmDeleteAccount = async () => {
     if (!account_id || !account) {
@@ -126,8 +190,6 @@ export default function GameAccountManager() {
 
       if (response.data.success) {
         toast.success("Account deleted successfully!");
-
-        // Redirect to accounts page after successful deletion
         setTimeout(() => {
           window.location.href = "/dashboard/accounts";
         }, 1500);
@@ -184,12 +246,11 @@ export default function GameAccountManager() {
     balance: bot.balance || 0,
     currency: bot.currency_name,
     lastTrade: bot.last_crosstraded_at
-      ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(
-          bot.last_crosstraded_at
-        )})`
+      ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(bot.last_crosstraded_at)})`
       : "--",
     cooldown: bot.last_crosstraded_at || "",
     last_crosstraded_at: bot.last_crosstraded_at,
+    last_currency_crosstraded_at: bot.last_currency_crosstraded_at,
   }));
 
   const optionCards: OptionCard[] = [
@@ -263,104 +324,6 @@ export default function GameAccountManager() {
     },
   ];
 
-  const statCards: StatCard[] = [
-    {
-      title: "Wallet",
-      icon: BotMessageSquare,
-      iconBgColor: "bg-green-600/20",
-      iconColor: "text-green-400",
-      badgeColor: "bg-stone-800/50",
-      content: (
-        <>
-          {botsData.map((bot) => (
-            <h3 key={bot.name} className="text-sm text-stone-400 mb-1">
-              {bot.name}:{" "}
-              <span className="font-medium text-green-400">
-                {bot.balance}{" "}
-                {bot.balance > 1 ? `${bot.currency}s` : `${bot.currency}`}
-              </span>
-            </h3>
-          ))}
-          {botsData.length === 0 && (
-            <p className="text-stone-400 text-sm">No bots configured</p>
-          )}
-        </>
-      ),
-      description: "",
-    },
-    {
-      title: "Last Crosstrade",
-      icon: RefreshCw,
-      iconBgColor: "bg-blue-600/20",
-      iconColor: "text-blue-400",
-      badgeColor: "bg-stone-800/50",
-      content: (
-        <>
-          {botsData.map((bot) => (
-            <h3 key={bot.name} className="text-sm text-stone-400 mb-1">
-              {bot.name}:{" "}
-              <span className="font-medium text-white">{bot.lastTrade}</span>
-            </h3>
-          ))}
-          {botsData.length === 0 && (
-            <p className="text-stone-400 text-sm">No trades yet</p>
-          )}
-        </>
-      ),
-    },
-    {
-      title: "Crosstrade Cooldown",
-      icon: Calendar,
-      iconBgColor: "bg-purple-600/20",
-      iconColor: "text-purple-400",
-      badgeColor: "bg-stone-800/50",
-      content: (
-        <>
-          {botsData.map((bot) => (
-            <h3 key={bot.name} className="text-sm text-stone-400 mb-1">
-              {bot.name}: <CountdownTimer startDate={bot.last_crosstraded_at} />
-            </h3>
-          ))}
-          {botsData.length === 0 && (
-            <p className="text-stone-400 text-sm">No bots configured</p>
-          )}
-        </>
-      ),
-      description: "",
-    },
-    {
-      title: "Account Status",
-      icon: Shield,
-      iconBgColor: "bg-emerald-600/20",
-      iconColor: "text-emerald-400",
-      badgeColor:
-        account.selected_bots.length > 0
-          ? "bg-emerald-900/30"
-          : "bg-stone-800/50",
-      content: (
-        <>
-          <h3 className="text-2xl font-medium text-white mb-1">
-            {account.selected_bots.length}
-          </h3>
-          <p className="text-stone-400 text-sm">Bots in account</p>
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-stone-800">
-            {botsData.map((bot) => (
-              <div
-                key={bot.name}
-                className="bg-black text-stone-500 text-sm border border-stone-900 px-3 py-1 rounded-lg"
-              >
-                {bot.name}
-              </div>
-            ))}
-            {botsData.length === 0 && (
-              <p className="text-stone-500 text-sm">No bots selected</p>
-            )}
-          </div>
-        </>
-      ),
-    },
-  ];
-
   const quickActions = [
     {
       text: "Refresh Data",
@@ -424,35 +387,44 @@ export default function GameAccountManager() {
             </div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {statCards.map((stat, index) => (
-              <div
-                key={index}
-                className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-2 rounded-lg ${stat.iconBgColor}`}>
-                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-1 ${stat.badgeColor} text-stone-300 rounded`}
-                  >
-                    {stat.title}
-                  </span>
-                </div>
-                {stat.content}
-                {stat.description && (
-                  <p className="text-stone-400 text-xs mt-1">
-                    {stat.description}
-                  </p>
-                )}
+          {/* ── Bot Cards Section ── */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-medium text-stone-400">
+                  Configured Bots
+                </h2>
+                <span className="text-xs px-2 py-0.5 bg-stone-800 text-stone-400 rounded-full">
+                  {botsData.length}
+                </span>
               </div>
-            ))}
+            </div>
+
+            {botsData.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {botsData.map((bot) => (
+                  <BotCard key={bot.name} bot={bot} />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-black/30 border border-stone-800 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-stone-900 flex items-center justify-center">
+                  <BotIcon className="h-6 w-6 text-stone-600" />
+                </div>
+                <p className="text-stone-500 text-sm">No bots configured yet</p>
+                <Link
+                  href={`/dashboard/accounts/${account_id}/bots`}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Add bots →
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Account Details */}
             <div className="lg:col-span-1">
               <div className="bg-stone-950 border border-stone-800 rounded-xl p-6">
                 <h2 className="text-xl font-medium text-white mb-6">
@@ -507,7 +479,7 @@ export default function GameAccountManager() {
                     </div>
                   </div>
 
-                  {/* Created Date */}
+                  {/* Dates */}
                   <div className="bg-black/30 border border-stone-800 rounded-lg p-4 space-y-4">
                     <div className="flex items-center gap-3 mb-2">
                       <Calendar className="h-4 w-4 text-stone-500" />
@@ -529,11 +501,35 @@ export default function GameAccountManager() {
                       {formatDate(account.updated_at)})
                     </p>
                   </div>
+
+                  {/* Account Status */}
+                  <div className="bg-black/30 border border-stone-800 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Shield className="h-4 w-4 text-emerald-500" />
+                      <span className="text-sm text-stone-400">
+                        Account Status
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          botsData.length > 0
+                            ? "bg-emerald-400"
+                            : "bg-stone-600"
+                        }`}
+                      />
+                      <span className="text-white text-sm">
+                        {botsData.length > 0
+                          ? `${botsData.length} bot${botsData.length > 1 ? "s" : ""} active`
+                          : "No bots configured"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Left Column - Options */}
+            {/* Account Options */}
             <div className="lg:col-span-2">
               <div className="bg-stone-950 border border-stone-800 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -543,7 +539,6 @@ export default function GameAccountManager() {
                   <p className="text-stone-500 text-sm">Choose an action</p>
                 </div>
 
-                {/* Options Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {optionCards.map((option, index) => {
                     const Icon = option.icon;

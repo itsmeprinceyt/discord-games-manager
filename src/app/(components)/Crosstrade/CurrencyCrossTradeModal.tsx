@@ -62,7 +62,7 @@ export default function CurrencyCrossTradeModal({
       setFetchingAccounts(true);
       try {
         const res = await axios.get(
-          `/api/dashboard/account/${currentAccountId}/currency-crosstrade/accounts`
+          `/api/dashboard/account/${currentAccountId}/currency-crosstrade/accounts`,
         );
         if (res.data.success) setAccounts(res.data.data);
       } catch (err) {
@@ -176,7 +176,7 @@ export default function CurrencyCrossTradeModal({
           traded_with: tradedWith.trim() || null,
           trade_link: tradeLink.trim() || null,
           note: note.trim() || null,
-        }
+        },
       );
 
       if (res.data.success) {
@@ -232,7 +232,11 @@ export default function CurrencyCrossTradeModal({
                 <div className="relative">
                   <select
                     value={fromAccountId}
-                    onChange={(e) => setFromAccountId(e.target.value)}
+                    onChange={(e) => {
+                      setFromAccountId(e.target.value);
+                      if (e.target.value === toAccountId)
+                        setSelectedFromBot(null);
+                    }}
                     disabled={fetchingAccounts}
                     className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer ${STONE_Button}`}
                   >
@@ -280,11 +284,17 @@ export default function CurrencyCrossTradeModal({
                       className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer`}
                     >
                       <option value="">Select a bot</option>
-                      {fromBots.map((bot) => (
-                        <option key={bot.id} value={bot.id}>
-                          {bot.name} — {bot.balance} {bot.currency_name}
-                        </option>
-                      ))}
+                      {fromBots
+                        .filter((bot) =>
+                          fromAccountId === toAccountId
+                            ? bot.id !== selectedToBot?.id
+                            : true,
+                        )
+                        .map((bot) => (
+                          <option key={bot.id} value={bot.id}>
+                            {bot.name} — {bot.balance} {bot.currency_name}
+                          </option>
+                        ))}
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-500 pointer-events-none" />
                   </div>
@@ -356,7 +366,11 @@ export default function CurrencyCrossTradeModal({
                 <div className="relative">
                   <select
                     value={toAccountId}
-                    onChange={(e) => setToAccountId(e.target.value)}
+                    onChange={(e) => {
+                      setToAccountId(e.target.value);
+                      if (e.target.value === fromAccountId)
+                        setSelectedToBot(null);
+                    }}
                     disabled={fetchingAccounts}
                     className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer`}
                   >
@@ -404,11 +418,17 @@ export default function CurrencyCrossTradeModal({
                       className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer`}
                     >
                       <option value="">Select a bot</option>
-                      {toBots.map((bot) => (
-                        <option key={bot.id} value={bot.id}>
-                          {bot.name} — {bot.balance} {bot.currency_name}
-                        </option>
-                      ))}
+                      {toBots
+                        .filter((bot) =>
+                          fromAccountId === toAccountId
+                            ? bot.id !== selectedFromBot?.id
+                            : true,
+                        )
+                        .map((bot) => (
+                          <option key={bot.id} value={bot.id}>
+                            {bot.name} — {bot.balance} {bot.currency_name}
+                          </option>
+                        ))}
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-500 pointer-events-none" />
                   </div>

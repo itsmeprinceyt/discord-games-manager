@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -57,21 +57,21 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!Number.isInteger(from_amount) || from_amount <= 0) {
       return NextResponse.json(
         { success: false, error: "From amount must be a positive integer" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!Number.isInteger(to_amount) || to_amount <= 0) {
       return NextResponse.json(
         { success: false, error: "To amount must be a positive integer" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -81,39 +81,39 @@ export async function POST(request: NextRequest) {
     // Verify from account belongs to user
     const [fromAccountCheck] = await pool.execute<any[]>(
       `SELECT id, name FROM bot_accounts WHERE id = ? AND user_id = ?`,
-      [from_bot_account_id, session.user.id]
+      [from_bot_account_id, session.user.id],
     );
 
     if (!Array.isArray(fromAccountCheck) || fromAccountCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "From account not found or access denied" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     // Verify to account belongs to user
     const [toAccountCheck] = await pool.execute<any[]>(
       `SELECT id, name FROM bot_accounts WHERE id = ? AND user_id = ?`,
-      [to_bot_account_id, session.user.id]
+      [to_bot_account_id, session.user.id],
     );
 
     if (!Array.isArray(toAccountCheck) || toAccountCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "To account not found or access denied" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     // Validate from bot and check balance
     const [fromBotCheck] = await pool.execute<any[]>(
       `SELECT id, balance, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
-      [from_selected_bot_id, from_bot_account_id]
+      [from_selected_bot_id, from_bot_account_id],
     );
 
     if (!Array.isArray(fromBotCheck) || fromBotCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "From bot not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -124,19 +124,29 @@ export async function POST(request: NextRequest) {
           success: false,
           error: `Insufficient balance. Available: ${fromBalance} ${fromBotCheck[0].currency_name}, Requested: ${from_amount}`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const [toBotCheck] = await pool.execute<any[]>(
       `SELECT id, balance, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
-      [to_selected_bot_id, to_bot_account_id]
+      [to_selected_bot_id, to_bot_account_id],
     );
 
     if (!Array.isArray(toBotCheck) || toBotCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "To bot not found" },
-        { status: 404 }
+        { status: 404 },
+      );
+    }
+
+    if (
+      from_bot_account_id === to_bot_account_id &&
+      from_selected_bot_id === to_selected_bot_id
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Cannot crosstrade a bot with itself" },
+        { status: 400 },
       );
     }
 
@@ -171,32 +181,32 @@ export async function POST(request: NextRequest) {
           note || null,
           now,
           now,
-        ]
+        ],
       );
 
       // Deduct from giving bot
       const [deductResult] = await connection.execute(
-        `UPDATE selected_bot SET balance = GREATEST(balance - ?, 0), updated_at = ?
+        `UPDATE selected_bot SET balance = GREATEST(balance - ?, 0),last_currency_crosstraded_at = ?, updated_at = ?
          WHERE id = ? AND bot_account_id = ? AND balance >= ?`,
         [
           from_amount,
           now,
+          now,
           from_selected_bot_id,
           from_bot_account_id,
           from_amount,
-        ]
+        ],
       );
 
       if ((deductResult as any).affectedRows === 0) {
         throw new Error(
-          "Failed to deduct balance from giving bot. Insufficient funds."
+          "Failed to deduct balance from giving bot. Insufficient funds.",
         );
       }
 
       await connection.execute(
-        `UPDATE selected_bot SET balance = balance + ?, updated_at = ?
-         WHERE id = ? AND bot_account_id = ?`,
-        [to_amount, now, to_selected_bot_id, to_bot_account_id]
+        `UPDATE selected_bot SET balance = balance + ?, last_currency_crosstraded_at = ?, updated_at = ? WHERE id = ? AND bot_account_id = ?`,
+        [to_amount, now, now, to_selected_bot_id, to_bot_account_id],
       );
 
       await connection.commit();
@@ -210,7 +220,7 @@ export async function POST(request: NextRequest) {
 
       await logAudit(
         actor,
-        "wallet_update",
+        "crosstrade_entry",
         `@${actor.name} insert a new currency crosstrade`,
         {
           trade_id: tradeId,
@@ -218,7 +228,7 @@ export async function POST(request: NextRequest) {
           from_currency: fromBotCheck[0].currency_name,
           to_amount,
           to_currency: toBotCheck[0].currency_name,
-        }
+        },
       );
 
       return NextResponse.json(
@@ -226,7 +236,7 @@ export async function POST(request: NextRequest) {
           success: true,
           message: "Currency crosstrade completed successfully",
         },
-        { status: 201 }
+        { status: 201 },
       );
     } catch (dbError) {
       if (connection) await connection.rollback();
@@ -240,7 +250,7 @@ export async function POST(request: NextRequest) {
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   } finally {
     if (connection) {

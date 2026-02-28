@@ -24,4 +24,6 @@ FOREIGN KEY (to_bot_account_id) REFERENCES bot_accounts(id) ON DELETE CASCADE,
 FOREIGN KEY (to_selected_bot_id) REFERENCES selected_bot(id) ON DELETE CASCADE
 );
 
+ALTER TABLE selected_bot ADD COLUMN last_currency_crosstraded_at VARCHAR(30) AFTER last_crosstraded_at;
+
 make indexing

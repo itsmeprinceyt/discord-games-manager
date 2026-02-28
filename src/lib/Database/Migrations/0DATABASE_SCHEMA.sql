@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS selected_bot (
     normal_days TINYINT UNSIGNED NOT NULL,
     weekend_days TINYINT UNSIGNED NOT NULL,
     last_crosstraded_at VARCHAR(30),
+    last_currency_crosstraded_at VARCHAR(30),
     voted_at VARCHAR(30),
     updated_at VARCHAR(30) NOT NULL,
     FOREIGN KEY (bot_account_id) REFERENCES bot_accounts(id) ON DELETE CASCADE,
