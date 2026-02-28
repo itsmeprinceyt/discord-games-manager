@@ -3,6 +3,7 @@ import getAnalyticsLogsRedisKey from "./getAnalyticsLogsRedisKey";
 import getCrosstradeLogsRedisKey from "./getCrosstradeLogsRedisKey";
 import getCrosstrades from "./getCrosstrades";
 import getCurrencyCrosstradeLogsRedisKey from "./getCurrencyCrosstradeLogsRedisKey";
+import getCurrencyCrosstradeLogsRedisKeyAll from "./getCurrencyCrosstradeLogsRedisKeyAll";
 import getSingleAnalyticsLogsRedisKey from "./getSingleAnalyticsLogsRedisKey";
 import getUserDashboardRedisKey from "./getUserDashboardRedisKey";
 import getUserSingleAccountDashboardRedisKey from "./getUserSingleAccountDashboardRedisKey";
@@ -14,7 +15,6 @@ export async function invalidateUserCache(userId: string): Promise<void> {
   const keys = [
     `${getAnalyticsLogsRedisKey()}:${userId}`,
     `${getUserDashboardRedisKey()}:${userId}`,
-    `${getCurrencyCrosstradeLogsRedisKey()}:${userId}`,
   ];
 
   const crosstradeKeys = await redis.keys(
@@ -33,6 +33,14 @@ export async function invalidateUserCache(userId: string): Promise<void> {
     `${getSingleAnalyticsLogsRedisKey()}:${userId}:*`
   );
 
+  const currencyLogs = await redis.keys(
+    `${getCurrencyCrosstradeLogsRedisKey()}:${userId}:*`
+  );
+
+  const currencyLogsAll = await redis.keys(
+    `${getCurrencyCrosstradeLogsRedisKeyAll()}:${userId}:*`
+  );
+
   const allKeys = [
     ...keys,
     ...crosstradeKeys,
@@ -40,6 +48,8 @@ export async function invalidateUserCache(userId: string): Promise<void> {
     ...accountTradeKeys,
     ...botWalletInfoKeys,
     ...analyticsAccountKeys,
+    ...currencyLogs,
+    ...currencyLogsAll,
   ];
 
   if (allKeys.length > 0) {

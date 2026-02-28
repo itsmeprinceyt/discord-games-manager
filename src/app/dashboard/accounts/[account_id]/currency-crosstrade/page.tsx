@@ -192,16 +192,22 @@ export default function CurrencyCrossTradeManager() {
                           ID
                         </th>
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
-                          FROM
+                          SENDER
                         </th>
                         <th className="text-center p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           GIVING
                         </th>
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
-                          TO
+                          FROM &
+                        </th>
+                        <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
+                          RECEIVER
                         </th>
                         <th className="text-center p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           RECEIVING
+                        </th>
+                        <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
+                          TO
                         </th>
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           BUYER ID
@@ -223,39 +229,57 @@ export default function CurrencyCrossTradeManager() {
                               </span>
                             </td>
 
-                            {/* FROM */}
+                            {/* SENDER */}
+                            <td className="p-4">
+                              <Link
+                                href={`/dashboard/accounts/${trade.from_bot_account_id}`}
+                                target="_blank"
+                                className="text-white hover:text-blue-400 transition-colors"
+                              >
+                                {trade.from_bot_account_name}
+                              </Link>
+                            </td>
+
+                            {/* GIVING */}
+                            <td className="p-4 text-center">
+                              <span className="flex items-center justify-center gap-1 px-2 py-1 rounded-full border text-xs font-medium text-nowrap w-full text-center bg-red-600/20 text-red-400 border-red-800">
+                                {trade.from_amount} {trade.from_currency_name}
+                              </span>
+                            </td>
+
+                            {/* FROM bot */}
                             <td className="p-4">
                               <span className="text-white font-medium">
                                 {trade.from_bot_name}
                               </span>
                             </td>
 
-                            {/* GIVING (from amount + currency) */}
-                            <td className="p-4 text-center">
-                              <span
-                                className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border text-xs font-medium text-nowrap w-full text-center bg-red-600/20 text-red-400 border-red-800`}
+                            {/* RECEIVER */}
+                            <td className="p-4">
+                              <Link
+                                href={`/dashboard/accounts/${trade.to_bot_account_id}`}
+                                target="_blank"
+                                className="text-white hover:text-blue-400 transition-colors"
                               >
-                                {trade.from_amount} {trade.from_currency_name}
+                                {trade.to_bot_account_name}
+                              </Link>
+                            </td>
+
+                            {/* RECEIVING */}
+                            <td className="p-4 text-center">
+                              <span className="flex items-center justify-center gap-1 px-2 py-1 rounded-full border text-xs font-medium text-nowrap w-full text-center bg-green-600/20 text-green-400 border-green-800">
+                                {trade.to_amount} {trade.to_currency_name}
                               </span>
                             </td>
 
-                            {/* TO */}
+                            {/* TO bot */}
                             <td className="p-4">
                               <span className="text-white font-medium">
                                 {trade.to_bot_name}
                               </span>
                             </td>
 
-                            {/* RECEIVING (to amount + currency) */}
-                            <td className="p-4 text-center">
-                              <span
-                                className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full border text-xs font-medium text-nowrap w-full text-center bg-green-600/20 text-green-400 border-green-800`}
-                              >
-                                {trade.to_amount} {trade.to_currency_name}
-                              </span>
-                            </td>
-
-                            {/* TRADED WITH */}
+                            {/* BUYER ID */}
                             <td className="p-4">
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-stone-500 shrink-0" />
@@ -290,34 +314,21 @@ export default function CurrencyCrossTradeManager() {
                           {/* Expanded Details Row */}
                           {expandedTradeId === trade.id && (
                             <tr className="bg-black/20 border-b border-stone-800">
-                              <td colSpan={8} className="p-0">
+                              <td colSpan={9} className="p-0">
                                 <div className="p-6 border-t border-stone-800">
-                                  <div className="flex flex-wrap items-start justify-between gap-6">
-                                    {/* Meta & Actions */}
-                                    <div className="flex-1 space-y-3 bg-black/20 p-3 rounded-lg border border-stone-800">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                                    {/* Note */}
+                                    <div className="space-y-4 bg-black/20 p-3 rounded-lg border border-stone-800">
                                       <h4 className="text-sm font-medium text-stone-300">
-                                        Details
+                                        Note
                                       </h4>
-                                      <div className="space-y-2 text-xs">
-                                        <div>
-                                          <div className="text-stone-400 mb-1">
-                                            Traded With
-                                          </div>
-                                          <div className="text-white">
-                                            {trade.traded_with || "--"}
-                                          </div>
+                                      <div className="space-y-4 text-xs">
+                                        <div className="text-white italic">
+                                          {trade.note
+                                            ? `" ${trade.note} "`
+                                            : `--`}
                                         </div>
-                                        <div>
-                                          <div className="text-stone-400 mb-1">
-                                            Note
-                                          </div>
-                                          <div className="text-white italic">
-                                            {trade.note
-                                              ? `" ${trade.note} "`
-                                              : "--"}
-                                          </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-2 gap-4">
                                           <div>
                                             <div className="text-stone-400 mb-1">
                                               Created
@@ -339,7 +350,7 @@ export default function CurrencyCrossTradeManager() {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex-1 space-y-3 md:col-span-2 lg:col-span-3">
+                                    <div className="space-y-4">
                                       <h4 className="text-sm font-medium text-stone-300">
                                         Actions
                                       </h4>
@@ -357,7 +368,7 @@ export default function CurrencyCrossTradeManager() {
                                         ) : (
                                           <button
                                             disabled
-                                            className={`px-3 py-1.5 bg-blue-800 text-white text-sm rounded cursor-not-allowed flex items-center gap-2 opacity-50`}
+                                            className="px-3 py-1.5 bg-blue-800 text-white text-sm rounded cursor-not-allowed flex items-center gap-2 opacity-50"
                                           >
                                             <LinkIcon className="h-3 w-3" />
                                             No Trade Link

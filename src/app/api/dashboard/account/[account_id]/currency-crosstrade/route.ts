@@ -13,18 +13,6 @@ import { getRedis } from "../../../../../../lib/Redis/redis";
 import { SINGLE_USER_CROSSTRADES_TTL } from "../../../../../../utils/Redis/redisTTL";
 import getCurrencyCrosstradeLogsRedisKey from "../../../../../../utils/Redis/getCurrencyCrosstradeLogsRedisKey";
 
-export interface CurrencyCrossTradeRequest {
-  from_bot_account_id: string;
-  from_selected_bot_id: string;
-  from_amount: number;
-  to_bot_account_id: string;
-  to_selected_bot_id: string;
-  to_amount: number;
-  traded_with?: string | null;
-  trade_link?: string | null;
-  note?: string | null;
-}
-
 export interface CurrencyCrossTrade {
   id: string;
   user_id: string;
@@ -47,7 +35,22 @@ export interface CurrencyCrossTrade {
   updated_at: string;
 }
 
-export async function GET() {
+export interface CurrencyCrossTradeRequest {
+  from_bot_account_id: string;
+  from_selected_bot_id: string;
+  from_amount: number;
+  to_bot_account_id: string;
+  to_selected_bot_id: string;
+  to_amount: number;
+  traded_with?: string | null;
+  trade_link?: string | null;
+  note?: string | null;
+}
+
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ account_id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -57,11 +60,16 @@ export async function GET() {
       );
     }
 
+    const { account_id } = await context.params;
+    const accountId = account_id;
+
     await initServer();
     const redis = getRedis();
+
+    // Cache key scoped to both user AND account so different accounts don't share cache
     const cacheKey = `${getCurrencyCrosstradeLogsRedisKey()}:${
       session.user.id
-    }`;
+    }:${accountId}`;
 
     const cached = await redis.get<CurrencyCrossTrade[]>(cacheKey);
     if (cached) {
@@ -72,6 +80,19 @@ export async function GET() {
     }
 
     const pool = db();
+
+    // Verify the account belongs to the user before returning any data
+    const [accountCheck] = await pool.execute<any[]>(
+      `SELECT id FROM bot_accounts WHERE id = ? AND user_id = ?`,
+      [accountId, session.user.id]
+    );
+
+    if (!Array.isArray(accountCheck) || accountCheck.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Account not found or access denied" },
+        { status: 403 }
+      );
+    }
 
     const [rows] = await pool.execute<any[]>(
       `SELECT
@@ -100,8 +121,9 @@ export async function GET() {
        JOIN bot_accounts to_ba ON cct.to_bot_account_id = to_ba.id
        JOIN selected_bot to_sb ON cct.to_selected_bot_id = to_sb.id
        WHERE cct.user_id = ?
+         AND (cct.from_bot_account_id = ? OR cct.to_bot_account_id = ?)
        ORDER BY cct.created_at DESC`,
-      [session.user.id]
+      [session.user.id, accountId, accountId]
     );
 
     const data: CurrencyCrossTrade[] = Array.isArray(rows)
@@ -144,18 +166,6 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
-
-export interface CurrencyCrossTradeRequest {
-  from_bot_account_id: string;
-  from_selected_bot_id: string;
-  from_amount: number;
-  to_bot_account_id: string;
-  to_selected_bot_id: string;
-  to_amount: number;
-  traded_with?: string | null;
-  trade_link?: string | null;
-  note?: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -322,7 +332,7 @@ export async function POST(request: NextRequest) {
 
       // Deduct from giving bot
       const [deductResult] = await connection.execute(
-        `UPDATE selected_bot SET balance = GREATEST(balance - ?, 0),last_currency_crosstraded_at = ?, updated_at = ?
+        `UPDATE selected_bot SET balance = GREATEST(balance - ?, 0), last_currency_crosstraded_at = ?, updated_at = ?
          WHERE id = ? AND bot_account_id = ? AND balance >= ?`,
         [
           from_amount,
