@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { initServer, db } from "../../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
+import { getRedis } from "../../../../lib/Redis/redis";
+import getCrosstradeLogsRedisKey from "../../../../utils/Redis/getCrosstradeLogsRedisKey";
+import { CROSSTRADE_LOGS_TTL } from "../../../../utils/Redis/redisTTL";
 
 interface UserCrossTradeLog {
   id: string;
@@ -50,7 +53,6 @@ export async function GET(request: Request) {
 
     const targetUserId = session.user.id;
 
-    // Only allow users to view their own data unless they're admin
     if (session.user.id !== targetUserId && !session.user.is_admin) {
       return NextResponse.json(
         {
@@ -62,15 +64,13 @@ export async function GET(request: Request) {
     }
 
     await initServer();
-    const pool = db();
+    const redis = getRedis();
 
-    // Get pagination parameters from query string
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = (page - 1) * limit;
 
-    // Optional filters
     const bot_account_id = searchParams.get("bot_account_id");
     const start_date = searchParams.get("start_date");
     const end_date = searchParams.get("end_date");
@@ -78,7 +78,22 @@ export async function GET(request: Request) {
     const crosstrade_via = searchParams.get("crosstrade_via");
     const bot_name = searchParams.get("bot_name");
 
-    // Build WHERE clause and parameters
+    const cacheKey = `${getCrosstradeLogsRedisKey()}:${targetUserId}:p${page}:l${limit}:${
+      bot_account_id || ""
+    }:${start_date || ""}:${end_date || ""}:${currency || ""}:${
+      crosstrade_via || ""
+    }:${bot_name || ""}`;
+
+    const cached = await redis.get<UserCrossTradesResponse>(cacheKey);
+    if (cached) {
+      return NextResponse.json(
+        { success: true, data: cached },
+        { status: 200 }
+      );
+    }
+
+    const pool = db();
+
     let whereClause = "WHERE ct.user_id = ?";
     const queryParams: any[] = [targetUserId];
 
@@ -112,15 +127,12 @@ export async function GET(request: Request) {
       queryParams.push(bot_name);
     }
 
-    // Get total count for pagination
     const [countResult] = await pool.execute<any[]>(
-      `
-        SELECT COUNT(*) as total 
-        FROM crosstrades ct
-        JOIN selected_bot sb ON ct.selected_bot_id = sb.id
-        JOIN bot_accounts ba ON ct.bot_account_id = ba.id
-        ${whereClause}
-        `,
+      `SELECT COUNT(*) as total 
+       FROM crosstrades ct
+       JOIN selected_bot sb ON ct.selected_bot_id = sb.id
+       JOIN bot_accounts ba ON ct.bot_account_id = ba.id
+       ${whereClause}`,
       queryParams
     );
 
@@ -129,56 +141,49 @@ export async function GET(request: Request) {
         ? Number(countResult[0].total)
         : 0;
 
-    // Get cross-trades with pagination
     const [crossTrades] = await pool.execute<any[]>(
-      `
-        SELECT
-            ct.id,
-            ct.crosstrade_date,
-            ct.currency,
-            ct.crosstrade_via,
-            ct.amount_received,
-            ct.rate,
-            ct.conversion_rate,
-            ct.net_amount,
-            ct.traded_with,
-            ct.trade_link,
-            ct.traded,
-            ct.paid,
-            ct.note,
-            ct.created_at,
-            ct.updated_at,
-            sb.name AS bot_name,
-            ba.id AS bot_account_id,
-            ba.name AS bot_account_name
-        FROM crosstrades ct
-        JOIN selected_bot sb ON ct.selected_bot_id = sb.id
-        JOIN bot_accounts ba ON ct.bot_account_id = ba.id
-        ${whereClause}
-        ORDER BY ct.crosstrade_date DESC, ct.created_at DESC
-        LIMIT ? OFFSET ?
-        `,
+      `SELECT
+          ct.id,
+          ct.crosstrade_date,
+          ct.currency,
+          ct.crosstrade_via,
+          ct.amount_received,
+          ct.rate,
+          ct.conversion_rate,
+          ct.net_amount,
+          ct.traded_with,
+          ct.trade_link,
+          ct.traded,
+          ct.paid,
+          ct.note,
+          ct.created_at,
+          ct.updated_at,
+          sb.name AS bot_name,
+          ba.id AS bot_account_id,
+          ba.name AS bot_account_name
+       FROM crosstrades ct
+       JOIN selected_bot sb ON ct.selected_bot_id = sb.id
+       JOIN bot_accounts ba ON ct.bot_account_id = ba.id
+       ${whereClause}
+       ORDER BY ct.crosstrade_date DESC, ct.created_at DESC
+       LIMIT ? OFFSET ?`,
       [...queryParams, limit.toString(), offset.toString()]
     );
 
     const [botAccounts] = await pool.execute<any[]>(
-      `
-        SELECT DISTINCT ba.id, ba.name
-        FROM bot_accounts ba
-        WHERE ba.user_id = ?
-        ORDER BY ba.name
-      `,
+      `SELECT DISTINCT ba.id, ba.name
+       FROM bot_accounts ba
+       WHERE ba.user_id = ?
+       ORDER BY ba.name`,
       [targetUserId]
     );
 
     const [botNames] = await pool.execute<any[]>(
-      `
-        SELECT DISTINCT sb.name
-        FROM selected_bot sb
-        JOIN bot_accounts ba ON sb.bot_account_id = ba.id
-        WHERE ba.user_id = ?
-        ORDER BY sb.name
-      `,
+      `SELECT DISTINCT sb.name
+       FROM selected_bot sb
+       JOIN bot_accounts ba ON sb.bot_account_id = ba.id
+       WHERE ba.user_id = ?
+       ORDER BY sb.name`,
       [targetUserId]
     );
 
@@ -212,8 +217,8 @@ export async function GET(request: Request) {
     const responseData: UserCrossTradesResponse = {
       cross_trade_logs: crossTradeLogs,
       total_count: totalCount,
-      page: page,
-      limit: limit,
+      page,
+      limit,
       total_pages: totalPages,
       filters: {
         bot_accounts: botAccounts.map((acc: any) => ({
@@ -224,16 +229,14 @@ export async function GET(request: Request) {
       },
     };
 
+    await redis.set(cacheKey, responseData, { ex: CROSSTRADE_LOGS_TTL });
+
     return NextResponse.json(
-      {
-        success: true,
-        data: responseData,
-      },
+      { success: true, data: responseData },
       { status: 200 }
     );
   } catch (error: unknown) {
     console.error("Error fetching user cross trade logs:", error);
-
     return NextResponse.json(
       {
         success: false,

@@ -6,6 +6,7 @@ import { authOptions } from "../../../../../auth/[...nextauth]/route";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { getCurrentDateTime } from "../../../../../../../utils/Variables/getDateTime.util";
+import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
 
 interface AddDailyRewardRequest {
   bot_id: string;
@@ -142,6 +143,8 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    await invalidateUserCache(session.user.id);
 
     const actor: AuditActor = {
       user_id: session.user.id,

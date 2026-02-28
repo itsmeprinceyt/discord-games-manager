@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { initServer, db } from "../../../../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]/route";
+import { getRedis } from "../../../../../../lib/Redis/redis";
+import getWalletInfo from "../../../../../../utils/Redis/getWalletInfo";
+import { GET_WALLET_INFO_TTL } from "../../../../../../utils/Redis/redisTTL";
 
 export interface BotInfoResponse {
   id: string;
@@ -13,9 +16,7 @@ export interface BotInfoResponse {
 
 export async function GET(
   req: Request,
-  context: {
-    params: Promise<{ account_id: string }>;
-  }
+  context: { params: Promise<{ account_id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -26,6 +27,7 @@ export async function GET(
         { status: 401 }
       );
     }
+
     const { account_id } = await context.params;
     const accountId = account_id;
 
@@ -37,27 +39,34 @@ export async function GET(
     }
 
     await initServer();
+    const redis = getRedis();
+    const cacheKey = `${getWalletInfo()}:${session.user.id}:${accountId}`;
+
+    const cached = await redis.get<BotInfoResponse[]>(cacheKey);
+    if (cached) {
+      return NextResponse.json(
+        { success: true, data: cached },
+        { status: 200 }
+      );
+    }
+
     const pool = db();
 
     const [results] = await pool.execute<any[]>(
       `SELECT 
-            sb.id,
-            sb.name,
-            sb.currency_name,
-            sb.balance
-        FROM selected_bot sb
-        WHERE sb.bot_account_id = ?
-        ORDER BY sb.name ASC`,
+        sb.id,
+        sb.name,
+        sb.currency_name,
+        sb.balance
+       FROM selected_bot sb
+       WHERE sb.bot_account_id = ?
+       ORDER BY sb.name ASC`,
       [accountId]
     );
 
     if (!Array.isArray(results) || results.length === 0) {
       return NextResponse.json(
-        {
-          success: true,
-          data: [],
-          message: "No bots found for this user",
-        },
+        { success: true, data: [], message: "No bots found for this user" },
         { status: 200 }
       );
     }
@@ -69,16 +78,11 @@ export async function GET(
       balance: row.balance || 0,
     }));
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: bots,
-      },
-      { status: 200 }
-    );
+    await redis.set(cacheKey, bots, { ex: GET_WALLET_INFO_TTL });
+
+    return NextResponse.json({ success: true, data: bots }, { status: 200 });
   } catch (error: unknown) {
     console.error("Error fetching user bots:", error);
-
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

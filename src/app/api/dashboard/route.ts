@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { initServer, db } from "../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
+import { getRedis } from "../../../lib/Redis/redis";
+import getUserDashboardRedisKey from "../../../utils/Redis/getUserDashboardRedisKey";
+import { USER_DASHBOARD_TTL } from "../../../utils/Redis/redisTTL";
 
 export async function GET() {
   try {
@@ -16,6 +19,14 @@ export async function GET() {
     }
 
     await initServer();
+    const redis = getRedis();
+    const cacheKey = `${getUserDashboardRedisKey()}:${session.user.id}`;
+
+    const cached = await redis.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json({ success: true, data: cached });
+    }
+
     const pool = db();
 
     const [totalAccounts] = await pool.execute<any[]>(
@@ -24,15 +35,10 @@ export async function GET() {
     );
 
     const [totalTrades] = await pool.execute<any[]>(
-      `SELECT COUNT(*) as count FROM crosstrades 
-       WHERE user_id = ?`,
+      `SELECT COUNT(*) as count FROM crosstrades WHERE user_id = ?`,
       [session.user.id]
     );
 
-    // Get user's latest 20 audit logs
-    // Only include logs where:
-    // 1. actor_user_id = user's id (actions performed by the user)
-    // 2. target_user_id = user's id (actions performed on the user)
     const [auditLogs] = await pool.execute<any[]>(
       `SELECT * FROM audit_logs 
        WHERE actor_user_id = ? OR target_user_id = ?
@@ -43,7 +49,6 @@ export async function GET() {
 
     const parsedLogs = auditLogs.map((log) => {
       let meta = null;
-
       try {
         if (log.meta) {
           if (typeof log.meta === "string") {
@@ -56,23 +61,20 @@ export async function GET() {
         console.error("Error parsing meta for log", log.id, ":", error);
         meta = null;
       }
-
-      return {
-        ...log,
-        meta,
-      };
+      return { ...log, meta };
     });
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        stats: {
-          total_accounts: totalAccounts[0].count,
-          total_trades: totalTrades[0].count,
-        },
-        auditLogs: parsedLogs,
+    const responseData = {
+      stats: {
+        total_accounts: totalAccounts[0].count,
+        total_trades: totalTrades[0].count,
       },
-    });
+      auditLogs: parsedLogs,
+    };
+
+    await redis.set(cacheKey, responseData, { ex: USER_DASHBOARD_TTL });
+
+    return NextResponse.json({ success: true, data: responseData });
   } catch (error: unknown) {
     console.error("User dashboard error:", error);
     return NextResponse.json(

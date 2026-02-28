@@ -1,4 +1,11 @@
-import { ONE_HOUR } from "../TTL";
+import { ONE_HOUR, ONE_MINUTE } from "../TTL";
 
 export const REDIS_HEARTBEAT_TTL = ONE_HOUR;
+export const ANALYTICS_LOGS_TTL = ONE_MINUTE * 2;
+export const CROSSTRADE_LOGS_TTL = ONE_MINUTE * 2;
+export const USER_DASHBOARD_TTL = ONE_MINUTE * 2;
+export const SINGLE_USER_DASHBOARD_TTL = ONE_MINUTE * 2;
+export const SINGLE_USER_CROSSTRADES_TTL = ONE_MINUTE * 2;
+export const GET_WALLET_INFO_TTL = ONE_MINUTE * 2;
+export const SINGLE_USER_ANALYTICS_LOGS = ONE_MINUTE * 2;
 // TODO: all TTLS at one place

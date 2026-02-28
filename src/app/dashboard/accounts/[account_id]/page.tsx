@@ -185,7 +185,7 @@ export default function GameAccountManager() {
     currency: bot.currency_name,
     lastTrade: bot.last_crosstraded_at
       ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(
-          bot.last_crosstraded_at,
+          bot.last_crosstraded_at
         )})`
       : "--",
     cooldown: bot.last_crosstraded_at || "",
@@ -194,7 +194,7 @@ export default function GameAccountManager() {
 
   const optionCards: OptionCard[] = [
     {
-      href: `/dashboard/accounts/${account_id}/analytics`,
+      href: `/dashboard/accounts/${account_id}/analytics-logs`,
       icon: BarChart3,
       title: "Account Analytics",
       description: "Detailed performance metrics and insights",
