@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   TrendingUp,
   DollarSign,
@@ -14,7 +14,9 @@ import {
   Target,
   Zap,
   Clock,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -367,13 +369,21 @@ export default function AccountAnalyticsLogs() {
       <div className="min-h-screen p-4 md:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
-              Account Analytics
-            </h1>
-            <p className="text-stone-400 text-sm">
-              Cross-trade performance for this account
-            </p>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/dashboard/accounts/${accountId}`}
+              className="p-2 hover:bg-stone-800 rounded-lg transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="h-5 w-5 text-stone-400" />
+            </Link>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
+                Analytics & Reports
+              </h1>
+              <p className="text-stone-400 text-sm">
+                Track your crosstrade performance and earnings for this account
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
