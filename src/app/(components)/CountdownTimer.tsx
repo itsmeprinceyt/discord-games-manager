@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { COOLDOWN_DAYS } from "../../utils/main.util";
 
 interface CountdownTimerProps {
   startDate: string | null;
@@ -8,7 +9,7 @@ interface CountdownTimerProps {
 
 export default function CountdownTimer({
   startDate,
-  cooldownDays = 14,
+  cooldownDays = COOLDOWN_DAYS,
 }: CountdownTimerProps) {
   const [countdown, setCountdown] = useState<string>("--");
 

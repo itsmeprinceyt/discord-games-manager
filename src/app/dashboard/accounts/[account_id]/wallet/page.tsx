@@ -5,18 +5,22 @@ import PageWrapper from "../../../../(components)/PageWrapper";
 import Link from "next/link";
 import {
   ArrowLeft,
-  CreditCard,
   RefreshCw,
   AlertCircle,
   CoinsIcon,
   Edit,
+  Plus,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../../../utils/Variables/getAxiosError.util";
-import { STONE_Button } from "../../../../../utils/CSS/Button.util";
+import {
+  AMBER_Button,
+  STONE_Button,
+} from "../../../../../utils/CSS/Button.util";
 import EditBalanceModal from "../../../../(components)/Balance/EditBalanceModal";
 import Loader from "../../../../(components)/Loader";
+import CurrencyCrossTradeModal from "../../../../(components)/Crosstrade/CurrencyCrossTradeModal";
 
 interface BotBalance {
   id: string;
@@ -37,7 +41,6 @@ const getCurrencyColor = (currencyName: string) => {
     Jade: "bg-emerald-600/20 text-emerald-400",
     Wist: "bg-purple-600/20 text-purple-400",
   };
-
   return colorMap[currencyName] || "bg-stone-600/20 text-stone-400";
 };
 
@@ -48,17 +51,19 @@ export default function AccountWalletPage() {
   const [walletData, setWalletData] = useState<BotBalance[]>([]);
   const [selectedBot, setSelectedBot] = useState<BotBalance | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isCurrencyTradeModalOpen, setIsCurrencyTradeModalOpen] =
+    useState<boolean>(false);
+  const [accountName, setAccountName] = useState<string>("");
 
   const fetchWalletData = useCallback(
     async (showLoading = true) => {
       if (!account_id) return;
-
       try {
         if (showLoading) setLoading(true);
         else setRefreshing(true);
 
         const response = await axios.get<WalletResponse>(
-          `/api/dashboard/account/${account_id}/wallet`,
+          `/api/dashboard/account/${account_id}/wallet`
         );
 
         if (response.data.success) {
@@ -69,7 +74,7 @@ export default function AccountWalletPage() {
       } catch (err: unknown) {
         const message = getAxiosErrorMessage(
           err,
-          "Error fetching balance data",
+          "Error fetching balance data"
         );
         toast.error(message);
         console.error("Error fetching balance data:", err);
@@ -78,19 +83,27 @@ export default function AccountWalletPage() {
         setRefreshing(false);
       }
     },
-    [account_id],
+    [account_id]
   );
 
   useEffect(() => {
-    const load = () => {
-      fetchWalletData();
-    };
-    load();
+    fetchWalletData();
   }, [fetchWalletData, account_id]);
 
-  const handleRefresh = () => {
-    fetchWalletData(false);
-  };
+  useEffect(() => {
+    const fetchAccountName = async () => {
+      if (!account_id) return;
+      try {
+        const res = await axios.get(`/api/dashboard/account/${account_id}`);
+        if (res.data.success) setAccountName(res.data.data.name);
+      } catch {
+        setAccountName(String(account_id));
+      }
+    };
+    fetchAccountName();
+  }, [account_id]);
+
+  const handleRefresh = () => fetchWalletData(false);
 
   const handleEditClick = (bot: BotBalance) => {
     setSelectedBot(bot);
@@ -100,10 +113,9 @@ export default function AccountWalletPage() {
   const handleUpdateBalance = async (botId: string, newBalance: number) => {
     setWalletData((prev) =>
       prev.map((bot) =>
-        bot.id === botId ? { ...bot, balance: newBalance } : bot,
-      ),
+        bot.id === botId ? { ...bot, balance: newBalance } : bot
+      )
     );
-
     toast.success("Balance updated successfully!");
     fetchWalletData();
   };
@@ -112,18 +124,15 @@ export default function AccountWalletPage() {
     try {
       const response = await axios.post(
         `/api/dashboard/account/${account_id}/wallet/manual-vote`,
-        { bot_id: botId },
+        { bot_id: botId }
       );
-
       if (response.data.success) {
         const { new_balance } = response.data.data;
-
         setWalletData((prev) =>
           prev.map((bot) =>
-            bot.id === botId ? { ...bot, balance: new_balance } : bot,
-          ),
+            bot.id === botId ? { ...bot, balance: new_balance } : bot
+          )
         );
-
         toast.success(response.data.message);
       }
     } catch (err: unknown) {
@@ -158,9 +167,18 @@ export default function AccountWalletPage() {
           onUpdate={handleUpdateBalance}
         />
 
+        {/* Currency Crosstrade Modal */}
+        <CurrencyCrossTradeModal
+          isOpen={isCurrencyTradeModalOpen}
+          onClose={() => setIsCurrencyTradeModalOpen(false)}
+          onSuccess={() => fetchWalletData(false)}
+          currentAccountId={String(account_id)}
+          currentAccountName={accountName}
+        />
+
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-4">
               <Link
                 href={`/dashboard/accounts/${account_id}`}
@@ -169,9 +187,6 @@ export default function AccountWalletPage() {
                 <ArrowLeft className="h-5 w-5 text-stone-400" />
               </Link>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-600/20 rounded-lg">
-                  <CreditCard className="h-6 w-6 text-red-400" />
-                </div>
                 <div>
                   <h1 className="text-2xl md:text-3xl font-medium text-white">
                     Wallet
@@ -182,16 +197,26 @@ export default function AccountWalletPage() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className={`px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </button>
+
+            <div className="flex justify-end flex-wrap gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className={`px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </button>
+              <button
+                onClick={() => setIsCurrencyTradeModalOpen(true)}
+                className={`px-4 py-2 ${AMBER_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
+              >
+                <Plus className="h-4 w-4" />
+                New Currency CT
+              </button>
+            </div>
           </div>
         </div>
 
@@ -199,7 +224,6 @@ export default function AccountWalletPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {walletData.map((bot) => {
             const colorClass = getCurrencyColor(bot.currency_name);
-
             return (
               <div
                 key={bot.id}
