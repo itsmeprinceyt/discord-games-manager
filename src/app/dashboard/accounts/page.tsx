@@ -492,6 +492,7 @@ export default function ManageAccounts() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search accounts by name..."
+              maxLength={30}
               className="w-full pl-10 pr-4 py-3 bg-black/30 border border-stone-800 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-colors"
             />
             {searchQuery && (
@@ -539,7 +540,7 @@ export default function ManageAccounts() {
               <h3 className="text-lg font-medium text-stone-300 mb-2">
                 No accounts found
               </h3>
-              <p className="text-stone-500 mb-2">
+              <p className="text-stone-500 mb-2 px-4">
                 No accounts match &quot;{searchQuery}&quot;
               </p>
               <button
