@@ -72,14 +72,14 @@ function isValidISODate(dateStr: string): boolean {
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ account_id: string }> },
+  context: { params: Promise<{ account_id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -89,13 +89,15 @@ export async function GET(
     await initServer();
     const redis = getRedis();
 
-    const cacheKey = `${getCurrencyCrosstradeLogsRedisKey()}:${session.user.id}:${accountId}`;
+    const cacheKey = `${getCurrencyCrosstradeLogsRedisKey()}:${
+      session.user.id
+    }:${accountId}`;
 
     const cached = await redis.get<CurrencyCrossTrade[]>(cacheKey);
     if (cached) {
       return NextResponse.json(
         { success: true, data: cached },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -103,13 +105,13 @@ export async function GET(
 
     const [accountCheck] = await pool.execute<any[]>(
       `SELECT id FROM bot_accounts WHERE id = ? AND user_id = ?`,
-      [accountId, session.user.id],
+      [accountId, session.user.id]
     );
 
     if (!Array.isArray(accountCheck) || accountCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "Account not found or access denied" },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
@@ -145,7 +147,7 @@ export async function GET(
        WHERE cct.user_id = ?
          AND (cct.from_bot_account_id = ? OR cct.to_bot_account_id = ?)
        ORDER BY cct.crosstrade_date DESC`,
-      [session.user.id, accountId, accountId],
+      [session.user.id, accountId, accountId]
     );
 
     const data: CurrencyCrossTrade[] = Array.isArray(rows)
@@ -186,7 +188,7 @@ export async function GET(
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -199,7 +201,7 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -232,21 +234,21 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     if (!Number.isInteger(from_amount) || from_amount <= 0) {
       return NextResponse.json(
         { success: false, error: "From amount must be a positive integer" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     if (!Number.isInteger(to_amount) || to_amount <= 0) {
       return NextResponse.json(
         { success: false, error: "To amount must be a positive integer" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -254,7 +256,7 @@ export async function POST(request: NextRequest) {
     if (!crosstrade_date) {
       return NextResponse.json(
         { success: false, error: "crosstrade_date is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -264,7 +266,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "crosstrade_date must be a valid ISO 8601 date string",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -280,7 +282,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "traded_with must be a string of max 36 characters",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -295,7 +297,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "trade_with_name must be a string of max 50 characters",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -311,7 +313,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "trade_link must be a valid HTTP/HTTPS URL",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
       if (trade_link.trim().length > 100) {
@@ -320,7 +322,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "trade_link must be at most 100 characters",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -336,7 +338,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "trade_link_second must be a valid HTTP/HTTPS URL",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
       if (trade_link_second.trim().length > 100) {
@@ -345,7 +347,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "trade_link_second must be at most 100 characters",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -357,7 +359,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "note must be a string of max 250 characters",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -369,7 +371,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "bypass_from_balance must be a non-negative integer",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -381,7 +383,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "bypass_to_balance must be a non-negative integer",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -392,38 +394,38 @@ export async function POST(request: NextRequest) {
     // ── Ownership checks ───────────────────────────────────────────────────────
     const [fromAccountCheck] = await pool.execute<any[]>(
       `SELECT id, name FROM bot_accounts WHERE id = ? AND user_id = ?`,
-      [from_bot_account_id, session.user.id],
+      [from_bot_account_id, session.user.id]
     );
 
     if (!Array.isArray(fromAccountCheck) || fromAccountCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "From account not found or access denied" },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
     const [toAccountCheck] = await pool.execute<any[]>(
       `SELECT id, name FROM bot_accounts WHERE id = ? AND user_id = ?`,
-      [to_bot_account_id, session.user.id],
+      [to_bot_account_id, session.user.id]
     );
 
     if (!Array.isArray(toAccountCheck) || toAccountCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "To account not found or access denied" },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
     // ── Bot checks ─────────────────────────────────────────────────────────────
     const [fromBotCheck] = await pool.execute<any[]>(
       `SELECT id, balance, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
-      [from_selected_bot_id, from_bot_account_id],
+      [from_selected_bot_id, from_bot_account_id]
     );
 
     if (!Array.isArray(fromBotCheck) || fromBotCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "From bot not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -436,20 +438,20 @@ export async function POST(request: NextRequest) {
             success: false,
             error: `Insufficient balance. Available: ${fromBalance} ${fromBotCheck[0].currency_name}, Requested: ${from_amount}`,
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
 
     const [toBotCheck] = await pool.execute<any[]>(
       `SELECT id, balance, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
-      [to_selected_bot_id, to_bot_account_id],
+      [to_selected_bot_id, to_bot_account_id]
     );
 
     if (!Array.isArray(toBotCheck) || toBotCheck.length === 0) {
       return NextResponse.json(
         { success: false, error: "To bot not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -459,7 +461,7 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { success: false, error: "Cannot crosstrade a bot with itself" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -499,7 +501,7 @@ export async function POST(request: NextRequest) {
           note?.trim() || null,
           now,
           now,
-        ],
+        ]
       );
 
       // ── Update giving bot balance ───────────────────────────────────────────
@@ -513,7 +515,7 @@ export async function POST(request: NextRequest) {
             now,
             from_selected_bot_id,
             from_bot_account_id,
-          ],
+          ]
         );
       } else {
         const [deductResult] = await connection.execute(
@@ -526,12 +528,12 @@ export async function POST(request: NextRequest) {
             from_selected_bot_id,
             from_bot_account_id,
             from_amount,
-          ],
+          ]
         );
 
         if ((deductResult as any).affectedRows === 0) {
           throw new Error(
-            "Failed to deduct balance from giving bot. Insufficient funds.",
+            "Failed to deduct balance from giving bot. Insufficient funds."
           );
         }
       }
@@ -541,13 +543,13 @@ export async function POST(request: NextRequest) {
         await connection.execute(
           `UPDATE selected_bot SET balance = ?, last_currency_crosstraded_at = ?, updated_at = ?
            WHERE id = ? AND bot_account_id = ?`,
-          [bypass_to_balance, now, now, to_selected_bot_id, to_bot_account_id],
+          [bypass_to_balance, now, now, to_selected_bot_id, to_bot_account_id]
         );
       } else {
         await connection.execute(
           `UPDATE selected_bot SET balance = balance + ?, last_currency_crosstraded_at = ?, updated_at = ?
            WHERE id = ? AND bot_account_id = ?`,
-          [to_amount, now, now, to_selected_bot_id, to_bot_account_id],
+          [to_amount, now, now, to_selected_bot_id, to_bot_account_id]
         );
       }
 
@@ -573,7 +575,7 @@ export async function POST(request: NextRequest) {
           crosstrade_date: storedCrossTradeDate,
           bypass_from_balance: bypass_from_balance ?? null,
           bypass_to_balance: bypass_to_balance ?? null,
-        },
+        }
       );
 
       return NextResponse.json(
@@ -581,7 +583,7 @@ export async function POST(request: NextRequest) {
           success: true,
           message: "Currency crosstrade completed successfully",
         },
-        { status: 201 },
+        { status: 201 }
       );
     } catch (dbError) {
       if (connection) await connection.rollback();
@@ -595,394 +597,7 @@ export async function POST(request: NextRequest) {
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
-    );
-  } finally {
-    if (connection) {
-      try {
-        connection.release();
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }
-}
-
-export interface EditCurrencyCrossTradeRequest {
-  // Editable bot/amount fields
-  from_selected_bot_id: string;
-  from_amount: number;
-  to_selected_bot_id: string;
-  to_amount: number;
-  // Editable meta fields
-  crosstrade_date: string;
-  traded_with?: string | null;
-  trade_with_name?: string | null;
-  trade_link?: string | null;
-  trade_link_second?: string | null;
-  note?: string | null;
-}
-
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ account_id: string; trade_id: string }> },
-) {
-  let connection: PoolConnection | null = null;
-
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized - Please log in" },
-        { status: 401 },
-      );
-    }
-
-    const { account_id, trade_id } = await context.params;
-
-    const body = (await request.json()) as EditCurrencyCrossTradeRequest;
-    const {
-      from_selected_bot_id,
-      from_amount,
-      to_selected_bot_id,
-      to_amount,
-      crosstrade_date,
-      traded_with,
-      trade_with_name,
-      trade_link,
-      trade_link_second,
-      note,
-    } = body;
-
-    // ── Required field checks ──────────────────────────────────────────────────
-    if (!from_selected_bot_id || !to_selected_bot_id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "from_selected_bot_id and to_selected_bot_id are required",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!Number.isInteger(from_amount) || from_amount <= 0) {
-      return NextResponse.json(
-        { success: false, error: "from_amount must be a positive integer" },
-        { status: 400 },
-      );
-    }
-
-    if (!Number.isInteger(to_amount) || to_amount <= 0) {
-      return NextResponse.json(
-        { success: false, error: "to_amount must be a positive integer" },
-        { status: 400 },
-      );
-    }
-
-    // ── Crosstrade date validation ─────────────────────────────────────────────
-    if (!crosstrade_date) {
-      return NextResponse.json(
-        { success: false, error: "crosstrade_date is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!isValidISODate(crosstrade_date)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "crosstrade_date must be a valid ISO 8601 date string",
-        },
-        { status: 400 },
-      );
-    }
-
-    const storedCrossTradeDate = new Date(crosstrade_date).toISOString();
-
-    // ── Optional field validations ─────────────────────────────────────────────
-    if (traded_with !== undefined && traded_with !== null) {
-      if (typeof traded_with !== "string" || traded_with.trim().length > 36) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "traded_with must be a string of max 36 characters",
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (trade_with_name !== undefined && trade_with_name !== null) {
-      if (
-        typeof trade_with_name !== "string" ||
-        trade_with_name.trim().length > 50
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "trade_with_name must be a string of max 50 characters",
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (
-      trade_link !== undefined &&
-      trade_link !== null &&
-      trade_link.trim() !== ""
-    ) {
-      if (!isValidUrl(trade_link.trim())) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "trade_link must be a valid HTTP/HTTPS URL",
-          },
-          { status: 400 },
-        );
-      }
-      if (trade_link.trim().length > 100) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "trade_link must be at most 100 characters",
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (
-      trade_link_second !== undefined &&
-      trade_link_second !== null &&
-      trade_link_second.trim() !== ""
-    ) {
-      if (!isValidUrl(trade_link_second.trim())) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "trade_link_second must be a valid HTTP/HTTPS URL",
-          },
-          { status: 400 },
-        );
-      }
-      if (trade_link_second.trim().length > 100) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "trade_link_second must be at most 100 characters",
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (note !== undefined && note !== null) {
-      if (typeof note !== "string" || note.trim().length > 250) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "note must be a string of max 250 characters",
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    await initServer();
-    const pool = db();
-
-    // ── Fetch the existing trade and verify ownership ──────────────────────────
-    const [existingRows] = await pool.execute<any[]>(
-      `SELECT cct.*
-       FROM currency_crosstrades cct
-       JOIN bot_accounts ba ON cct.from_bot_account_id = ba.id
-       WHERE cct.id = ? AND cct.user_id = ?
-         AND (cct.from_bot_account_id = ? OR cct.to_bot_account_id = ?)`,
-      [trade_id, session.user.id, account_id, account_id],
-    );
-
-    if (!Array.isArray(existingRows) || existingRows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "Trade not found or access denied" },
-        { status: 404 },
-      );
-    }
-
-    const existing = existingRows[0];
-
-    // ── Validate new from bot belongs to the same from_bot_account ────────────
-    const [fromBotCheck] = await pool.execute<any[]>(
-      `SELECT id, balance, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
-      [from_selected_bot_id, existing.from_bot_account_id],
-    );
-
-    if (!Array.isArray(fromBotCheck) || fromBotCheck.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "From bot not found in the original account" },
-        { status: 404 },
-      );
-    }
-
-    // ── Validate new to bot belongs to the same to_bot_account ────────────────
-    const [toBotCheck] = await pool.execute<any[]>(
-      `SELECT id, balance, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
-      [to_selected_bot_id, existing.to_bot_account_id],
-    );
-
-    if (!Array.isArray(toBotCheck) || toBotCheck.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "To bot not found in the original account" },
-        { status: 404 },
-      );
-    }
-
-    if (
-      existing.from_bot_account_id === existing.to_bot_account_id &&
-      from_selected_bot_id === to_selected_bot_id
-    ) {
-      return NextResponse.json(
-        { success: false, error: "Cannot crosstrade a bot with itself" },
-        { status: 400 },
-      );
-    }
-
-    const now = getCurrentDateTime();
-
-    connection = await pool.getConnection();
-
-    try {
-      await connection.beginTransaction();
-
-      // ── Reverse old balance changes ────────────────────────────────────────
-      // Add back old from_amount to old from bot
-      await connection.execute(
-        `UPDATE selected_bot SET balance = balance + ?, updated_at = ?
-         WHERE id = ? AND bot_account_id = ?`,
-        [
-          existing.from_amount,
-          now,
-          existing.from_selected_bot_id,
-          existing.from_bot_account_id,
-        ],
-      );
-
-      // Deduct old to_amount from old to bot
-      await connection.execute(
-        `UPDATE selected_bot SET balance = GREATEST(balance - ?, 0), updated_at = ?
-         WHERE id = ? AND bot_account_id = ?`,
-        [
-          existing.to_amount,
-          now,
-          existing.to_selected_bot_id,
-          existing.to_bot_account_id,
-        ],
-      );
-
-      // ── Apply new balance changes ──────────────────────────────────────────
-      // Deduct new from_amount from new from bot
-      const [deductResult] = await connection.execute(
-        `UPDATE selected_bot SET balance = GREATEST(balance - ?, 0), last_currency_crosstraded_at = ?, updated_at = ?
-         WHERE id = ? AND bot_account_id = ? AND balance >= ?`,
-        [
-          from_amount,
-          now,
-          now,
-          from_selected_bot_id,
-          existing.from_bot_account_id,
-          from_amount,
-        ],
-      );
-
-      if ((deductResult as any).affectedRows === 0) {
-        throw new Error(
-          "Insufficient balance in the giving bot after reversal.",
-        );
-      }
-
-      // Add new to_amount to new to bot
-      await connection.execute(
-        `UPDATE selected_bot SET balance = balance + ?, last_currency_crosstraded_at = ?, updated_at = ?
-         WHERE id = ? AND bot_account_id = ?`,
-        [to_amount, now, now, to_selected_bot_id, existing.to_bot_account_id],
-      );
-
-      // ── Update the trade record ────────────────────────────────────────────
-      await connection.execute(
-        `UPDATE currency_crosstrades SET
-          from_selected_bot_id = ?,
-          from_currency_name = ?,
-          from_amount = ?,
-          to_selected_bot_id = ?,
-          to_currency_name = ?,
-          to_amount = ?,
-          crosstrade_date = ?,
-          traded_with = ?,
-          trade_with_name = ?,
-          trade_link = ?,
-          trade_link_second = ?,
-          note = ?,
-          updated_at = ?
-         WHERE id = ? AND user_id = ?`,
-        [
-          from_selected_bot_id,
-          fromBotCheck[0].currency_name,
-          from_amount,
-          to_selected_bot_id,
-          toBotCheck[0].currency_name,
-          to_amount,
-          storedCrossTradeDate,
-          traded_with?.trim() || null,
-          trade_with_name?.trim() || null,
-          trade_link?.trim() || null,
-          trade_link_second?.trim() || null,
-          note?.trim() || null,
-          now,
-          trade_id,
-          session.user.id,
-        ],
-      );
-
-      await connection.commit();
-      await invalidateUserCache(session.user.id);
-
-      const actor: AuditActor = {
-        user_id: session.user.id,
-        email: session.user.email,
-        name: session.user.username,
-      };
-
-      await logAudit(
-        actor,
-        "crosstrade_update",
-        `@${actor.name} updated currency crosstrade #${trade_id}`,
-        {
-          trade_id,
-          from_amount,
-          from_currency: fromBotCheck[0].currency_name,
-          to_amount,
-          to_currency: toBotCheck[0].currency_name,
-          crosstrade_date: storedCrossTradeDate,
-        },
-      );
-
-      return NextResponse.json(
-        { success: true, message: "Currency crosstrade updated successfully" },
-        { status: 200 },
-      );
-    } catch (dbError) {
-      if (connection) await connection.rollback();
-      throw dbError;
-    }
-  } catch (error: unknown) {
-    console.error("Currency crosstrade edit error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
+      { status: 500 }
     );
   } finally {
     if (connection) {

@@ -12,7 +12,6 @@ interface BotInfo {
   id: string;
   name: string;
   currency_name: string;
-  balance: number;
 }
 
 interface CurrencyCrossTradeEditModalProps {
@@ -87,29 +86,29 @@ export default function CurrencyCrossTradeEditModal({
   const [toBots, setToBots] = useState<BotInfo[]>([]);
 
   const [selectedFromBotId, setSelectedFromBotId] = useState<string>(
-    trade.from_selected_bot_id,
+    trade.from_selected_bot_id
   );
   const [selectedToBotId, setSelectedToBotId] = useState<string>(
-    trade.to_selected_bot_id,
+    trade.to_selected_bot_id
   );
 
   const [fromAmount, setFromAmount] = useState<string>(
-    String(trade.from_amount),
+    String(trade.from_amount)
   );
   const [toAmount, setToAmount] = useState<string>(String(trade.to_amount));
 
   const [crosstradeDate, setCrosstradeDate] = useState<string>(
-    toInputDateTime(trade.crosstrade_date),
+    toInputDateTime(trade.crosstrade_date)
   );
   const [dateError, setDateError] = useState<string>("");
 
   const [tradedWith, setTradedWith] = useState(trade.traded_with || "");
   const [tradeWithName, setTradeWithName] = useState(
-    trade.trade_with_name || "",
+    trade.trade_with_name || ""
   );
   const [tradeLink, setTradeLink] = useState(trade.trade_link || "");
   const [tradeLinkSecond, setTradeLinkSecond] = useState(
-    trade.trade_link_second || "",
+    trade.trade_link_second || ""
   );
   const [note, setNote] = useState(trade.note || "");
 
@@ -117,7 +116,7 @@ export default function CurrencyCrossTradeEditModal({
     setFetchingFromBots(true);
     try {
       const res = await axios.get(
-        `/api/dashboard/account/${trade.from_bot_account_id}/wallet`,
+        `/api/dashboard/account/${trade.from_bot_account_id}/wallet`
       );
       if (res.data.success) setFromBots(res.data.data);
     } catch (err) {
@@ -131,7 +130,7 @@ export default function CurrencyCrossTradeEditModal({
     setFetchingToBots(true);
     try {
       const res = await axios.get(
-        `/api/dashboard/account/${trade.to_bot_account_id}/wallet`,
+        `/api/dashboard/account/${trade.to_bot_account_id}/wallet`
       );
       if (res.data.success) setToBots(res.data.data);
     } catch (err) {
@@ -168,7 +167,7 @@ export default function CurrencyCrossTradeEditModal({
   const handleFromAmountChange = (val: string) => {
     if (val === "" || /^\d+$/.test(val)) {
       setFromAmount(
-        parseInt(val) > CURRENCY_LIMIT ? String(CURRENCY_LIMIT) : val,
+        parseInt(val) > CURRENCY_LIMIT ? String(CURRENCY_LIMIT) : val
       );
     }
   };
@@ -242,7 +241,7 @@ export default function CurrencyCrossTradeEditModal({
           trade_link: tradeLink.trim() || null,
           trade_link_second: tradeLinkSecond.trim() || null,
           note: note.trim() || null,
-        },
+        }
       );
 
       if (res.data.success) {
@@ -357,7 +356,7 @@ export default function CurrencyCrossTradeEditModal({
                     >
                       {fromBots.map((bot) => (
                         <option key={bot.id} value={bot.id}>
-                          {bot.name} — {bot.balance} {bot.currency_name}
+                          {bot.name} — {bot.currency_name}
                         </option>
                       ))}
                     </select>
@@ -368,7 +367,7 @@ export default function CurrencyCrossTradeEditModal({
 
               <div className="space-y-1.5">
                 <label className="text-xs text-stone-500">
-                  Amount{" "}
+                  Currency:{" "}
                   {selectedFromBot && (
                     <span className="text-red-400">
                       {selectedFromBot.currency_name}
@@ -383,12 +382,6 @@ export default function CurrencyCrossTradeEditModal({
                   maxLength={String(CURRENCY_LIMIT).length}
                   className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-red-600"
                 />
-                {selectedFromBot && (
-                  <p className="text-xs text-stone-500">
-                    Current balance: {selectedFromBot.balance}{" "}
-                    {selectedFromBot.currency_name}
-                  </p>
-                )}
               </div>
             </div>
 
@@ -420,7 +413,7 @@ export default function CurrencyCrossTradeEditModal({
                     >
                       {toBots.map((bot) => (
                         <option key={bot.id} value={bot.id}>
-                          {bot.name} — {bot.balance} {bot.currency_name}
+                          {bot.name} — {bot.currency_name}
                         </option>
                       ))}
                     </select>
@@ -431,7 +424,7 @@ export default function CurrencyCrossTradeEditModal({
 
               <div className="space-y-1.5">
                 <label className="text-xs text-stone-500">
-                  Amount{" "}
+                  Currency:{" "}
                   {selectedToBot && (
                     <span className="text-green-400">
                       {selectedToBot.currency_name}
@@ -445,12 +438,6 @@ export default function CurrencyCrossTradeEditModal({
                   placeholder="Enter amount"
                   className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-green-600"
                 />
-                {selectedToBot && (
-                  <p className="text-xs text-stone-500">
-                    Current balance: {selectedToBot.balance}{" "}
-                    {selectedToBot.currency_name}
-                  </p>
-                )}
               </div>
             </div>
           </div>

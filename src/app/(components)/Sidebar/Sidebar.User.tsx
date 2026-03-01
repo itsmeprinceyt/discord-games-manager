@@ -10,9 +10,9 @@ import {
   Menu,
   X,
   Bookmark,
-  FileSpreadsheet,
   BarChart3,
-  FileStack,
+  TriangleDashed,
+  CircleDashed,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -30,12 +30,12 @@ const userNavItems = [
   {
     title: "Crosstrade Logs",
     href: "/dashboard/crosstrade-logs",
-    icon: <FileSpreadsheet className="h-5 w-5" />,
+    icon: <TriangleDashed className="h-5 w-5" />,
   },
   {
     title: "Currency Crosstrade Logs",
     href: "/dashboard/currency-crosstrade-logs",
-    icon: <FileStack className="h-5 w-5" />,
+    icon: <CircleDashed className="h-5 w-5" />,
   },
   {
     title: "Manage Accounts",
