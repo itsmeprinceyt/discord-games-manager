@@ -11,11 +11,12 @@ import {
   NotebookPen,
   AlertTriangle,
   CreditCard,
-  FileSpreadsheet,
   Search,
   ChevronDown,
   ChevronUp,
   Loader2Icon,
+  TriangleDashed,
+  CircleDashed,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../../(components)/PageWrapper";
@@ -1063,7 +1064,7 @@ const AccountCard = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <Tooltip label="Notes/Todo">
             <button
               onClick={() => onTodoClick(account.id, account.name)}
@@ -1080,7 +1081,15 @@ const AccountCard = ({
               href={`${account.id}/crosstrade/`}
               className={`w-full py-2 px-3 ${STONE_Button} text-stone-400 hover:text-white rounded-lg text-xs flex items-center justify-center transition-colors`}
             >
-              <FileSpreadsheet size={13} />
+              <TriangleDashed size={13} />
+            </Link>
+          </Tooltip>
+          <Tooltip label="Currency Crosstrades">
+            <Link
+              href={`${account.id}//currency-crosstrade/`}
+              className={`w-full py-2 px-3 ${STONE_Button} text-stone-400 hover:text-white rounded-lg text-xs flex items-center justify-center transition-colors`}
+            >
+              <CircleDashed size={13} />
             </Link>
           </Tooltip>
           <Tooltip label="Wallet">

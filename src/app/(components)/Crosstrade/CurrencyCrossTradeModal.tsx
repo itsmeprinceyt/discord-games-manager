@@ -1,10 +1,19 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { X, ArrowRight, Check, Loader2, ChevronDown } from "lucide-react";
+import {
+  X,
+  ArrowRight,
+  Check,
+  Loader2,
+  ChevronDown,
+  AlertTriangle,
+  Calendar,
+} from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../utils/Variables/getAxiosError.util";
 import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
+import { CURRENCY_LIMIT } from "../../../utils/main.util";
 
 interface Account {
   id: string;
@@ -25,6 +34,51 @@ interface CurrencyCrossTradeModalProps {
   currentAccountId: string;
   currentAccountName: string;
 }
+
+// ── Date helpers (same pattern as CrossTradeForm) ──────────────────────────────
+const getLocalDateTimeString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const formatDateTimeForInput = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const validateDateTimeString = (dateTimeString: string): string => {
+  if (!dateTimeString) return "Date and time are required";
+
+  const dateTimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+  if (!dateTimePattern.test(dateTimeString)) return "Invalid date/time format";
+
+  const [datePart, timePart] = dateTimeString.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hours, minutes] = timePart.split(":").map(Number);
+
+  if (year < 1000 || year > 9999) return "Year must be between 1000 and 9999";
+  if (month < 1 || month > 12) return "Month must be between 01 and 12";
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (day < 1 || day > daysInMonth)
+    return `Day must be between 01 and ${daysInMonth} for month ${month}`;
+  if (hours < 0 || hours > 23) return "Hour must be between 00 and 23";
+  if (minutes < 0 || minutes > 59) return "Minutes must be between 00 and 59";
+
+  const date = new Date(dateTimeString);
+  if (isNaN(date.getTime())) return "Invalid date/time";
+
+  return "";
+};
 
 export default function CurrencyCrossTradeModal({
   isOpen,
@@ -52,9 +106,24 @@ export default function CurrencyCrossTradeModal({
   const [fromAmount, setFromAmount] = useState<string>("");
   const [toAmount, setToAmount] = useState<string>("");
 
+  // Bypass balance fields
+  const [bypassFromBalance, setBypassFromBalance] = useState<string>("");
+  const [bypassToBalance, setBypassToBalance] = useState<string>("");
+
+  // Date field
+  const [crosstradeDate, setCrosstradeDate] = useState<string>(
+    getLocalDateTimeString(),
+  );
+  const [dateError, setDateError] = useState<string>("");
+
   const [tradedWith, setTradedWith] = useState("");
+  const [tradeWithName, setTradeWithName] = useState("");
   const [tradeLink, setTradeLink] = useState("");
+  const [tradeLinkSecond, setTradeLinkSecond] = useState("");
   const [note, setNote] = useState("");
+
+  const isBypassingFrom = bypassFromBalance !== "";
+  const isBypassingTo = bypassToBalance !== "";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -79,6 +148,7 @@ export default function CurrencyCrossTradeModal({
     setFetchingFromBots(true);
     setSelectedFromBot(null);
     setFromAmount("");
+    setBypassFromBalance("");
     try {
       const res = await axios.get(`/api/dashboard/account/${accountId}/wallet`);
       if (res.data.success) setFromBots(res.data.data);
@@ -94,6 +164,7 @@ export default function CurrencyCrossTradeModal({
     setFetchingToBots(true);
     setSelectedToBot(null);
     setToAmount("");
+    setBypassToBalance("");
     try {
       const res = await axios.get(`/api/dashboard/account/${accountId}/wallet`);
       if (res.data.success) setToBots(res.data.data);
@@ -122,16 +193,22 @@ export default function CurrencyCrossTradeModal({
       setSelectedToBot(null);
       setFromAmount("");
       setToAmount("");
+      setBypassFromBalance("");
+      setBypassToBalance("");
+      setCrosstradeDate(getLocalDateTimeString());
+      setDateError("");
       setTradedWith("");
+      setTradeWithName("");
       setTradeLink("");
+      setTradeLinkSecond("");
       setNote("");
     }
   }, [isOpen, currentAccountId]);
 
   const handleFromAmountChange = (val: string) => {
     if (val === "" || /^\d+$/.test(val)) {
-      if (selectedFromBot && parseInt(val) > selectedFromBot.balance) {
-        setFromAmount(String(selectedFromBot.balance));
+      if (parseInt(val) > CURRENCY_LIMIT) {
+        setFromAmount(String(CURRENCY_LIMIT));
       } else {
         setFromAmount(val);
       }
@@ -144,23 +221,86 @@ export default function CurrencyCrossTradeModal({
     }
   };
 
+  const handleBypassFromChange = (val: string) => {
+    if (val === "" || /^\d+$/.test(val)) {
+      if (parseInt(val) > CURRENCY_LIMIT) {
+        setBypassFromBalance(String(CURRENCY_LIMIT));
+      } else {
+        setBypassFromBalance(val);
+      }
+    }
+  };
+
+  const handleBypassToChange = (val: string) => {
+    if (val === "" || /^\d+$/.test(val)) {
+      if (parseInt(val) > CURRENCY_LIMIT) {
+        setBypassToBalance(String(CURRENCY_LIMIT));
+      } else {
+        setBypassToBalance(val);
+      }
+    }
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCrosstradeDate(val);
+    setDateError(validateDateTimeString(val));
+  };
+
+  const handleDateBlur = () => {
+    const date = new Date(crosstradeDate);
+    if (isNaN(date.getTime())) {
+      setCrosstradeDate(getLocalDateTimeString());
+      setDateError("");
+    } else {
+      const formatted = formatDateTimeForInput(date);
+      setCrosstradeDate(formatted);
+      setDateError(validateDateTimeString(formatted));
+    }
+  };
+
   const fromAmountNum = parseInt(fromAmount) || 0;
   const toAmountNum = parseInt(toAmount) || 0;
-  const newFromBalance = selectedFromBot
-    ? selectedFromBot.balance - fromAmountNum
-    : 0;
-  const newToBalance = selectedToBot ? selectedToBot.balance + toAmountNum : 0;
+  const bypassFromNum =
+    bypassFromBalance !== "" ? parseInt(bypassFromBalance) : null;
+  const bypassToNum = bypassToBalance !== "" ? parseInt(bypassToBalance) : null;
+
+  const newFromBalance = isBypassingFrom
+    ? (bypassFromNum ?? 0)
+    : selectedFromBot
+      ? selectedFromBot.balance - fromAmountNum
+      : 0;
+
+  const newToBalance = isBypassingTo
+    ? (bypassToNum ?? 0)
+    : selectedToBot
+      ? selectedToBot.balance + toAmountNum
+      : 0;
 
   const canSubmit =
     selectedFromBot &&
     selectedToBot &&
     fromAmountNum > 0 &&
     toAmountNum > 0 &&
-    fromAmountNum <= (selectedFromBot?.balance || 0) &&
+    (isBypassingFrom || fromAmountNum <= CURRENCY_LIMIT) &&
+    !dateError &&
     !loading;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+
+    const err = validateDateTimeString(crosstradeDate);
+    if (err) {
+      setDateError(err);
+      toast.error("Please enter a valid crosstrade date");
+      return;
+    }
+
+    const localDate = new Date(crosstradeDate);
+    if (isNaN(localDate.getTime())) {
+      toast.error("Invalid date selected");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -173,8 +313,13 @@ export default function CurrencyCrossTradeModal({
           to_bot_account_id: toAccountId,
           to_selected_bot_id: selectedToBot!.id,
           to_amount: toAmountNum,
+          bypass_from_balance: bypassFromNum,
+          bypass_to_balance: bypassToNum,
+          crosstrade_date: localDate.toISOString(),
           traded_with: tradedWith.trim() || null,
+          trade_with_name: tradeWithName.trim() || null,
           trade_link: tradeLink.trim() || null,
+          trade_link_second: tradeLinkSecond.trim() || null,
           note: note.trim() || null,
         },
       );
@@ -215,6 +360,32 @@ export default function CurrencyCrossTradeModal({
         </div>
 
         <div className="p-6">
+          {/* Crosstrade Date */}
+          <div className="mb-6 space-y-1.5">
+            <label className="text-xs text-stone-500">
+              Crosstrade Date <span className="text-red-400">*</span>
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-500 pointer-events-none" />
+              <input
+                type="datetime-local"
+                value={crosstradeDate}
+                onChange={handleDateChange}
+                onBlur={handleDateBlur}
+                min="2020-01-01T00:00"
+                max="2100-12-31T23:59"
+                step="60"
+                className={`w-full pl-10 pr-4 py-2.5 bg-stone-900/50 border ${
+                  dateError ? "border-red-600" : "border-stone-700"
+                } rounded-lg text-white text-sm focus:outline-none focus:border-blue-600 cursor-pointer`}
+              />
+            </div>
+            {dateError && <p className="text-xs text-red-500">{dateError}</p>}
+            <p className="text-xs text-stone-600">
+              Format: YYYY-MM-DD HH:MM (24-hour)
+            </p>
+          </div>
+
           {/* Two-panel trade area */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-4 mb-2">
             {/* LEFT — Giving Side */}
@@ -280,8 +451,9 @@ export default function CurrencyCrossTradeModal({
                           fromBots.find((b) => b.id === e.target.value) || null;
                         setSelectedFromBot(bot);
                         setFromAmount("");
+                        setBypassFromBalance("");
                       }}
-                      className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer`}
+                      className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer"
                     >
                       <option value="">Select a bot</option>
                       {fromBots
@@ -315,6 +487,7 @@ export default function CurrencyCrossTradeModal({
                     value={fromAmount}
                     onChange={(e) => handleFromAmountChange(e.target.value)}
                     placeholder="Enter amount"
+                    maxLength={String(CURRENCY_LIMIT).length}
                     className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-red-600"
                   />
                   <div className="flex justify-between text-xs">
@@ -323,7 +496,7 @@ export default function CurrencyCrossTradeModal({
                       {selectedFromBot.balance} {selectedFromBot.currency_name}
                     </span>
                   </div>
-                  {fromAmountNum > 0 && (
+                  {fromAmountNum > 0 && !isBypassingFrom && (
                     <div className="flex justify-between text-xs">
                       <span className="text-stone-500">After trade:</span>
                       <span
@@ -335,11 +508,35 @@ export default function CurrencyCrossTradeModal({
                       </span>
                     </div>
                   )}
-                  {fromAmountNum > selectedFromBot.balance && (
-                    <p className="text-xs text-red-400">
-                      Exceeds available balance
-                    </p>
-                  )}
+                  {!isBypassingFrom &&
+                    fromAmountNum > selectedFromBot.balance && (
+                      <p className="text-xs text-red-400">
+                        Exceeds available balance
+                      </p>
+                    )}
+
+                  {/* Bypass From Balance */}
+                  <div className="pt-2 border-t border-stone-800 space-y-1.5">
+                    <label className="text-xs text-orange-500 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Override end balance (bypass)
+                    </label>
+                    <input
+                      type="text"
+                      value={bypassFromBalance}
+                      onChange={(e) => handleBypassFromChange(e.target.value)}
+                      placeholder="Leave empty to auto-compute"
+                      className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm placeholder-stone-600 focus:outline-none focus:border-orange-600"
+                    />
+                    {isBypassingFrom && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-orange-600">Bypassing to:</span>
+                        <span className="text-orange-400 font-medium">
+                          {bypassFromNum} {selectedFromBot.currency_name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -372,7 +569,7 @@ export default function CurrencyCrossTradeModal({
                         setSelectedToBot(null);
                     }}
                     disabled={fetchingAccounts}
-                    className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer`}
+                    className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer"
                   >
                     {fetchingAccounts ? (
                       <option>Loading...</option>
@@ -414,8 +611,9 @@ export default function CurrencyCrossTradeModal({
                           toBots.find((b) => b.id === e.target.value) || null;
                         setSelectedToBot(bot);
                         setToAmount("");
+                        setBypassToBalance("");
                       }}
-                      className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer`}
+                      className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer"
                     >
                       <option value="">Select a bot</option>
                       {toBots
@@ -457,7 +655,7 @@ export default function CurrencyCrossTradeModal({
                       {selectedToBot.balance} {selectedToBot.currency_name}
                     </span>
                   </div>
-                  {toAmountNum > 0 && (
+                  {toAmountNum > 0 && !isBypassingTo && (
                     <div className="flex justify-between text-xs">
                       <span className="text-stone-500">After trade:</span>
                       <span className="text-green-400">
@@ -465,10 +663,47 @@ export default function CurrencyCrossTradeModal({
                       </span>
                     </div>
                   )}
+
+                  {/* Bypass To Balance */}
+                  <div className="pt-2 border-t border-stone-800 space-y-1.5">
+                    <label className="text-xs text-orange-500 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Override end balance (bypass)
+                    </label>
+                    <input
+                      type="text"
+                      value={bypassToBalance}
+                      onChange={(e) => handleBypassToChange(e.target.value)}
+                      placeholder="Leave empty to auto-compute"
+                      className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm placeholder-stone-600 focus:outline-none focus:border-orange-600"
+                    />
+                    {isBypassingTo && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-orange-600">Bypassing to:</span>
+                        <span className="text-orange-400 font-medium">
+                          {bypassToNum} {selectedToBot.currency_name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           </div>
+
+          {/* Bypass warning banner */}
+          {(isBypassingFrom || isBypassingTo) && (
+            <div className="my-3 p-3 bg-orange-950/30 border border-orange-700/50 rounded-lg flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-orange-400">
+                <span className="font-medium">Bypass mode active.</span>{" "}
+                {isBypassingFrom &&
+                  `Giving bot balance will be set directly to ${bypassFromNum ?? 0} instead of auto-computed. `}
+                {isBypassingTo &&
+                  `Receiving bot balance will be set directly to ${bypassToNum ?? 0} instead of auto-computed.`}
+              </p>
+            </div>
+          )}
 
           {/* Trade summary */}
           {selectedFromBot &&
@@ -514,40 +749,77 @@ export default function CurrencyCrossTradeModal({
             )}
 
           {/* Optional fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div className="space-y-1.5">
-              <label className="text-xs text-stone-500">Buyer ID</label>
+              <label className="text-xs text-stone-500">
+                Buyer ID <span className="text-stone-600">(optional)</span>
+              </label>
               <input
                 type="text"
                 value={tradedWith}
                 onChange={(e) => setTradedWith(e.target.value)}
-                placeholder="User ID of the buyer (optional)"
+                maxLength={36}
+                placeholder="User ID of the buyer"
                 className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-stone-500">Trade Link</label>
+              <label className="text-xs text-stone-500">
+                Buyer Name <span className="text-stone-600">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={tradeWithName}
+                onChange={(e) => setTradeWithName(e.target.value)}
+                maxLength={50}
+                placeholder="Display name of the buyer"
+                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-stone-500">
+                Trade Link <span className="text-stone-600">(optional)</span>
+              </label>
               <input
                 type="url"
                 value={tradeLink}
                 onChange={(e) => setTradeLink(e.target.value)}
-                placeholder="Trade link (optional)"
+                maxLength={100}
+                placeholder="Primary trade link"
+                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-stone-500">
+                Trade Link 2 <span className="text-stone-600">(optional)</span>
+              </label>
+              <input
+                type="url"
+                value={tradeLinkSecond}
+                onChange={(e) => setTradeLinkSecond(e.target.value)}
+                maxLength={100}
+                placeholder="Secondary trade link"
                 className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
               />
             </div>
           </div>
 
-          <label className="text-xs text-stone-500">Note (optional)</label>
-          <input
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
-            placeholder="Additional notes about this trade"
-          />
+          <div className="mb-4 space-y-1.5">
+            <label className="text-xs text-stone-500">
+              Note <span className="text-stone-600">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={250}
+              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
+              placeholder="Additional notes about this trade"
+            />
+          </div>
 
           {/* Footer buttons */}
-          <div className="flex gap-3 pt-4 mt-4 border-t border-stone-800">
+          <div className="flex gap-3 pt-4 border-t border-stone-800">
             <button
               onClick={onClose}
               disabled={loading}

@@ -15,6 +15,8 @@ import {
   Loader2,
   Link as LinkIcon,
   X,
+  Calendar,
+  Edit,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -29,6 +31,7 @@ import {
 import Loader from "../../../../(components)/Loader";
 import CurrencyCrossTradeModal from "../../../../(components)/Crosstrade/CurrencyCrossTradeModal";
 import { CurrencyCrossTrade } from "../../../../api/dashboard/account/[account_id]/currency-crosstrade/route";
+import CurrencyCrossTradeEditModal from "../../../../(components)/Crosstrade/CurrencyCrossTradeModalEdit";
 
 interface ApiResponse {
   success: boolean;
@@ -47,18 +50,24 @@ export default function CurrencyCrossTradeManager() {
     useState<boolean>(false);
   const [accountName, setAccountName] = useState<string>("");
 
+  // Edit modal state
+  const [editingTrade, setEditingTrade] = useState<CurrencyCrossTrade | null>(
+    null,
+  );
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+
   const fetchTrades = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get<ApiResponse>(
-        `/api/dashboard/account/${account_id}/currency-crosstrade`
+        `/api/dashboard/account/${account_id}/currency-crosstrade`,
       );
       if (response.data.success) {
         setTrades(response.data.data);
       }
     } catch (error: unknown) {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to load currency crosstrades")
+        getAxiosErrorMessage(error, "Failed to load currency crosstrades"),
       );
     } finally {
       setLoading(false);
@@ -94,6 +103,11 @@ export default function CurrencyCrossTradeManager() {
     console.log(`${tradeId}`);
   };
 
+  const handleEditTrade = (trade: CurrencyCrossTrade) => {
+    setEditingTrade(trade);
+    setIsEditModalOpen(true);
+  };
+
   const toggleExpand = (tradeId: string) => {
     setExpandedTradeId(expandedTradeId === tradeId ? null : tradeId);
   };
@@ -101,7 +115,7 @@ export default function CurrencyCrossTradeManager() {
   return (
     <PageWrapper withSidebar sidebarRole="user">
       <div className="min-h-screen p-4 md:p-6">
-        {/* Currency Crosstrade Modal */}
+        {/* New Crosstrade Modal */}
         <CurrencyCrossTradeModal
           isOpen={isCurrencyTradeModalOpen}
           onClose={() => setIsCurrencyTradeModalOpen(false)}
@@ -109,6 +123,20 @@ export default function CurrencyCrossTradeManager() {
           currentAccountId={String(account_id)}
           currentAccountName={accountName}
         />
+
+        {/* Edit Modal */}
+        {editingTrade && (
+          <CurrencyCrossTradeEditModal
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setEditingTrade(null);
+            }}
+            onSuccess={() => fetchTrades()}
+            trade={editingTrade}
+            currentAccountId={String(account_id)}
+          />
+        )}
 
         {/* Header */}
         <div className="mb-6">
@@ -192,6 +220,9 @@ export default function CurrencyCrossTradeManager() {
                           ID
                         </th>
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
+                          CROSSTRADE
+                        </th>
+                        <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           SENDER
                         </th>
                         <th className="text-center p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
@@ -212,6 +243,9 @@ export default function CurrencyCrossTradeManager() {
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           BUYER ID
                         </th>
+                        <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
+                          BUYER
+                        </th>
                         <th className="text-center p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           DETAILS
                         </th>
@@ -227,6 +261,18 @@ export default function CurrencyCrossTradeManager() {
                               <span className="text-stone-400 font-mono">
                                 #{trade.id}
                               </span>
+                            </td>
+
+                            {/* Date */}
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-stone-500 shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="text-white truncate">
+                                    {formatDateTime(trade.crosstrade_date)}
+                                  </div>
+                                </div>
+                              </div>
                             </td>
 
                             {/* SENDER */}
@@ -289,6 +335,13 @@ export default function CurrencyCrossTradeManager() {
                               </div>
                             </td>
 
+                            {/* BUYER NAME */}
+                            <td className="p-4">
+                              <span className="text-white">
+                                {trade.trade_with_name || "--"}
+                              </span>
+                            </td>
+
                             {/* Expand */}
                             <td className="p-4">
                               <div className="flex items-center justify-center">
@@ -314,7 +367,7 @@ export default function CurrencyCrossTradeManager() {
                           {/* Expanded Details Row */}
                           {expandedTradeId === trade.id && (
                             <tr className="bg-black/20 border-b border-stone-800">
-                              <td colSpan={9} className="p-0">
+                              <td colSpan={11} className="p-0">
                                 <div className="p-6 border-t border-stone-800">
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                                     {/* Note */}
@@ -374,6 +427,28 @@ export default function CurrencyCrossTradeManager() {
                                             No Trade Link
                                           </button>
                                         )}
+
+                                        {trade.trade_link_second ? (
+                                          <Link
+                                            href={trade.trade_link_second}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`px-3 py-1.5 ${BLUE_Button} text-white text-sm rounded transition-colors cursor-pointer flex items-center gap-2`}
+                                          >
+                                            <LinkIcon className="h-3 w-3" />
+                                            Trade Link 2
+                                          </Link>
+                                        ) : null}
+
+                                        {/* ── Edit button (copied from CrossTradeManager) ── */}
+                                        <button
+                                          className={`px-3 py-1.5 ${BLUE_Button} text-white text-sm rounded transition-colors cursor-pointer flex items-center gap-2`}
+                                          title="Edit"
+                                          onClick={() => handleEditTrade(trade)}
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                          Edit
+                                        </button>
 
                                         {deleteConfirmId === trade.id ? (
                                           <div className="flex items-center gap-2">

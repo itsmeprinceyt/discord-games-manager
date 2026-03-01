@@ -19,8 +19,9 @@ import {
   Trash,
   X,
   AlertTriangle,
-  FileSpreadsheet,
   Loader2Icon,
+  TriangleDashed,
+  CircleDashed,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -289,7 +290,7 @@ export default function GameAccountManager() {
     },
     {
       href: `/dashboard/accounts/${account_id}/crosstrade`,
-      icon: FileSpreadsheet,
+      icon: TriangleDashed,
       title: "Crosstrade Manager",
       description: "Manage all crosstrades",
       color: "purple",
@@ -299,7 +300,7 @@ export default function GameAccountManager() {
     },
     {
       href: `/dashboard/accounts/${account_id}/currency-crosstrade`,
-      icon: FileSpreadsheet,
+      icon: CircleDashed,
       title: "Currency Crosstrade Manager",
       description: "Manage all currency crosstrades",
       color: "orange",
