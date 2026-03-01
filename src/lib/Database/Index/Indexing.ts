@@ -9,8 +9,12 @@ export const createIndexStatements: string[] = [
 
   `CREATE INDEX idx_selected_bot_balance ON selected_bot(balance)`,
   `CREATE INDEX idx_selected_bot_last_crosstraded_at ON selected_bot(last_crosstraded_at)`,
+  `CREATE INDEX idx_selected_bot_last_currency_crosstraded_at ON selected_bot(last_currency_crosstraded_at)`,
   `CREATE INDEX idx_selected_bot_voted_at ON selected_bot(voted_at)`,
 
+  `CREATE INDEX idx_crosstrades_user_id ON crosstrades(user_id)`,
+  `CREATE INDEX idx_crosstrades_bot_account_id ON crosstrades(bot_account_id)`,
+  `CREATE INDEX idx_crosstrades_selected_bot_id ON crosstrades(selected_bot_id)`,
   `CREATE INDEX idx_crosstrades_crosstrade_date ON crosstrades(crosstrade_date)`,
   `CREATE INDEX idx_crosstrades_currency ON crosstrades(currency)`,
   `CREATE INDEX idx_crosstrades_crosstrade_via ON crosstrades(crosstrade_via)`,
@@ -18,10 +22,17 @@ export const createIndexStatements: string[] = [
   `CREATE INDEX idx_crosstrades_paid ON crosstrades(paid)`,
   `CREATE INDEX idx_crosstrades_created_at ON crosstrades(created_at)`,
   `CREATE INDEX idx_crosstrades_traded_paid ON crosstrades(traded, paid)`,
+  `CREATE INDEX idx_crosstrades_user_account_date ON crosstrades(user_id, bot_account_id, crosstrade_date)`,
+  `CREATE INDEX idx_crosstrades_selected_bot_date ON crosstrades(selected_bot_id, crosstrade_date)`,
 
   `CREATE INDEX idx_currency_crosstrades_user_id ON currency_crosstrades(user_id)`,
+  `CREATE INDEX idx_currency_crosstrades_from_bot_account_id ON currency_crosstrades(from_bot_account_id)`,
+  `CREATE INDEX idx_currency_crosstrades_to_bot_account_id ON currency_crosstrades(to_bot_account_id)`,
+  `CREATE INDEX idx_currency_crosstrades_from_selected_bot_id ON currency_crosstrades(from_selected_bot_id)`,
+  `CREATE INDEX idx_currency_crosstrades_to_selected_bot_id ON currency_crosstrades(to_selected_bot_id)`,
   `CREATE INDEX idx_currency_crosstrades_from_currency_name ON currency_crosstrades(from_currency_name)`,
   `CREATE INDEX idx_currency_crosstrades_to_currency_name ON currency_crosstrades(to_currency_name)`,
+  `CREATE INDEX idx_currency_crosstrades_crosstrade_date ON currency_crosstrades(crosstrade_date)`,
   `CREATE INDEX idx_currency_crosstrades_created_at ON currency_crosstrades(created_at)`,
   `CREATE INDEX idx_currency_crosstrades_user_created ON currency_crosstrades(user_id, created_at)`,
   `CREATE INDEX idx_currency_crosstrades_user_from_account ON currency_crosstrades(user_id, from_bot_account_id)`,
@@ -33,6 +44,7 @@ export const createIndexStatements: string[] = [
   `CREATE INDEX idx_audit_logs_performed_at ON audit_logs(performed_at)`,
   `CREATE INDEX idx_audit_logs_action_performed ON audit_logs(action_type, performed_at)`,
 ];
+
 export const dropIndexStatements: string[] = [
   `DROP INDEX idx_users_is_admin ON users`,
   `DROP INDEX idx_users_created_at ON users`,
@@ -44,8 +56,12 @@ export const dropIndexStatements: string[] = [
 
   `DROP INDEX idx_selected_bot_balance ON selected_bot`,
   `DROP INDEX idx_selected_bot_last_crosstraded_at ON selected_bot`,
+  `DROP INDEX idx_selected_bot_last_currency_crosstraded_at ON selected_bot`,
   `DROP INDEX idx_selected_bot_voted_at ON selected_bot`,
 
+  `DROP INDEX idx_crosstrades_user_id ON crosstrades`,
+  `DROP INDEX idx_crosstrades_bot_account_id ON crosstrades`,
+  `DROP INDEX idx_crosstrades_selected_bot_id ON crosstrades`,
   `DROP INDEX idx_crosstrades_crosstrade_date ON crosstrades`,
   `DROP INDEX idx_crosstrades_currency ON crosstrades`,
   `DROP INDEX idx_crosstrades_crosstrade_via ON crosstrades`,
@@ -53,10 +69,17 @@ export const dropIndexStatements: string[] = [
   `DROP INDEX idx_crosstrades_paid ON crosstrades`,
   `DROP INDEX idx_crosstrades_created_at ON crosstrades`,
   `DROP INDEX idx_crosstrades_traded_paid ON crosstrades`,
+  `DROP INDEX idx_crosstrades_user_account_date ON crosstrades`,
+  `DROP INDEX idx_crosstrades_selected_bot_date ON crosstrades`,
 
   `DROP INDEX idx_currency_crosstrades_user_id ON currency_crosstrades`,
+  `DROP INDEX idx_currency_crosstrades_from_bot_account_id ON currency_crosstrades`,
+  `DROP INDEX idx_currency_crosstrades_to_bot_account_id ON currency_crosstrades`,
+  `DROP INDEX idx_currency_crosstrades_from_selected_bot_id ON currency_crosstrades`,
+  `DROP INDEX idx_currency_crosstrades_to_selected_bot_id ON currency_crosstrades`,
   `DROP INDEX idx_currency_crosstrades_from_currency_name ON currency_crosstrades`,
   `DROP INDEX idx_currency_crosstrades_to_currency_name ON currency_crosstrades`,
+  `DROP INDEX idx_currency_crosstrades_crosstrade_date ON currency_crosstrades`,
   `DROP INDEX idx_currency_crosstrades_created_at ON currency_crosstrades`,
   `DROP INDEX idx_currency_crosstrades_user_created ON currency_crosstrades`,
   `DROP INDEX idx_currency_crosstrades_user_from_account ON currency_crosstrades`,
