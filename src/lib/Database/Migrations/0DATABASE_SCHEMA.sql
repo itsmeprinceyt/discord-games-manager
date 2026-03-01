@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS crosstrades (
     net_amount DECIMAL(10, 2) NULL,
     -- Meta
     traded_with CHAR(36) DEFAULT NULL,
+    trade_with_name VARCHAR(50) DEFAULT NULL,
     trade_link VARCHAR(100) DEFAULT NULL,
     traded BOOLEAN NOT NULL DEFAULT TRUE,
     paid BOOLEAN NOT NULL DEFAULT TRUE,
@@ -92,8 +93,11 @@ CREATE TABLE IF NOT EXISTS currency_crosstrades (
     to_currency_name VARCHAR(30) NOT NULL,
     to_amount INT NOT NULL,
     -- Meta
+    crosstrade_date VARCHAR(30) NOT NULL,
     traded_with CHAR(36) DEFAULT NULL,
+    trade_with_name VARCHAR(50) DEFAULT NULL,
     trade_link VARCHAR(100) DEFAULT NULL,
+    trade_link_second VARCHAR(100) DEFAULT NULL,
     note VARCHAR(250) DEFAULT NULL,
     created_at VARCHAR(30) NOT NULL,
     updated_at VARCHAR(30) NOT NULL,

@@ -1,3 +1,4 @@
+const CURRENCY_LIMIT: number = 9999999;
 const COOLDOWN_DAYS: number = 14;
 const CURRENCY_COOLDOWN_DAYS: number = 7;
 //===================================================================================//
@@ -114,6 +115,7 @@ export {
   formatTime,
   formatDate,
   formatDateTime,
+  CURRENCY_LIMIT,
   COOLDOWN_DAYS,
   CURRENCY_COOLDOWN_DAYS,
 };
