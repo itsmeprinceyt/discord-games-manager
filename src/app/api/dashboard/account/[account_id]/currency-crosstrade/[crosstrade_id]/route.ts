@@ -301,6 +301,35 @@ export async function PUT(
         ]
       );
 
+      // ── Sync last_currency_crosstraded_at for both bots ───────────────────
+      // Fetch the latest crosstrade_date for each bot across ALL their trades
+      // (as either giver or receiver) and update accordingly
+      await connection.execute(
+        `UPDATE selected_bot
+         SET last_currency_crosstraded_at = (
+           SELECT MAX(crosstrade_date)
+           FROM currency_crosstrades
+           WHERE from_selected_bot_id = ? OR to_selected_bot_id = ?
+         ),
+         updated_at = ?
+         WHERE id = ?`,
+        [from_selected_bot_id, from_selected_bot_id, now, from_selected_bot_id]
+      );
+
+      if (from_selected_bot_id !== to_selected_bot_id) {
+        await connection.execute(
+          `UPDATE selected_bot
+           SET last_currency_crosstraded_at = (
+             SELECT MAX(crosstrade_date)
+             FROM currency_crosstrades
+             WHERE from_selected_bot_id = ? OR to_selected_bot_id = ?
+           ),
+           updated_at = ?
+           WHERE id = ?`,
+          [to_selected_bot_id, to_selected_bot_id, now, to_selected_bot_id]
+        );
+      }
+
       await connection.commit();
       await invalidateUserCache(session.user.id);
 
