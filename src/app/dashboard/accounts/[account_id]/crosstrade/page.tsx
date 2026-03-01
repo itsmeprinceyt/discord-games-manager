@@ -168,7 +168,7 @@ export default function CrossTradeManager() {
               </Link>
               <div>
                 <h1 className="text-2xl md:text-3xl font-medium text-white">
-                  Cross Trade Manager
+                  Crosstrade Manager
                 </h1>
                 <p className="text-stone-400 text-sm">
                   Manage all cross trades for this account
@@ -263,6 +263,9 @@ export default function CrossTradeManager() {
                         </th>
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           BUYER ID
+                        </th>
+                        <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
+                          BUYER
                         </th>
                         <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                           VIA
@@ -362,7 +365,7 @@ export default function CrossTradeManager() {
                               {trade.rate || "--"}
                             </td>
 
-                            {/* Buyer */}
+                            {/* Buyer ID */}
                             <td className="p-4">
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-stone-500 shrink-0" />
@@ -371,6 +374,13 @@ export default function CrossTradeManager() {
                                     {trade.traded_with || "--"}
                                   </div>
                                 </div>
+                              </div>
+                            </td>
+
+                            {/* Buyer Name */}
+                            <td className="p-4">
+                              <div className="text-white truncate">
+                                {trade.trade_with_name || "--"}
                               </div>
                             </td>
 

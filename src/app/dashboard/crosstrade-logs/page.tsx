@@ -36,6 +36,7 @@ interface UserCrossTradeLog {
   conversion_rate: number | null;
   net_amount: number | null;
   traded_with: string | null;
+  trade_with_name: string | null;
   trade_link: string | null;
   traded: boolean;
   paid: boolean;
@@ -485,6 +486,9 @@ export default function UserCrossTradeLogs() {
                             BUYER ID
                           </th>
                           <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
+                            BUYER
+                          </th>
+                          <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                             VIA
                           </th>
                           <th className="text-center p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
@@ -597,7 +601,7 @@ export default function UserCrossTradeLogs() {
                                 {trade.rate || "--"}
                               </td>
 
-                              {/* Buyer */}
+                              {/* Buyer ID*/}
                               <td className="p-4">
                                 <div className="flex items-center gap-2">
                                   <User className="h-4 w-4 text-stone-500 shrink-0" />
@@ -606,6 +610,13 @@ export default function UserCrossTradeLogs() {
                                       {trade.traded_with || "--"}
                                     </div>
                                   </div>
+                                </div>
+                              </td>
+
+                              {/* Buyer Name*/}
+                              <td className="p-4">
+                                <div className="text-white truncate">
+                                  {trade.trade_with_name || "--"}
                                 </div>
                               </td>
 

@@ -33,6 +33,7 @@ interface CrossTrade {
   conversion_rate: number;
   net_amount: number;
   traded_with: string;
+  trade_with_name: string;
   trade_link: string;
   traded: boolean;
   paid: boolean;
@@ -58,6 +59,7 @@ interface CrossTradeFormData {
   conversion_rate: number;
   net_amount: number;
   traded_with: string;
+  trade_with_name: string;
   trade_link: string;
   traded: boolean;
   paid: boolean;
@@ -178,6 +180,7 @@ export default function CrossTradeForm({
         conversion_rate: tradeToEdit.conversion_rate || 0,
         net_amount: tradeToEdit.net_amount,
         traded_with: tradeToEdit.traded_with || "",
+        trade_with_name: tradeToEdit.trade_with_name || "",
         trade_link: tradeToEdit.trade_link || "",
         traded: tradeToEdit.traded,
         paid: tradeToEdit.paid,
@@ -197,6 +200,7 @@ export default function CrossTradeForm({
       conversion_rate: 0,
       net_amount: 0,
       traded_with: "",
+      trade_with_name: "",
       trade_link: "",
       traded: true,
       paid: true,
@@ -488,6 +492,7 @@ export default function CrossTradeForm({
       conversion_rate: 0,
       net_amount: 0,
       traded_with: "",
+      trade_with_name: "",
       trade_link: "",
       traded: true,
       paid: true,
@@ -673,7 +678,8 @@ export default function CrossTradeForm({
         conversion_rate:
           formData.currency === "usd" ? formData.conversion_rate : null,
         net_amount: formData.net_amount,
-        traded_with: formData.traded_with.trim(),
+        traded_with: formData.traded_with.trim() || null,
+        trade_with_name: formData.trade_with_name.trim() || null,
         trade_link: formData.trade_link.trim(),
         traded: formData.traded,
         paid: formData.paid,
@@ -1238,6 +1244,22 @@ export default function CrossTradeForm({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Buyer Name */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-stone-300 mb-2">
+              Buyer Name
+            </label>
+            <input
+              type="text"
+              name="trade_with_name"
+              value={formData.trade_with_name}
+              onChange={handleInputChange}
+              maxLength={50}
+              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text"
+              placeholder="Display name of the buyer (optional)"
+            />
           </div>
 
           {/* Trade Link */}

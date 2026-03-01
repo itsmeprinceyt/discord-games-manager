@@ -52,7 +52,7 @@ export default function CurrencyCrossTradeManager() {
 
   // Edit modal state
   const [editingTrade, setEditingTrade] = useState<CurrencyCrossTrade | null>(
-    null,
+    null
   );
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
@@ -60,14 +60,14 @@ export default function CurrencyCrossTradeManager() {
     try {
       setLoading(true);
       const response = await axios.get<ApiResponse>(
-        `/api/dashboard/account/${account_id}/currency-crosstrade`,
+        `/api/dashboard/account/${account_id}/currency-crosstrade`
       );
       if (response.data.success) {
         setTrades(response.data.data);
       }
     } catch (error: unknown) {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to load currency crosstrades"),
+        getAxiosErrorMessage(error, "Failed to load currency crosstrades")
       );
     } finally {
       setLoading(false);
@@ -150,7 +150,7 @@ export default function CurrencyCrossTradeManager() {
               </Link>
               <div>
                 <h1 className="text-2xl md:text-3xl font-medium text-white">
-                  Currency Crosstrade
+                  Currency Crosstrade Manager
                 </h1>
                 <p className="text-stone-400 text-sm">
                   Track in-game currency exchanges between bots

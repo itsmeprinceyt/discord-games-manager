@@ -13,6 +13,7 @@ import {
   Link as LinkIcon,
   Filter,
   X,
+  Calendar,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -461,7 +462,10 @@ export default function CurrencyCrossTradeLogsPage() {
                       <thead>
                         <tr className="border-b border-stone-800">
                           <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
-                            CROSSTRADE ID
+                            ID
+                          </th>
+                          <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
+                            CROSSTRADE
                           </th>
                           <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                             SENDER
@@ -484,6 +488,9 @@ export default function CurrencyCrossTradeLogsPage() {
                           <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                             BUYER ID
                           </th>
+                          <th className="text-left p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
+                            BUYER
+                          </th>
                           <th className="text-center p-4 text-stone-400 text-sm font-medium whitespace-nowrap">
                             DETAILS
                           </th>
@@ -499,6 +506,18 @@ export default function CurrencyCrossTradeLogsPage() {
                                 <span className="text-stone-400 font-mono">
                                   #{trade.id}
                                 </span>
+                              </td>
+
+                              {/* Date */}
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-stone-500 shrink-0" />
+                                  <div className="min-w-0">
+                                    <div className="text-white truncate">
+                                      {formatDateTime(trade.crosstrade_date)}
+                                    </div>
+                                  </div>
+                                </div>
                               </td>
 
                               {/* SENDER */}
@@ -559,6 +578,13 @@ export default function CurrencyCrossTradeLogsPage() {
                                     {trade.traded_with || "--"}
                                   </span>
                                 </div>
+                              </td>
+
+                              {/* BUYER NAME */}
+                              <td className="p-4">
+                                <span className="text-white">
+                                  {trade.trade_with_name || "--"}
+                                </span>
                               </td>
 
                               {/* Expand */}
@@ -650,6 +676,17 @@ export default function CurrencyCrossTradeLogsPage() {
                                               No Trade Link
                                             </button>
                                           )}
+                                          {trade.trade_link_second ? (
+                                            <Link
+                                              href={trade.trade_link_second}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className={`px-3 py-1.5 ${BLUE_Button} text-white text-sm rounded transition-colors cursor-pointer flex items-center gap-2`}
+                                            >
+                                              <LinkIcon className="h-3 w-3" />
+                                              Trade Link 2
+                                            </Link>
+                                          ) : null}
                                         </div>
                                       </div>
                                     </div>
