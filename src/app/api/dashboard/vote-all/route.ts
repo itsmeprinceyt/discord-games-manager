@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { logAudit } from "../../../../utils/Variables/AuditLogger.util";
 import { AuditActor } from "../../../../types/Admin/AuditLogger/auditLogger.type";
+import { invalidateUserCache } from "../../../../utils/Redis/invalidateUserRedisData";
 
 export async function POST() {
   try {
@@ -74,6 +75,7 @@ export async function POST() {
     }
 
     await Promise.all(updatePromises);
+    await invalidateUserCache(session.user.id);
 
     const actor: AuditActor = {
       user_id: session.user.id,
