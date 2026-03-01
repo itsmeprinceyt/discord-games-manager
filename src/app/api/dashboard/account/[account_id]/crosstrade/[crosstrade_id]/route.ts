@@ -8,6 +8,7 @@ import { PoolConnection } from "mysql2/promise";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { CrossTradeRequestAPI } from "../route";
+import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
 
 export async function PUT(
   request: NextRequest,
@@ -39,6 +40,7 @@ export async function PUT(
       conversion_rate,
       net_amount,
       traded_with,
+      trade_with_name,
       trade_link,
       traded,
       paid,
@@ -177,6 +179,16 @@ export async function PUT(
       );
     }
 
+    if (trade_with_name && trade_with_name.length > 50) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Trade with name must be 50 characters or less",
+        },
+        { status: 400 }
+      );
+    }
+
     if (trade_link && trade_link.length > 100) {
       console.error("Trade link too long:", trade_link.length);
       return NextResponse.json(
@@ -211,6 +223,7 @@ export async function PUT(
           conversion_rate = ?,
           net_amount = ?,
           traded_with = ?,
+          trade_with_name = ?,
           trade_link = ?,
           traded = ?,
           paid = ?,
@@ -229,6 +242,7 @@ export async function PUT(
         conversion_rate,
         net_amount,
         traded_with,
+        trade_with_name,
         trade_link,
         traded,
         paid,
@@ -277,6 +291,8 @@ export async function PUT(
       }
 
       await connection.commit();
+
+      await invalidateUserCache(session.user.id);
 
       const actor: AuditActor = {
         user_id: session.user.id,

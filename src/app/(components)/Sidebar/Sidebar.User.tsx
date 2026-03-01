@@ -9,10 +9,10 @@ import {
   ChevronRight,
   Menu,
   X,
-  Bookmark,
   BarChart3,
   TriangleDashed,
   CircleDashed,
+  Database,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -40,7 +40,7 @@ const userNavItems = [
   {
     title: "Manage Accounts",
     href: "/dashboard/accounts",
-    icon: <Bookmark className="h-5 w-5" />,
+    icon: <Database className="h-5 w-5" />,
   },
   {
     title: "Settings",

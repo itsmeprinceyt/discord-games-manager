@@ -20,6 +20,7 @@ interface UserCrossTradeLog {
   conversion_rate: number | null;
   net_amount: number | null;
   traded_with: string | null;
+  trade_with_name: string | null;
   trade_link: string | null;
   traded: boolean;
   paid: boolean;
@@ -152,6 +153,7 @@ export async function GET(request: Request) {
           ct.conversion_rate,
           ct.net_amount,
           ct.traded_with,
+          ct.trade_with_name,
           ct.trade_link,
           ct.traded,
           ct.paid,
@@ -203,6 +205,7 @@ export async function GET(request: Request) {
             : null,
           net_amount: trade.net_amount ? Number(trade.net_amount) : null,
           traded_with: trade.traded_with,
+          trade_with_name: trade.trade_with_name,
           trade_link: trade.trade_link,
           traded: Boolean(trade.traded),
           paid: Boolean(trade.paid),

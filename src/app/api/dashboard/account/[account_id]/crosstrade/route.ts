@@ -29,6 +29,7 @@ interface CrossTradeLog {
   conversion_rate: number | null;
   net_amount: number | null;
   traded_with: string | null;
+  trade_with_name: string | null;
   trade_link: string | null;
   traded: boolean;
   paid: boolean;
@@ -105,6 +106,7 @@ export async function GET(
         ct.conversion_rate,
         ct.net_amount,
         ct.traded_with,
+        ct.trade_with_name,
         ct.trade_link,
         ct.traded,
         ct.paid,
@@ -137,6 +139,7 @@ export async function GET(
             : null,
           net_amount: trade.net_amount ? Number(trade.net_amount) : null,
           traded_with: trade.traded_with,
+          trade_with_name: trade.trade_with_name,
           trade_link: trade.trade_link,
           traded: Boolean(trade.traded),
           paid: Boolean(trade.paid),
@@ -182,6 +185,7 @@ export interface CrossTradeRequestAPI {
   conversion_rate: number | null;
   net_amount: number | null;
   traded_with: string | null;
+  trade_with_name: string | null;
   trade_link: string | null;
   traded: boolean;
   paid: boolean;
@@ -215,6 +219,7 @@ export async function POST(request: NextRequest) {
       conversion_rate,
       net_amount,
       traded_with,
+      trade_with_name,
       trade_link,
       traded,
       paid,
@@ -376,6 +381,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (trade_with_name && trade_with_name.length > 50) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Trade with name must be 50 characters or less",
+        },
+        { status: 400 }
+      );
+    }
+
     if (trade_link && trade_link.length > 100) {
       console.error("Trade link too long:", trade_link.length);
       return NextResponse.json(
@@ -404,9 +419,9 @@ export async function POST(request: NextRequest) {
         INSERT INTO crosstrades (
           id, user_id, bot_account_id, selected_bot_id,
           crosstrade_date, currency, crosstrade_via, amount_received,
-          rate, conversion_rate, net_amount, traded_with,
+          rate, conversion_rate, net_amount, traded_with, trade_with_name,
           trade_link, traded, paid, note, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       await connection.execute(insertCrosstradeQuery, [
@@ -422,6 +437,7 @@ export async function POST(request: NextRequest) {
         conversion_rate,
         net_amount,
         traded_with,
+        trade_with_name,
         trade_link,
         traded,
         paid,

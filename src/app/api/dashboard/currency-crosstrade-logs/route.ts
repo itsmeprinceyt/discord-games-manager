@@ -21,8 +21,11 @@ interface UserCurrencyCrossTradeLog {
   to_bot_name: string;
   to_currency_name: string;
   to_amount: number;
+  crosstrade_date: string;
   traded_with: string | null;
+  trade_with_name: string | null;
   trade_link: string | null;
+  trade_link_second: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -175,8 +178,11 @@ export async function GET(request: Request) {
           to_sb.name AS to_bot_name,
           cct.to_currency_name,
           cct.to_amount,
+          cct.crosstrade_date,
           cct.traded_with,
+          cct.trade_with_name,
           cct.trade_link,
+          cct.trade_link_second,
           cct.note,
           cct.created_at,
           cct.updated_at
@@ -251,8 +257,11 @@ export async function GET(request: Request) {
           to_bot_name: trade.to_bot_name,
           to_currency_name: trade.to_currency_name,
           to_amount: Number(trade.to_amount),
+          crosstrade_date: trade.crosstrade_date,
           traded_with: trade.traded_with,
+          trade_with_name: trade.trade_with_name,
           trade_link: trade.trade_link,
+          trade_link_second: trade.trade_link_second,
           note: trade.note,
           created_at: trade.created_at,
           updated_at: trade.updated_at,
