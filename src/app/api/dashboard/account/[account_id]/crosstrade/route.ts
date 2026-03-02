@@ -182,7 +182,7 @@ export interface CrossTradeRequestAPI {
   crosstrade_via: "upi" | "paypal" | "wise";
   amount_received: number;
   rate: string | null;
-  conversion_rate: number | null;
+  conversion_rate: string | null;
   net_amount: number | null;
   traded_with: string | null;
   trade_with_name: string | null;
@@ -352,8 +352,8 @@ export async function POST(request: NextRequest) {
     if (
       currency === "usd" &&
       (!conversion_rate ||
-        typeof conversion_rate !== "number" ||
-        conversion_rate <= 0)
+        typeof Number(conversion_rate) !== "number" ||
+        Number(conversion_rate) <= 0)
     ) {
       console.error("Invalid conversion_rate for USD:", conversion_rate);
       return NextResponse.json(
@@ -434,7 +434,7 @@ export async function POST(request: NextRequest) {
         crosstrade_via,
         amount_received,
         rate,
-        conversion_rate,
+        Number(conversion_rate),
         net_amount,
         traded_with,
         trade_with_name,

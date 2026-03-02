@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS crosstrades (
     crosstrade_via ENUM('upi', 'paypal', 'wise') NOT NULL DEFAULT 'upi',
     amount_received DECIMAL(10, 2) NOT NULL,
     rate VARCHAR(10) DEFAULT NULL,
-    conversion_rate DECIMAL(18, 12) NULL,
+    conversion_rate DECIMAL(24, 16) NULL,
     net_amount DECIMAL(10, 2) NULL,
     -- Meta
     traded_with CHAR(36) DEFAULT NULL,

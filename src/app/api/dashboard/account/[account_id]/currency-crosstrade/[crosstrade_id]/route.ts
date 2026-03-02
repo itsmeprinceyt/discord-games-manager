@@ -381,3 +381,246 @@ export async function PUT(
     }
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ account_id: string; crosstrade_id: string }> }
+) {
+  let connection: PoolConnection | null = null;
+
+  try {
+    const session = await getServerSession(authOptions);
+
+    // Validation 1: Check if user is authenticated
+    if (!session) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized - Please log in",
+        },
+        { status: 401 }
+      );
+    }
+
+    const { account_id, crosstrade_id } = await context.params;
+    const accountId = account_id;
+    const tradeId = crosstrade_id;
+
+    // Validation 2: Check if trade ID is provided
+    if (!tradeId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Currency crosstrade ID is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    await initServer();
+    const pool = db();
+
+    // Validation 3: Check if the trade exists and belongs to the user
+    // Note: A currency crosstrade can belong to either from_bot_account_id or to_bot_account_id
+    const [existingTrade] = await pool.execute<any[]>(
+      `
+      SELECT 
+        cct.id,
+        cct.user_id,
+        cct.from_bot_account_id,
+        cct.to_bot_account_id,
+        cct.from_selected_bot_id,
+        cct.to_selected_bot_id,
+        cct.from_amount,
+        cct.to_amount,
+        cct.from_currency_name,
+        cct.to_currency_name,
+        cct.crosstrade_date,
+        fb.name as from_bot_name,
+        tb.name as to_bot_name,
+        fba.name as from_account_name,
+        tba.name as to_account_name
+      FROM currency_crosstrades cct
+      LEFT JOIN selected_bot fb ON cct.from_selected_bot_id = fb.id
+      LEFT JOIN selected_bot tb ON cct.to_selected_bot_id = tb.id
+      LEFT JOIN bot_accounts fba ON cct.from_bot_account_id = fba.id
+      LEFT JOIN bot_accounts tba ON cct.to_bot_account_id = tba.id
+      WHERE cct.id = ? AND cct.user_id = ? 
+        AND (cct.from_bot_account_id = ? OR cct.to_bot_account_id = ?)
+      `,
+      [tradeId, session.user.id, accountId, accountId]
+    );
+
+    if (!Array.isArray(existingTrade) || existingTrade.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Currency crosstrade not found or you don't have permission to delete it",
+        },
+        { status: 404 }
+      );
+    }
+
+    const tradeData = existingTrade[0];
+    const now = getCurrentDateTime();
+    connection = await pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      // Validation 4: Optional - Check if trade is recent enough to delete
+      // You can adjust this based on your business rules
+      const tradeDate = new Date(tradeData.crosstrade_date);
+      const currentDate = new Date();
+      const daysDifference = Math.floor(
+        (currentDate.getTime() - tradeDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Optional: Prevent deletion of trades older than 30 days
+      // Comment this out if you don't want this restriction
+      if (daysDifference > 30) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Cannot delete currency crosstrades older than 30 days. Contact admin",
+          },
+          { status: 403 }
+        );
+      }
+
+      // Delete the currency crosstrade
+      const [deleteResult] = await connection.execute(
+        `
+        DELETE FROM currency_crosstrades 
+        WHERE id = ? AND user_id = ?
+        `,
+        [tradeId, session.user.id]
+      );
+
+      // Check if delete was successful
+      const result = deleteResult as any;
+      if (result.affectedRows === 0) {
+        throw new Error("Failed to delete currency crosstrade");
+      }
+
+      // Update last_currency_crosstraded_at for both bots involved
+      // For the FROM bot
+      if (tradeData.from_selected_bot_id) {
+        // Find the next latest crosstrade date for this bot (as either giver or receiver)
+        const [latestFromCrosstrade] = await connection.execute<any[]>(
+          `
+          SELECT MAX(crosstrade_date) as latest_date 
+          FROM currency_crosstrades 
+          WHERE (from_selected_bot_id = ? OR to_selected_bot_id = ?) 
+            AND id != ?
+          `,
+          [
+            tradeData.from_selected_bot_id,
+            tradeData.from_selected_bot_id,
+            tradeId,
+          ]
+        );
+
+        const latestFromDate =
+          Array.isArray(latestFromCrosstrade) &&
+          latestFromCrosstrade.length > 0 &&
+          latestFromCrosstrade[0].latest_date
+            ? latestFromCrosstrade[0].latest_date
+            : null;
+
+        // Update the FROM bot with the new latest date (or NULL if no trades left)
+        await connection.execute(
+          `
+          UPDATE selected_bot 
+          SET last_currency_crosstraded_at = ?,
+              updated_at = ?
+          WHERE id = ?
+          `,
+          [latestFromDate, now, tradeData.from_selected_bot_id]
+        );
+      }
+
+      // For the TO bot (if different from FROM bot)
+      if (
+        tradeData.to_selected_bot_id &&
+        tradeData.to_selected_bot_id !== tradeData.from_selected_bot_id
+      ) {
+        // Find the next latest crosstrade date for this bot (as either giver or receiver)
+        const [latestToCrosstrade] = await connection.execute<any[]>(
+          `
+          SELECT MAX(crosstrade_date) as latest_date 
+          FROM currency_crosstrades 
+          WHERE (from_selected_bot_id = ? OR to_selected_bot_id = ?) 
+            AND id != ?
+          `,
+          [tradeData.to_selected_bot_id, tradeData.to_selected_bot_id, tradeId]
+        );
+
+        const latestToDate =
+          Array.isArray(latestToCrosstrade) &&
+          latestToCrosstrade.length > 0 &&
+          latestToCrosstrade[0].latest_date
+            ? latestToCrosstrade[0].latest_date
+            : null;
+
+        // Update the TO bot with the new latest date (or NULL if no trades left)
+        await connection.execute(
+          `
+          UPDATE selected_bot 
+          SET last_currency_crosstraded_at = ?,
+              updated_at = ?
+          WHERE id = ?
+          `,
+          [latestToDate, now, tradeData.to_selected_bot_id]
+        );
+      }
+
+      await connection.commit();
+
+      // Invalidate user cache to reflect changes
+      await invalidateUserCache(session.user.id);
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Currency crosstrade deleted successfully",
+          data: {
+            id: tradeId,
+            deleted_at: now,
+          },
+        },
+        { status: 200 }
+      );
+    } catch (dbError: unknown) {
+      if (connection) {
+        await connection.rollback();
+      }
+      console.error(
+        "Database error during currency crosstrade deletion:",
+        dbError
+      );
+      throw dbError;
+    }
+  } catch (error: unknown) {
+    console.error("Error deleting currency crosstrade:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to delete currency crosstrade",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  } finally {
+    if (connection) {
+      try {
+        connection.release();
+      } catch (releaseError) {
+        console.error("Error releasing connection:", releaseError);
+      }
+    }
+  }
+}
