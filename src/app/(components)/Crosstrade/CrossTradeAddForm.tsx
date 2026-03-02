@@ -56,7 +56,7 @@ interface CrossTradeFormData {
   crosstrade_via: "upi" | "paypal" | "wise";
   amount_received: number;
   rate: string;
-  conversion_rate: number;
+  conversion_rate: string;
   net_amount: number;
   traded_with: string;
   trade_with_name: string;
@@ -177,7 +177,7 @@ export default function CrossTradeForm({
         crosstrade_via: tradeToEdit.crosstrade_via,
         amount_received: tradeToEdit.amount_received,
         rate: tradeToEdit.rate || "",
-        conversion_rate: tradeToEdit.conversion_rate || 0,
+        conversion_rate: tradeToEdit.conversion_rate?.toString() || "",
         net_amount: tradeToEdit.net_amount,
         traded_with: tradeToEdit.traded_with || "",
         trade_with_name: tradeToEdit.trade_with_name || "",
@@ -197,7 +197,7 @@ export default function CrossTradeForm({
       crosstrade_via: "upi",
       amount_received: 0,
       rate: "",
-      conversion_rate: 0,
+      conversion_rate: "",
       net_amount: 0,
       traded_with: "",
       trade_with_name: "",
@@ -388,14 +388,17 @@ export default function CrossTradeForm({
   };
 
   const validateConversionRate = useCallback(
-    (value: number) => {
+    (value: string) => {
       if (formData.currency === "usd") {
+        const numValue = parseFloat(value);
+        const isValid = value.trim() !== "" && !isNaN(numValue) && numValue > 0;
+
         setConversionRateChecks({
-          required: value > 0,
-          positive: value > 0,
+          required: isValid,
+          positive: isValid,
         });
 
-        if (!value || value <= 0) {
+        if (!isValid) {
           setErrors((prev) => ({
             ...prev,
             conversion_rate: "Conversion rate must be greater than 0 for USD",
@@ -489,7 +492,7 @@ export default function CrossTradeForm({
       crosstrade_via: defaultPaymentMethod,
       amount_received: 0,
       rate: "",
-      conversion_rate: 0,
+      conversion_rate: "",
       net_amount: 0,
       traded_with: "",
       trade_with_name: "",
@@ -558,7 +561,7 @@ export default function CrossTradeForm({
           setDeductAmount("");
         }
       }
-    } else if (type === "number") {
+    } else if (type === "number" && name !== "conversion_rate") {
       const numValue = Number(value);
       setFormData((prev) => ({
         ...prev,
@@ -567,7 +570,6 @@ export default function CrossTradeForm({
 
       if (name === "amount_received") validateAmountReceived(numValue);
       if (name === "net_amount") validateNetAmount(numValue);
-      if (name === "conversion_rate") validateConversionRate(numValue);
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -577,6 +579,7 @@ export default function CrossTradeForm({
       if (name === "rate") validateRate(value);
       if (name === "traded_with") validateTrader(value);
       if (name === "trade_link") validateTradeLink(value);
+      if (name === "conversion_rate") validateConversionRate(value);
     }
   };
 
@@ -637,8 +640,9 @@ export default function CrossTradeForm({
     validateAmountReceived(formData.amount_received);
     validateNetAmount(formData.net_amount);
     validateRate(formData.rate);
-    if (formData.currency === "usd")
+    if (formData.currency === "usd") {
       validateConversionRate(formData.conversion_rate);
+    }
 
     if (Object.keys(errors).length > 0 || dateError) {
       toast.error("Please fix the errors in the form");
@@ -654,9 +658,12 @@ export default function CrossTradeForm({
       return;
     }
 
-    if (formData.currency === "usd" && !conversionRateChecks.positive) {
-      toast.error("Conversion rate is required for USD");
-      return;
+    if (formData.currency === "usd") {
+      const conversionNum = parseFloat(formData.conversion_rate);
+      if (isNaN(conversionNum) || conversionNum <= 0) {
+        toast.error("Conversion rate is required for USD");
+        return;
+      }
     }
 
     setLoading(true);
@@ -676,7 +683,9 @@ export default function CrossTradeForm({
         amount_received: formData.amount_received,
         rate: formData.rate || null,
         conversion_rate:
-          formData.currency === "usd" ? formData.conversion_rate : null,
+          formData.currency === "usd" && formData.conversion_rate
+            ? formData.conversion_rate
+            : null,
         net_amount: formData.net_amount,
         traded_with: formData.traded_with.trim() || null,
         trade_with_name: formData.trade_with_name.trim() || null,
@@ -1121,43 +1130,42 @@ export default function CrossTradeForm({
                 Conversion Rate <span className="text-red-400">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="conversion_rate"
-                value={formData.conversion_rate || ""}
+                value={formData.conversion_rate}
                 onChange={handleInputChange}
-                min="0"
-                step="0.00000000000001"
                 className={`w-full p-2.5 bg-stone-900/50 border ${
                   errors.conversion_rate ? "border-red-600" : "border-stone-700"
                 } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
-                placeholder="82.456789"
+                placeholder="82.4567891234567890 (up to 16 decimal places)"
               />
 
               {errors.conversion_rate && (
                 <p className="text-xs text-red-500">{errors.conversion_rate}</p>
               )}
 
-              {formData.conversion_rate > 0 && (
-                <div className="mt-2 p-3 bg-stone-900/30 rounded-lg space-y-1">
-                  <p className="text-xs text-stone-400 mb-2">
-                    Conversion rate requirements:
-                  </p>
-                  <div className="grid grid-cols-1 gap-1">
-                    <ChecklistItem
-                      checked={conversionRateChecks.required}
-                      label="Required field"
-                    />
-                    <ChecklistItem
-                      checked={conversionRateChecks.positive}
-                      label="Must be greater than 0"
-                      error={formData.conversion_rate <= 0}
-                    />
+              {formData.conversion_rate &&
+                parseFloat(formData.conversion_rate) > 0 && (
+                  <div className="mt-2 p-3 bg-stone-900/30 rounded-lg space-y-1">
+                    <p className="text-xs text-stone-400 mb-2">
+                      Conversion rate requirements:
+                    </p>
+                    <div className="grid grid-cols-1 gap-1">
+                      <ChecklistItem
+                        checked={conversionRateChecks.required}
+                        label="Required field"
+                      />
+                      <ChecklistItem
+                        checked={conversionRateChecks.positive}
+                        label="Must be greater than 0"
+                        error={parseFloat(formData.conversion_rate) <= 0}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               <p className="text-xs text-stone-500">
-                Enter conversion rate (up to 12 decimal places)
+                Enter conversion rate with up to 16 decimal places
               </p>
             </div>
           )}

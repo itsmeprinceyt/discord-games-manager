@@ -97,10 +97,29 @@ export default function CurrencyCrossTradeManager() {
     fetchTrades();
   };
 
-  const handleDeleteTrade = async (tradeId: string) => {
-    // TODO: Implement delete
-    toast.error("Delete feature coming soon");
-    console.log(`${tradeId}`);
+  const handleDeleteTrade = async (crosstrade_id: string) => {
+    try {
+      const loadingToast = toast.loading("Deleting currency crosstrade...");
+
+      const response = await axios.delete(
+        `/api/dashboard/account/${account_id}/currency-crosstrade/${crosstrade_id}`
+      );
+
+      toast.dismiss(loadingToast);
+
+      if (response.data.success) {
+        toast.success("Currency crosstrade deleted successfully!");
+        setDeleteConfirmId(null);
+
+        await fetchTrades();
+      }
+    } catch (error: unknown) {
+      toast.dismiss();
+      toast.error(
+        getAxiosErrorMessage(error, "Failed to delete currency crosstrade")
+      );
+      setDeleteConfirmId(null);
+    }
   };
 
   const handleEditTrade = (trade: CurrencyCrossTrade) => {
