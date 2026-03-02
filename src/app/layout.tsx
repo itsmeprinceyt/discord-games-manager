@@ -12,7 +12,7 @@ import LoaderFullscreen from "./(components)/LoaderFullscreen";
 export const metadata: Metadata = {
   metadataBase: new URL("https://games-manager-pro.vercel.app/"),
   title:
-    "Games Manager Pro | Manage All Your Game Accounts in One Place | Itsme Prince",
+    "Games Manager Pro | Manage All Your Game Accounts in One Place | ItsMe Prince",
   description:
     "Games Manager Pro is a personal web app that helps you securely manage, organize, and track all your gaming accounts in one place. Built by ItsMe Prince for gamers who want clean and simple account management.",
 

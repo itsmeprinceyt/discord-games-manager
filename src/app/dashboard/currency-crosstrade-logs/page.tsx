@@ -612,7 +612,7 @@ export default function CurrencyCrossTradeLogsPage() {
                             {/* Expanded Row */}
                             {expandedTradeId === trade.id && (
                               <tr className="bg-black/20 border-b border-stone-800">
-                                <td colSpan={9} className="p-0">
+                                <td colSpan={11} className="p-0">
                                   <div className="p-6 border-t border-stone-800">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                                       {/* Note */}
