@@ -15,6 +15,10 @@ import {
   X,
   Link as LinkIcon,
   Filter,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -425,31 +429,64 @@ export default function UserCrossTradeLogs() {
                   {data && data.total_pages > 1 && (
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => handlePageChange(1)}
+                        disabled={filters.page <= 1}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handlePageChange(filters.page - 1)}
                         disabled={filters.page <= 1}
-                        className={`px-3 py-1.5 ${STONE_Button} text-stone-300 text-sm rounded cursor-pointer ${
-                          filters.page <= 1
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
                       >
-                        Previous
+                        <ChevronLeft className="h-4 w-4" />
                       </button>
 
-                      <span className="text-white text-sm px-2">
-                        Page {filters.page} of {data.total_pages}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        {[...Array(Math.min(5, data.total_pages))].map(
+                          (_, i) => {
+                            let pageNum = filters.page;
+                            if (data.total_pages <= 5) {
+                              pageNum = i + 1;
+                            } else if (filters.page <= 3) {
+                              pageNum = i + 1;
+                            } else if (filters.page >= data.total_pages - 2) {
+                              pageNum = data.total_pages - 4 + i;
+                            } else {
+                              pageNum = filters.page - 2 + i;
+                            }
+
+                            return (
+                              <button
+                                key={i}
+                                onClick={() => handlePageChange(pageNum)}
+                                className={`w-8 h-8 rounded-lg text-sm transition-colors cursor-pointer ${
+                                  filters.page === pageNum
+                                    ? `${BLUE_Button} text-white`
+                                    : `${STONE_Button} border border-stone-800 text-stone-400`
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
 
                       <button
                         onClick={() => handlePageChange(filters.page + 1)}
                         disabled={filters.page >= data.total_pages}
-                        className={`px-3 py-1.5 ${STONE_Button} text-stone-300 text-sm rounded cursor-pointer ${
-                          filters.page >= data.total_pages
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
                       >
-                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handlePageChange(data.total_pages)}
+                        disabled={filters.page >= data.total_pages}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                      >
+                        <ChevronsRight className="h-4 w-4" />
                       </button>
                     </div>
                   )}
@@ -678,8 +715,8 @@ export default function UserCrossTradeLogs() {
                             {/* Expanded Details Row */}
                             {expandedTradeId === trade.id && (
                               <tr className="bg-black/20 border-b border-stone-800">
-                                <td colSpan={12} className="p-0">
-                                  <div className="p-6 border-t border-stone-800">
+                                <td colSpan={13} className="p-0">
+                                  <div className="p-6 border-t border-stone-800 ">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                                       {/* Trade Details */}
                                       <div className="space-y-4 bg-black/20 p-3 rounded-lg border border-stone-800 ">
@@ -913,25 +950,30 @@ export default function UserCrossTradeLogs() {
 
                 {/* Bottom Pagination */}
                 {data && data.total_pages > 1 && (
-                  <div className="flex items-center justify-center mt-6">
+                  <div className="mt-6 flex items-center justify-between">
+                    <div className="text-sm text-stone-400">
+                      Page {filters.page} of {data.total_pages}
+                    </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(1)}
+                        disabled={filters.page <= 1}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => handlePageChange(filters.page - 1)}
                         disabled={filters.page <= 1}
-                        className={`px-4 py-2 ${STONE_Button} text-stone-300 text-sm rounded cursor-pointer ${
-                          filters.page <= 1
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
                       >
-                        Previous
+                        <ChevronLeft className="h-4 w-4" />
                       </button>
 
                       <div className="flex items-center gap-1">
-                        {Array.from(
-                          { length: Math.min(5, data.total_pages) },
+                        {[...Array(Math.min(5, data.total_pages))].map(
                           (_, i) => {
-                            let pageNum;
+                            let pageNum = filters.page;
                             if (data.total_pages <= 5) {
                               pageNum = i + 1;
                             } else if (filters.page <= 3) {
@@ -944,12 +986,12 @@ export default function UserCrossTradeLogs() {
 
                             return (
                               <button
-                                key={pageNum}
+                                key={i}
                                 onClick={() => handlePageChange(pageNum)}
-                                className={`px-3 py-1 rounded text-sm ${
+                                className={`w-8 h-8 rounded-lg text-sm transition-colors cursor-pointer ${
                                   filters.page === pageNum
-                                    ? "bg-blue-600 text-white"
-                                    : `${STONE_Button} text-stone-300`
+                                    ? `${BLUE_Button} text-white`
+                                    : `${STONE_Button} border border-stone-800 text-stone-400`
                                 }`}
                               >
                                 {pageNum}
@@ -962,13 +1004,16 @@ export default function UserCrossTradeLogs() {
                       <button
                         onClick={() => handlePageChange(filters.page + 1)}
                         disabled={filters.page >= data.total_pages}
-                        className={`px-4 py-2 ${STONE_Button} text-stone-300 text-sm rounded cursor-pointer ${
-                          filters.page >= data.total_pages
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
                       >
-                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handlePageChange(data.total_pages)}
+                        disabled={filters.page >= data.total_pages}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                      >
+                        <ChevronsRight className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
