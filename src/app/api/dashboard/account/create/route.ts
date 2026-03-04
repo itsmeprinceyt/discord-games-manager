@@ -7,6 +7,7 @@ import { logAudit } from "../../../../../utils/Variables/AuditLogger.util";
 import { AuditActor } from "../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
+import { isUserBanned } from "../../../../../utils/Variables/getUserBanned";
 
 // TODO: put in a file
 interface BotAccountFormData {
@@ -21,7 +22,15 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 },
+        { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 
@@ -31,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!name) {
       return NextResponse.json(
         { error: "Bot account name is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -41,21 +50,21 @@ export async function POST(request: NextRequest) {
     if (!trimmedName) {
       return NextResponse.json(
         { error: "Bot account name is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     if (trimmedName.length > 30) {
       return NextResponse.json(
         { error: "Bot account name must be 30 characters or less" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     if (trimmedAccountUid && trimmedAccountUid.length > 36) {
       return NextResponse.json(
         { error: "Account UID must not exceed 36 characters" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -65,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     const [userExists] = await pool.execute<any[]>(
       "SELECT id FROM users WHERE id = ?",
-      [session.user.id],
+      [session.user.id]
     );
 
     if (!Array.isArray(userExists) || userExists.length === 0) {
@@ -74,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     const [existingBotAccounts] = await pool.execute<any[]>(
       "SELECT id FROM bot_accounts WHERE user_id = ? AND name = ?",
-      [session.user.id, trimmedName],
+      [session.user.id, trimmedName]
     );
 
     if (Array.isArray(existingBotAccounts) && existingBotAccounts.length > 0) {
@@ -82,20 +91,20 @@ export async function POST(request: NextRequest) {
         {
           error: "A bot account with this name already exists for your account",
         },
-        { status: 409 },
+        { status: 409 }
       );
     }
 
     if (trimmedAccountUid) {
       const [existingAccountUid] = await pool.execute<any[]>(
         "SELECT id FROM bot_accounts WHERE account_uid = ?",
-        [trimmedAccountUid],
+        [trimmedAccountUid]
       );
 
       if (Array.isArray(existingAccountUid) && existingAccountUid.length > 0) {
         return NextResponse.json(
           { error: "This account UID is already in use" },
-          { status: 409 },
+          { status: 409 }
         );
       }
     }
@@ -104,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     await pool.execute(
       "INSERT INTO bot_accounts (id, user_id, name, account_uid, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-      [id, session.user.id, trimmedName, trimmedAccountUid || null, now, now],
+      [id, session.user.id, trimmedName, trimmedAccountUid || null, now, now]
     );
 
     const actor: AuditActor = {
@@ -119,7 +128,7 @@ export async function POST(request: NextRequest) {
       `@${actor.name} created a game account (${trimmedName} - #${id}) successfully`,
       {
         bot_account_id: id,
-      },
+      }
     );
 
     return NextResponse.json(
@@ -127,7 +136,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: "Bot account created successfully",
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error: unknown) {
     console.error("Bot account creation error:", error);
@@ -136,21 +145,21 @@ export async function POST(request: NextRequest) {
       if (error.message.includes("Duplicate entry")) {
         return NextResponse.json(
           { error: "Bot account with this name or account UID already exists" },
-          { status: 409 },
+          { status: 409 }
         );
       }
 
       if (error.message.includes("foreign key constraint fails")) {
         return NextResponse.json(
           { error: "Invalid user reference" },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
 
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

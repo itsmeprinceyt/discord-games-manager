@@ -308,7 +308,10 @@ export default function CurrencyCrossTradeManager() {
                             {/* GIVING */}
                             <td className="p-4 text-center">
                               <span className="flex items-center justify-center gap-1 px-2 py-1 rounded-full border text-xs font-medium text-nowrap w-full text-center bg-red-600/20 text-red-400 border-red-800">
-                                {trade.from_amount} {trade.from_currency_name}
+                                {trade.from_amount}{" "}
+                                {trade.from_amount > 1
+                                  ? `${trade.from_currency_name}s`
+                                  : trade.from_currency_name}
                               </span>
                             </td>
 
@@ -333,7 +336,10 @@ export default function CurrencyCrossTradeManager() {
                             {/* RECEIVING */}
                             <td className="p-4 text-center">
                               <span className="flex items-center justify-center gap-1 px-2 py-1 rounded-full border text-xs font-medium text-nowrap w-full text-center bg-green-600/20 text-green-400 border-green-800">
-                                {trade.to_amount} {trade.to_currency_name}
+                                {trade.to_amount}{" "}
+                                {trade.to_amount > 1
+                                  ? `${trade.to_currency_name}s`
+                                  : trade.to_currency_name}
                               </span>
                             </td>
 

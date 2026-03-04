@@ -12,6 +12,7 @@ import { invalidateUserCache } from "../../../../../../utils/Redis/invalidateUse
 import { getRedis } from "../../../../../../lib/Redis/redis";
 import getCrosstrades from "../../../../../../utils/Redis/getCrosstrades";
 import { SINGLE_USER_CROSSTRADES_TTL } from "../../../../../../utils/Redis/redisTTL";
+import { isUserBanned } from "../../../../../../utils/Variables/getUserBanned";
 
 interface BotAssociated {
   id: string;
@@ -206,6 +207,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 

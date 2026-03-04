@@ -12,6 +12,7 @@ import { invalidateUserCache } from "../../../../../../utils/Redis/invalidateUse
 import { getRedis } from "../../../../../../lib/Redis/redis";
 import { SINGLE_USER_CROSSTRADES_TTL } from "../../../../../../utils/Redis/redisTTL";
 import getCurrencyCrosstradeLogsRedisKey from "../../../../../../utils/Redis/getCurrencyCrosstradeLogsRedisKey";
+import { isUserBanned } from "../../../../../../utils/Variables/getUserBanned";
 
 export interface CurrencyCrossTrade {
   id: string;
@@ -202,6 +203,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 
@@ -416,9 +425,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Bot checks ─────────────────────────────────────────────────────────────
+    // ── Bot checks with blacklist verification ─────────────────────────────────
     const [fromBotCheck] = await pool.execute<any[]>(
-      `SELECT id, balance, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
+      `SELECT id, balance, currency_name, blacklisted FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
       [from_selected_bot_id, from_bot_account_id]
     );
 
@@ -426,6 +435,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "From bot not found" },
         { status: 404 }
+      );
+    }
+
+    // Check if from bot is blacklisted
+    if (
+      fromBotCheck[0].blacklisted === true ||
+      fromBotCheck[0].blacklisted === 1
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Cannot create crosstrade: The source bot is blacklisted",
+          details: `Bot "${fromBotCheck[0].currency_name}" has been blacklisted and cannot be used in trades`,
+        },
+        { status: 403 }
       );
     }
 
@@ -444,7 +468,7 @@ export async function POST(request: NextRequest) {
     }
 
     const [toBotCheck] = await pool.execute<any[]>(
-      `SELECT id, balance, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
+      `SELECT id, balance, currency_name, blacklisted FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
       [to_selected_bot_id, to_bot_account_id]
     );
 
@@ -452,6 +476,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "To bot not found" },
         { status: 404 }
+      );
+    }
+
+    // Check if to bot is blacklisted
+    if (toBotCheck[0].blacklisted === true || toBotCheck[0].blacklisted === 1) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Cannot create crosstrade: The destination bot is blacklisted",
+          details: `Bot "${toBotCheck[0].currency_name}" has been blacklisted and cannot be used in trades`,
+        },
+        { status: 403 }
       );
     }
 

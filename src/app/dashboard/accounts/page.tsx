@@ -17,6 +17,7 @@ import {
   Loader2Icon,
   TriangleDashed,
   CircleDashed,
+  Ban,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../../(components)/PageWrapper";
@@ -889,7 +890,8 @@ const AccountCard = ({
 }) => {
   const [expandedBots, setExpandedBots] = useState<Record<string, boolean>>({});
 
-  const toggleBot = (botName: string) => {
+  const toggleBot = (botName: string, isBlacklisted: boolean = false) => {
+    if (isBlacklisted) return;
     setExpandedBots((prev) => ({ ...prev, [botName]: !prev[botName] }));
   };
 
@@ -916,46 +918,66 @@ const AccountCard = ({
       {account.selected_bots.length > 0 ? (
         <div className="px-4 pb-3 space-y-2">
           {account.selected_bots.map((bot) => {
-            const isExpanded = !!expandedBots[bot.name];
-            const hasCrosstradeCooldown = !!bot.last_crosstraded_at;
-            const hasCurrencyCooldown = !!bot.last_currency_crosstraded_at;
-            const hasAnyCooldown = hasCrosstradeCooldown || hasCurrencyCooldown;
+            const isBlacklisted = bot.blacklisted === true;
+            const isExpanded = !!expandedBots[bot.name] && !isBlacklisted;
+            const hasCrosstradeCooldown =
+              !isBlacklisted && !!bot.last_crosstraded_at;
+            const hasCurrencyCooldown =
+              !isBlacklisted && !!bot.last_currency_crosstraded_at;
+            const hasAnyCooldown =
+              !isBlacklisted && (hasCrosstradeCooldown || hasCurrencyCooldown);
 
             return (
               <div
                 key={bot.name}
-                className="bg-black/50 border border-stone-800/70 rounded-lg overflow-hidden"
+                className={`bg-black/50 border rounded-lg overflow-hidden border-stone-800/70 `}
               >
-                {/* ── Always-visible header row (clickable) ── */}
+                {/* ── Always-visible header row ── */}
                 <button
-                  onClick={() => toggleBot(bot.name)}
-                  className="w-full flex items-center justify-between px-3 py-2 hover:bg-stone-900/40 transition-colors cursor-pointer"
+                  onClick={() => toggleBot(bot.name, isBlacklisted)}
+                  disabled={isBlacklisted}
+                  className={`w-full flex items-center justify-between px-3 py-2 transition-colors hover:bg-stone-900/40 ${
+                    isBlacklisted ? `cursor-not-allowed` : `cursor-pointer`
+                  }`}
                 >
-                  <span className="text-white text-sm font-medium">
+                  <span className={`text-sm font-medium text-white`}>
                     {bot.name}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-green-400 font-bold text-sm">
-                      {bot.balance.toLocaleString()}{" "}
-                      <span className="text-[11px] font-normal">
-                        {bot.balance === 1
-                          ? bot.currency_name
-                          : `${bot.currency_name}s`}
+                    {isBlacklisted ? (
+                      <span className="text-red-400 text-[11px] tracking-wider">
+                        Blacklisted
                       </span>
-                    </span>
-                    {isExpanded ? (
-                      <ChevronUp className="h-4 w-4 text-stone-500 shrink-0" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-stone-500 shrink-0" />
+                      <span className="text-green-400 font-bold text-sm">
+                        {bot.balance.toLocaleString()}{" "}
+                        <span className="text-[11px] font-normal">
+                          {bot.balance === 1
+                            ? bot.currency_name
+                            : `${bot.currency_name}s`}
+                        </span>
+                      </span>
+                    )}
+                    {!isBlacklisted &&
+                      (isExpanded ? (
+                        <ChevronUp
+                          size={14}
+                          className=" text-stone-500 shrink-0"
+                        />
+                      ) : (
+                        <ChevronDown
+                          size={14}
+                          className=" text-stone-500 shrink-0"
+                        />
+                      ))}
+                    {isBlacklisted && (
+                      <Ban size={12} className="text-red-500 shrink-0" />
                     )}
                   </div>
                 </button>
 
-                {/*
-                  ── SEMI-EXPANDED: cooldowns always visible when they exist,
-                     regardless of isExpanded ──
-                */}
-                {hasAnyCooldown && (
+                {/* Cooldowns - only show for non-blacklisted bots */}
+                {!isBlacklisted && hasAnyCooldown && (
                   <div className="px-3 pb-2 pt-2 border-t border-stone-800/50 space-y-1">
                     {hasCrosstradeCooldown && (
                       <div className="flex items-center justify-between">
@@ -983,10 +1005,8 @@ const AccountCard = ({
                   </div>
                 )}
 
-                {/*
-                  ── FULLY EXPANDED: timestamps, shown only on click ──
-                */}
-                {isExpanded && (
+                {/* Fully expanded timestamps - only for non-blacklisted bots */}
+                {!isBlacklisted && isExpanded && (
                   <div className="px-3 py-2 border-t border-stone-800/70 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-stone-600">
@@ -1087,7 +1107,7 @@ const AccountCard = ({
           </Tooltip>
           <Tooltip label="Currency Crosstrades">
             <Link
-              href={`${account.id}//currency-crosstrade/`}
+              href={`${account.id}/currency-crosstrade/`}
               className={`w-full py-2 px-3 ${STONE_Button} text-stone-400 hover:text-white rounded-lg text-xs flex items-center justify-center transition-colors`}
             >
               <CircleDashed size={13} />

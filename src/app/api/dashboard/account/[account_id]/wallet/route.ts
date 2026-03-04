@@ -52,6 +52,20 @@ export async function GET(
 
     const pool = db();
 
+    const [accountCheck] = await pool.execute<any[]>(
+      `SELECT id FROM bot_accounts WHERE id = ? AND user_id = ?`,
+      [accountId, session.user.id]
+    );
+
+    if (!Array.isArray(accountCheck) || accountCheck.length === 0) {
+      return NextResponse.json(
+        {
+          error: "Account not found or you don't have permission to access it",
+        },
+        { status: 404 }
+      );
+    }
+
     const [results] = await pool.execute<any[]>(
       `SELECT 
         sb.id,
@@ -59,14 +73,18 @@ export async function GET(
         sb.currency_name,
         sb.balance
        FROM selected_bot sb
-       WHERE sb.bot_account_id = ?
+       WHERE sb.bot_account_id = ? AND (sb.blacklisted = FALSE OR sb.blacklisted IS NULL)
        ORDER BY sb.name ASC`,
       [accountId]
     );
 
     if (!Array.isArray(results) || results.length === 0) {
       return NextResponse.json(
-        { success: true, data: [], message: "No bots found for this user" },
+        {
+          success: true,
+          data: [],
+          message: "No active bots found for this account",
+        },
         { status: 200 }
       );
     }

@@ -6,6 +6,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { logAudit } from "../../../../utils/Variables/AuditLogger.util";
 import { AuditActor } from "../../../../types/Admin/AuditLogger/auditLogger.type";
 import { invalidateUserCache } from "../../../../utils/Redis/invalidateUserRedisData";
+import { isUserBanned } from "../../../../utils/Variables/getUserBanned";
 
 export async function POST() {
   try {
@@ -18,11 +19,19 @@ export async function POST() {
       );
     }
 
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
+      );
+    }
+
     await initServer();
     const pool = db();
 
     const now = new Date();
-    const utcDay = now.getUTCDay(); // 0 = Sunday, 6 = Saturday in UTC
+    const utcDay = now.getUTCDay();
     const updatedAt = now.toISOString();
 
     const [userBots] = await pool.execute<any[]>(
@@ -32,13 +41,14 @@ export async function POST() {
         sb.balance,
         sb.name,
         sb.currency_name,
+        sb.blacklisted,
         ba.user_id,
         b.normal_days,
         b.weekend_days
        FROM selected_bot sb
        INNER JOIN bot_accounts ba ON sb.bot_account_id = ba.id
        INNER JOIN bots b ON sb.name = b.name
-       WHERE ba.user_id = ?`,
+       WHERE ba.user_id = ? AND (sb.blacklisted = FALSE OR sb.blacklisted IS NULL)`,
       [session.user.id]
     );
 
@@ -46,7 +56,7 @@ export async function POST() {
       return NextResponse.json(
         {
           success: true,
-          message: "No bots found for this user",
+          message: "No active bots found for this user",
           data: { updated_bots: 0, total_reward: 0 },
         },
         { status: 200 }
@@ -86,7 +96,7 @@ export async function POST() {
     await logAudit(
       actor,
       "vote_trigger",
-      `@${actor.name} triggered Vote All for ${userBots.length} bot(s)`,
+      `@${actor.name} triggered Vote All for ${userBots.length} active bot(s)`,
       {
         user_id: session.user.id,
         total_bots: userBots.length,
@@ -100,7 +110,7 @@ export async function POST() {
     return NextResponse.json(
       {
         success: true,
-        message: `Auto-vote completed for ${userBots.length} bots`,
+        message: `Auto-vote completed for ${userBots.length} active bots`,
         data: {
           updated_bots: userBots.length,
           total_reward: totalReward,

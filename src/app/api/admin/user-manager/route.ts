@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { initServer, db } from "../../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
+import { isUserBanned } from "../../../../utils/Variables/getUserBanned";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,14 @@ export async function GET(request: NextRequest) {
     if (!session.user.is_admin) {
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
         { status: 403 }
       );
     }
@@ -48,6 +57,7 @@ export async function GET(request: NextRequest) {
         u.username,
         u.email,
         u.is_admin,
+        u.is_banned,
         u.created_at,
         u.updated_at
       FROM users u
@@ -112,6 +122,7 @@ export async function GET(request: NextRequest) {
           username: user.username,
           email: user.email,
           is_admin: Boolean(user.is_admin),
+          is_banned: Boolean(user.is_banned),
           created_at: user.created_at,
           updated_at: user.updated_at,
           bot_accounts: botAccountsWithSelectedBots,

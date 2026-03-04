@@ -8,32 +8,19 @@ import { authOptions } from "../../../../../auth/[...nextauth]/route";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
+import { isUserBanned } from "../../../../../../../utils/Variables/getUserBanned";
+
+interface BlacklistUpdate {
+  selectedBotId: string;
+  blacklisted: boolean;
+}
 
 interface RequestBody {
   botIds: string[];
   botAccountId: string;
+  blacklistUpdates?: BlacklistUpdate[];
 }
 
-/**
- * Updates the selected bots association for a bot account.
- *
- * This endpoint allows users to manage which bots are associated with their bot account.
- * It handles:
- * - Adding new bot associations (creates new selected_bot records)
- * - Removing bot associations (deletes selected_bot records and their crosstrades)
- * - Preserving existing bot associations and their crosstrades
- *
- * Workflow:
- * 1. Authenticate the user session
- * 2. Validate the input parameters
- * 3. Check if the bot account exists and belongs to the user
- * 4. Fetch currently selected bots for the account
- * 5. Determine which bots to add and which to remove
- * 6. For removed bots: delete their selected_bot records and associated crosstrades
- * 7. For new bots: create new selected_bot records
- * 8. Update the bot_accounts table's updated_at timestamp
- * 9. Log audit trail and return response
- */
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -45,8 +32,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
+      );
+    }
+
     const body: RequestBody = await request.json();
-    const { botIds, botAccountId } = body;
+    const { botIds, botAccountId, blacklistUpdates = [] } = body;
 
     // Validation
     if (!botAccountId) {
@@ -59,6 +54,13 @@ export async function POST(request: NextRequest) {
     if (!Array.isArray(botIds)) {
       return NextResponse.json(
         { error: "botIds must be an array" },
+        { status: 400 }
+      );
+    }
+
+    if (!Array.isArray(blacklistUpdates)) {
+      return NextResponse.json(
+        { error: "blacklistUpdates must be an array" },
         { status: 400 }
       );
     }
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Optional: Verify the bot account belongs to the authenticated user
+    // Verify the bot account belongs to the authenticated user
     if (accountExists[0].user_id !== session.user.id) {
       return NextResponse.json(
         { error: "Unauthorized - You don't own this bot account" },
@@ -88,9 +90,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch current selected bots with their bot details
+    // Fetch current selected bots with their bot details and blacklist status
     const [currentSelectedBots] = await pool.execute<any[]>(
       `SELECT sb.id as selected_bot_id, sb.name as selected_bot_name, 
+              sb.blacklisted as blacklisted,
               b.id as bot_id, b.name as bot_name, b.currency_name,
               b.normal_days, b.weekend_days
        FROM selected_bot sb
@@ -105,36 +108,33 @@ export async function POST(request: NextRequest) {
     const botIdsToRemove = currentBotIds.filter((id) => !botIds.includes(id));
     const botIdsToAdd = botIds.filter((id) => !currentBotIds.includes(id));
 
-    // If no changes, return early
-    if (botIdsToRemove.length === 0 && botIdsToAdd.length === 0) {
-      const remainingBots = currentSelectedBots.map((bot) => ({
-        id: bot.selected_bot_id,
-        bot_id: bot.bot_id,
-        name: bot.bot_name,
-        currency_name: bot.currency_name,
-        normal_days: bot.normal_days,
-        weekend_days: bot.weekend_days,
-      }));
+    // Track changes for response
+    const changes = {
+      added: botIdsToAdd.length,
+      removed: botIdsToRemove.length,
+      blacklist_updated: 0,
+      crosstrades_deleted: false,
+    };
 
-      return NextResponse.json(
-        {
-          success: true,
-          message: "No changes made to bot associations",
-          data: {
-            total_bots: remainingBots.length,
-            added_count: 0,
-            removed_count: 0,
-            crosstrades_deleted: false,
-            bots: remainingBots,
-          },
-        },
-        { status: 200 }
-      );
+    // Handle blacklist updates first (for existing bots)
+    if (blacklistUpdates.length > 0) {
+      for (const update of blacklistUpdates) {
+        const botExists = currentSelectedBots.find(
+          (bot) => bot.selected_bot_id === update.selectedBotId
+        );
+
+        if (botExists) {
+          await pool.execute(
+            `UPDATE selected_bot 
+             SET blacklisted = ?, updated_at = ?
+             WHERE id = ? AND bot_account_id = ?`,
+            [update.blacklisted, now, update.selectedBotId, botAccountId]
+          );
+          changes.blacklist_updated++;
+        }
+      }
     }
 
-    let crosstradesDeleted = false;
-
-    // Handle removals: Delete selected_bot records and their crosstrades
     if (botIdsToRemove.length > 0) {
       // Get the selected_bot IDs for bots being removed
       const selectedBotsToRemove = currentSelectedBots
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
           selectedBotsToRemove
         );
 
-        crosstradesDeleted = true;
+        changes.crosstrades_deleted = true;
       }
     }
 
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Create new selected_bot records
+      // Create new selected_bot records (blacklisted defaults to false)
       addedBots = await Promise.all(
         botsToAddDetails.map(async (bot) => {
           const selectedBotId = generateHexId(12);
@@ -196,10 +196,11 @@ export async function POST(request: NextRequest) {
               balance, 
               normal_days, 
               weekend_days, 
+              blacklisted,
               last_crosstraded_at, 
               voted_at, 
               updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               selectedBotId,
               botAccountId,
@@ -208,6 +209,7 @@ export async function POST(request: NextRequest) {
               0,
               bot.normal_days,
               bot.weekend_days,
+              false,
               null,
               null,
               now,
@@ -221,28 +223,44 @@ export async function POST(request: NextRequest) {
             currency_name: bot.currency_name,
             normal_days: bot.normal_days,
             weekend_days: bot.weekend_days,
+            blacklisted: false,
           };
         })
       );
     }
 
-    await pool.execute("UPDATE bot_accounts SET updated_at = ? WHERE id = ?", [
-      now,
-      botAccountId,
-    ]);
+    if (
+      botIdsToRemove.length > 0 ||
+      botIdsToAdd.length > 0 ||
+      blacklistUpdates.length > 0
+    ) {
+      await pool.execute(
+        "UPDATE bot_accounts SET updated_at = ? WHERE id = ?",
+        [now, botAccountId]
+      );
+    }
 
-    const remainingBots = currentSelectedBots
-      .filter((bot) => !botIdsToRemove.includes(bot.bot_id))
-      .map((bot) => ({
-        id: bot.selected_bot_id,
-        bot_id: bot.bot_id,
-        name: bot.bot_name,
-        currency_name: bot.currency_name,
-        normal_days: bot.normal_days,
-        weekend_days: bot.weekend_days,
-      }));
+    // Fetch updated list for response
+    const [updatedSelectedBots] = await pool.execute<any[]>(
+      `SELECT sb.id as selected_bot_id, sb.name as selected_bot_name,
+              sb.blacklisted as blacklisted,
+              b.id as bot_id, b.name as bot_name, b.currency_name,
+              b.normal_days, b.weekend_days
+       FROM selected_bot sb
+       JOIN bots b ON sb.name = b.name
+       WHERE sb.bot_account_id = ?`,
+      [botAccountId]
+    );
 
-    const allBots = [...remainingBots, ...addedBots];
+    const allBots = updatedSelectedBots.map((bot) => ({
+      id: bot.selected_bot_id,
+      bot_id: bot.bot_id,
+      name: bot.bot_name,
+      currency_name: bot.currency_name,
+      normal_days: bot.normal_days,
+      weekend_days: bot.weekend_days,
+      blacklisted: bot.blacklisted,
+    }));
 
     await invalidateUserCache(session.user.id);
 
@@ -261,26 +279,42 @@ export async function POST(request: NextRequest) {
     }
 
     if (botIdsToRemove.length > 0) {
-      auditDetails.crosstrades_deleted = crosstradesDeleted;
+      auditDetails.removed_bot_names = currentSelectedBots
+        .filter((bot) => botIdsToRemove.includes(bot.bot_id))
+        .map((bot) => bot.bot_name);
+      auditDetails.crosstrades_deleted = changes.crosstrades_deleted;
+    }
+
+    if (blacklistUpdates.length > 0) {
+      auditDetails.blacklist_updates = blacklistUpdates.map((update) => ({
+        selected_bot_id: update.selectedBotId,
+        new_status: update.blacklisted,
+      }));
+    }
+
+    // Construct message based on changes
+    let message = "";
+    if (
+      changes.added === 0 &&
+      changes.removed === 0 &&
+      changes.blacklist_updated === 0
+    ) {
+      message = "No changes made to bot associations";
+    } else {
+      const parts = [];
+      if (changes.added > 0) parts.push(`added ${changes.added} bot(s)`);
+      if (changes.removed > 0) parts.push(`removed ${changes.removed} bot(s)`);
+      if (changes.blacklist_updated > 0)
+        parts.push(`updated blacklist for ${changes.blacklist_updated} bot(s)`);
+      message = `Successfully ${parts.join(", ")}`;
     }
 
     await logAudit(
       actor,
       "user_action",
-      `@${actor.name} updated bots of account (${accountExists[0].account_name} - #${botAccountId}) (Added: ${botIdsToAdd.length}, Removed: ${botIdsToRemove.length})`,
+      `@${actor.name} updated bots of account (${accountExists[0].account_name} - #${botAccountId}) - ${message}`,
       auditDetails
     );
-
-    let message = "";
-    if (botIdsToAdd.length === 0 && botIdsToRemove.length > 0) {
-      message = `Removed ${botIdsToRemove.length} bot(s) and their crosstrades from account`;
-    } else if (botIdsToAdd.length > 0 && botIdsToRemove.length === 0) {
-      message = `Added ${botIdsToAdd.length} new bot(s) to account`;
-    } else if (botIdsToAdd.length > 0 && botIdsToRemove.length > 0) {
-      message = `Updated account: added ${botIdsToAdd.length} bot(s), removed ${botIdsToRemove.length} bot(s) and their crosstrades`;
-    } else {
-      message = "No changes made to bot associations";
-    }
 
     return NextResponse.json(
       {
@@ -288,9 +322,7 @@ export async function POST(request: NextRequest) {
         message,
         data: {
           total_bots: allBots.length,
-          added_count: botIdsToAdd.length,
-          removed_count: botIdsToRemove.length,
-          crosstrades_deleted: crosstradesDeleted,
+          changes,
           bots: allBots,
           bot_account_updated_at: now,
         },

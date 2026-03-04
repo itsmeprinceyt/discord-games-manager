@@ -55,6 +55,7 @@ export default function AuditLogsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -89,14 +90,26 @@ export default function AuditLogsPage() {
   };
 
   const fetchLogs = useCallback(
-    async (page: number, filterParams = filters) => {
+    async (
+      page: number,
+      filterParams = filters,
+      itemsPerPage = pagination.items_per_page
+    ) => {
+      // Prevent fetching if page is invalid
+      if (
+        page < 1 ||
+        (pagination.total_pages > 0 && page > pagination.total_pages)
+      ) {
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
 
         const params = new URLSearchParams();
         params.append("page", page.toString());
-        params.append("limit", pagination.items_per_page.toString());
+        params.append("limit", itemsPerPage.toString());
 
         if (filterParams.userId) params.append("userId", filterParams.userId);
         if (filterParams.email) params.append("email", filterParams.email);
@@ -122,34 +135,38 @@ export default function AuditLogsPage() {
         setError(message);
       } finally {
         setLoading(false);
+        setIsInitialLoad(false);
       }
     },
-    [filters, pagination.items_per_page]
+    [filters, pagination.items_per_page, pagination.total_pages]
   );
 
-  const handleSearch = (
-    field: "userId" | "email" | "username",
-    value: string
-  ) => {
-    const updatedFilters = { ...filters, [field]: value };
-    setFilters(updatedFilters);
+  const handleSearch = useCallback(
+    (field: "userId" | "email" | "username", value: string) => {
+      const updatedFilters = { ...filters, [field]: value };
+      setFilters(updatedFilters);
 
-    if (searchTimerRef.current) {
-      clearTimeout(searchTimerRef.current);
-    }
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
 
-    searchTimerRef.current = setTimeout(() => {
-      fetchLogs(1, updatedFilters);
-    }, 500);
-  };
+      searchTimerRef.current = setTimeout(() => {
+        fetchLogs(1, updatedFilters);
+      }, 500);
+    },
+    [filters, fetchLogs]
+  );
 
-  const handleFilterChange = (field: string, value: string) => {
-    const newFilters = { ...filters, [field]: value };
-    setFilters(newFilters);
-    fetchLogs(1, newFilters);
-  };
+  const handleFilterChange = useCallback(
+    (field: string, value: string) => {
+      const newFilters = { ...filters, [field]: value };
+      setFilters(newFilters);
+      fetchLogs(1, newFilters);
+    },
+    [filters, fetchLogs]
+  );
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     const emptyFilters = {
       userId: "",
       email: "",
@@ -160,31 +177,43 @@ export default function AuditLogsPage() {
     };
     setFilters(emptyFilters);
     fetchLogs(1, emptyFilters);
-  };
+  }, [fetchLogs]);
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= pagination.total_pages) {
-      fetchLogs(newPage);
-    }
-  };
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      if (
+        newPage >= 1 &&
+        newPage <= pagination.total_pages &&
+        newPage !== pagination.current_page
+      ) {
+        fetchLogs(newPage);
+      }
+    },
+    [pagination.total_pages, pagination.current_page, fetchLogs]
+  );
 
-  const handleItemsPerPageChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const newLimit = parseInt(e.target.value);
-    setPagination((prev) => ({ ...prev, items_per_page: newLimit }));
-    fetchLogs(1);
-  };
+  const handleItemsPerPageChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newLimit = parseInt(e.target.value);
+      setPagination((prev) => ({ ...prev, items_per_page: newLimit }));
+      fetchLogs(1, filters, newLimit);
+    },
+    [filters, fetchLogs]
+  );
 
   useEffect(() => {
-    fetchLogs(1);
+    if (isInitialLoad) {
+      fetchLogs(1);
+    }
+  }, [isInitialLoad, fetchLogs]);
 
+  useEffect(() => {
     return () => {
       if (searchTimerRef.current) {
         clearTimeout(searchTimerRef.current);
       }
     };
-  }, [fetchLogs]);
+  }, []);
 
   const getActionIcon = (actionType: AuditLog["action_type"]) => {
     switch (actionType) {
@@ -263,6 +292,38 @@ export default function AuditLogsPage() {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
   };
+
+  const getPageNumbers = useCallback(() => {
+    const totalPages = pagination.total_pages;
+    const currentPage = pagination.current_page;
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, 5];
+    }
+
+    if (currentPage >= totalPages - 2) {
+      return [
+        totalPages - 4,
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages,
+      ];
+    }
+
+    return [
+      currentPage - 2,
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      currentPage + 2,
+    ];
+  }, [pagination.total_pages, pagination.current_page]);
 
   return (
     <PageWrapper withSidebar sidebarRole="admin">
@@ -573,7 +634,11 @@ export default function AuditLogsPage() {
                   <button
                     onClick={() => handlePageChange(1)}
                     disabled={!pagination.has_previous}
-                    className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                    className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+                      !pagination.has_previous
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                   >
                     <ChevronsLeft className="h-4 w-4" />
                   </button>
@@ -582,43 +647,29 @@ export default function AuditLogsPage() {
                       handlePageChange(pagination.current_page - 1)
                     }
                     disabled={!pagination.has_previous}
-                    className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                    className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+                      !pagination.has_previous
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
 
                   <div className="flex items-center gap-1">
-                    {[...Array(Math.min(5, pagination.total_pages))].map(
-                      (_, i) => {
-                        let pageNum = pagination.current_page;
-                        if (pagination.total_pages <= 5) {
-                          pageNum = i + 1;
-                        } else if (pagination.current_page <= 3) {
-                          pageNum = i + 1;
-                        } else if (
-                          pagination.current_page >=
-                          pagination.total_pages - 2
-                        ) {
-                          pageNum = pagination.total_pages - 4 + i;
-                        } else {
-                          pageNum = pagination.current_page - 2 + i;
-                        }
-
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => handlePageChange(pageNum)}
-                            className={`w-8 h-8 rounded-lg text-sm transition-colors cursor-pointer ${
-                              pagination.current_page === pageNum
-                                ? `${BLUE_Button} text-white`
-                                : `${STONE_Button} border border-stone-800 text-stone-400`
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      }
-                    )}
+                    {getPageNumbers().map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-8 h-8 rounded-lg text-sm transition-colors cursor-pointer ${
+                          pagination.current_page === pageNum
+                            ? `${BLUE_Button} text-white`
+                            : `${STONE_Button} border border-stone-800 text-stone-400 hover:bg-stone-800`
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
                   </div>
 
                   <button
@@ -626,14 +677,22 @@ export default function AuditLogsPage() {
                       handlePageChange(pagination.current_page + 1)
                     }
                     disabled={!pagination.has_next}
-                    className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                    className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+                      !pagination.has_next
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handlePageChange(pagination.total_pages)}
                     disabled={!pagination.has_next}
-                    className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                    className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+                      !pagination.has_next
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                   >
                     <ChevronsRight className="h-4 w-4" />
                   </button>

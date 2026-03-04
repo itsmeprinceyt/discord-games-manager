@@ -8,6 +8,7 @@ import { PoolConnection } from "mysql2/promise";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
+import { isUserBanned } from "../../../../../../../utils/Variables/getUserBanned";
 
 function isValidUrl(url: string): boolean {
   try {
@@ -49,6 +50,14 @@ export async function PUT(
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 
@@ -223,9 +232,9 @@ export async function PUT(
 
     const existing = existingRows[0];
 
-    // ── Validate from bot belongs to the same from_bot_account ───────────────
+    // ── Validate from bot belongs to the same from_bot_account and check blacklist ──
     const [fromBotCheck] = await pool.execute<any[]>(
-      `SELECT id, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
+      `SELECT id, currency_name, blacklisted FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
       [from_selected_bot_id, existing.from_bot_account_id]
     );
 
@@ -236,9 +245,24 @@ export async function PUT(
       );
     }
 
-    // ── Validate to bot belongs to the same to_bot_account ───────────────────
+    // Check if from bot is blacklisted
+    if (
+      fromBotCheck[0].blacklisted === true ||
+      fromBotCheck[0].blacklisted === 1
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Cannot update crosstrade: The source bot is blacklisted",
+          details: `Bot "${fromBotCheck[0].currency_name}" has been blacklisted and cannot be used in trades`,
+        },
+        { status: 403 }
+      );
+    }
+
+    // ── Validate to bot belongs to the same to_bot_account and check blacklist ──
     const [toBotCheck] = await pool.execute<any[]>(
-      `SELECT id, currency_name FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
+      `SELECT id, currency_name, blacklisted FROM selected_bot WHERE id = ? AND bot_account_id = ?`,
       [to_selected_bot_id, existing.to_bot_account_id]
     );
 
@@ -246,6 +270,18 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: "To bot not found in the original account" },
         { status: 404 }
+      );
+    }
+
+    // Check if to bot is blacklisted
+    if (toBotCheck[0].blacklisted === true || toBotCheck[0].blacklisted === 1) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Cannot update crosstrade: The destination bot is blacklisted",
+          details: `Bot "${toBotCheck[0].currency_name}" has been blacklisted and cannot be used in trades`,
+        },
+        { status: 403 }
       );
     }
 
@@ -399,6 +435,14 @@ export async function DELETE(
           error: "Unauthorized - Please log in",
         },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 

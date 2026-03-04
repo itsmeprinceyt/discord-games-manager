@@ -6,6 +6,7 @@ import { authOptions } from "../../../../../auth/[...nextauth]/route";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
+import { isUserBanned } from "../../../../../../../utils/Variables/getUserBanned";
 
 interface UpdateBalanceRequest {
   bot_id: string;
@@ -25,6 +26,14 @@ export async function PUT(
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 
@@ -70,6 +79,7 @@ export async function PUT(
         sb.id,
         sb.bot_account_id,
         sb.name,
+        sb.blacklisted,
         ba.user_id,
         ba.name as account_name
        FROM selected_bot sb
@@ -97,6 +107,16 @@ export async function PUT(
       return NextResponse.json(
         {
           error: "Unauthorized - You are not the owner of this bot",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (bot.blacklisted === true || bot.blacklisted === 1) {
+      return NextResponse.json(
+        {
+          error: "Cannot update balance of a blacklisted bot",
+          details: "This bot has been blacklisted and cannot be modified",
         },
         { status: 403 }
       );
