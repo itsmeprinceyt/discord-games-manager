@@ -103,11 +103,12 @@ export async function PUT(
         sb.bot_account_id,
         sb.name,
         sb.balance as current_balance,
+        sb.blacklisted,
         ba.user_id,
         ba.name as account_name
-       FROM selected_bot sb
-       INNER JOIN bot_accounts ba ON sb.bot_account_id = ba.id
-       WHERE sb.id IN (${placeholders}) AND ba.id = ?`,
+      FROM selected_bot sb
+      INNER JOIN bot_accounts ba ON sb.bot_account_id = ba.id
+      WHERE sb.id IN (${placeholders}) AND ba.id = ?`,
       [...botIds, accountId]
     );
 
@@ -146,6 +147,22 @@ export async function PUT(
         {
           error: "Unauthorized - You don't own some of these bots",
           unauthorized_bot_ids: unauthorizedBots.map((b: any) => b.id),
+        },
+        { status: 403 }
+      );
+    }
+
+    const blacklistedBots = verificationResults.filter(
+      (bot: any) => bot.blacklisted === true || bot.blacklisted === 1
+    );
+
+    if (blacklistedBots.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Cannot update blacklisted bots",
+          details: "Blacklisted bots cannot be modified",
+          blacklisted_bot_ids: blacklistedBots.map((b: any) => b.id),
+          blacklisted_bot_names: blacklistedBots.map((b: any) => b.name),
         },
         { status: 403 }
       );

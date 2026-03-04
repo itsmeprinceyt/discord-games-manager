@@ -58,11 +58,12 @@ export async function POST(
         sb.balance,
         sb.name,
         sb.currency_name,
+        sb.blacklisted,
         ba.user_id,
         ba.name as account_name
-       FROM selected_bot sb
-       INNER JOIN bot_accounts ba ON sb.bot_account_id = ba.id
-       WHERE sb.id = ? AND ba.id = ?`,
+      FROM selected_bot sb
+      INNER JOIN bot_accounts ba ON sb.bot_account_id = ba.id
+      WHERE sb.id = ? AND ba.id = ?`,
       [bot_id, accountId]
     );
 
@@ -85,6 +86,18 @@ export async function POST(
       return NextResponse.json(
         {
           error: "Unauthorized - You are not the owner of this account",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (bot.blacklisted === true || bot.blacklisted === 1) {
+      return NextResponse.json(
+        {
+          error: "Cannot add daily reward to a blacklisted bot",
+          details: "This bot has been blacklisted and cannot receive rewards",
+          bot_name: bot.name,
+          bot_id: bot_id,
         },
         { status: 403 }
       );

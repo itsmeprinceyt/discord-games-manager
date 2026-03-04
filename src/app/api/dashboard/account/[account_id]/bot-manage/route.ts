@@ -12,6 +12,7 @@ interface BotSelectionData {
   isSelected: boolean;
   selectedBotId?: string;
   balance?: number;
+  blacklisted?: boolean;
 }
 
 export interface BotWithSelection {
@@ -20,6 +21,7 @@ export interface BotWithSelection {
   currency_name: string;
   selected_bot_id: string | null;
   balance: number | null;
+  blacklisted: boolean | null;
 }
 
 export async function GET(
@@ -55,7 +57,8 @@ export async function GET(
         b.id, 
         b.name, 
         b.currency_name,
-        sb.id as selected_bot_id
+        sb.id as selected_bot_id,
+        sb.blacklisted as blacklisted
       FROM bots b
       LEFT JOIN selected_bot sb 
         ON b.name = sb.name 
@@ -76,6 +79,7 @@ export async function GET(
         currency: bot.currency_name,
         isSelected: !!bot.selected_bot_id,
         selectedBotId: bot.selected_bot_id || undefined,
+        blacklisted: bot.blacklisted || false,
       })
     );
 

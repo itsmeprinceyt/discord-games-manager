@@ -28,7 +28,7 @@ interface SelectedBotResponse {
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ account_id: string }> },
+  context: { params: Promise<{ account_id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -36,7 +36,7 @@ export async function GET(
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -46,7 +46,7 @@ export async function GET(
     if (!accountId) {
       return NextResponse.json(
         { error: "Account ID is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -60,45 +60,54 @@ export async function GET(
     if (cached) {
       return NextResponse.json(
         { success: true, data: cached },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
     const pool = db();
 
-    const [results] = await pool.execute<any[]>(
+    // First, get the bot account details
+    const [accountResults] = await pool.execute<any[]>(
       `SELECT 
         ba.id,
         ba.name,
         ba.account_uid,
         ba.created_at,
-        ba.updated_at,
+        ba.updated_at
+       FROM bot_accounts ba
+       WHERE ba.user_id = ? AND ba.id = ?`,
+      [session.user.id, accountId]
+    );
+
+    if (!Array.isArray(accountResults) || accountResults.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Account not found or you don't have permission to access it",
+        },
+        { status: 404 }
+      );
+    }
+
+    // Then, get only NON-blacklisted selected bots
+    const [botResults] = await pool.execute<any[]>(
+      `SELECT 
         sb.name as selected_bot_name,
         sb.currency_name,
         sb.balance,
         sb.last_crosstraded_at,
         sb.last_currency_crosstraded_at,
         sb.voted_at
-       FROM bot_accounts ba
-       LEFT JOIN selected_bot sb ON ba.id = sb.bot_account_id
-       WHERE ba.user_id = ? AND ba.id = ?
+       FROM selected_bot sb
+       WHERE sb.bot_account_id = ? AND (sb.blacklisted = FALSE OR sb.blacklisted IS NULL)
        ORDER BY sb.name ASC`,
-      [session.user.id, accountId],
+      [accountId]
     );
 
-    if (!Array.isArray(results) || results.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Account not found or you don't have permission to access it",
-        },
-        { status: 404 },
-      );
-    }
-
+    // Get trade count
     const [tradeCountResult] = await pool.execute<any[]>(
       `SELECT COUNT(*) as total_trades FROM crosstrades WHERE bot_account_id = ?`,
-      [accountId],
+      [accountId]
     );
 
     const trade_count =
@@ -106,28 +115,32 @@ export async function GET(
         ? Number(tradeCountResult[0].total_trades) || 0
         : 0;
 
+    // Build the account object
     const account: BotAccountResponse = {
-      id: results[0].id,
-      name: results[0].name,
-      account_uid: results[0].account_uid,
-      created_at: results[0].created_at,
-      updated_at: results[0].updated_at,
+      id: accountResults[0].id,
+      name: accountResults[0].name,
+      account_uid: accountResults[0].account_uid,
+      created_at: accountResults[0].created_at,
+      updated_at: accountResults[0].updated_at,
       selected_bots: [],
       trade_count,
     };
 
-    results.forEach((row) => {
-      if (row.selected_bot_name) {
-        account.selected_bots.push({
-          name: row.selected_bot_name,
-          currency_name: row.currency_name,
-          balance: row.balance || 0,
-          last_crosstraded_at: row.last_crosstraded_at,
-          last_currency_crosstraded_at: row.last_currency_crosstraded_at,
-          voted_at: row.voted_at,
-        });
-      }
-    });
+    // Add only non-blacklisted bots
+    if (Array.isArray(botResults)) {
+      botResults.forEach((row) => {
+        if (row.selected_bot_name) {
+          account.selected_bots.push({
+            name: row.selected_bot_name,
+            currency_name: row.currency_name,
+            balance: row.balance || 0,
+            last_crosstraded_at: row.last_crosstraded_at,
+            last_currency_crosstraded_at: row.last_currency_crosstraded_at,
+            voted_at: row.voted_at,
+          });
+        }
+      });
+    }
 
     await redis.set(cacheKey, account, { ex: SINGLE_USER_DASHBOARD_TTL });
 
@@ -136,7 +149,7 @@ export async function GET(
     console.error("Error fetching bot account:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

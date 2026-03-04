@@ -70,6 +70,7 @@ export async function PUT(
         sb.id,
         sb.bot_account_id,
         sb.name,
+        sb.blacklisted,
         ba.user_id,
         ba.name as account_name
        FROM selected_bot sb
@@ -97,6 +98,16 @@ export async function PUT(
       return NextResponse.json(
         {
           error: "Unauthorized - You are not the owner of this bot",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (bot.blacklisted === true || bot.blacklisted === 1) {
+      return NextResponse.json(
+        {
+          error: "Cannot update balance of a blacklisted bot",
+          details: "This bot has been blacklisted and cannot be modified",
         },
         { status: 403 }
       );

@@ -11,7 +11,6 @@ import {
   Shield,
   BarChart3,
   ChevronRight,
-  History,
   CreditCard,
   BotIcon,
   ArrowLeft,
@@ -317,16 +316,6 @@ export default function GameAccountManager() {
       iconColor: "text-blue-400",
       hoverBorderColor: "hover:border-blue-600",
       hoverBgColor: "hover:bg-blue-900/10",
-    },
-    {
-      href: `/dashboard/accounts/${account_id}/transactions`,
-      icon: History,
-      title: "Transaction Logs",
-      description: "View all trades and balance logs",
-      color: "emerald",
-      iconColor: "text-emerald-400",
-      hoverBorderColor: "hover:border-emerald-600",
-      hoverBgColor: "hover:bg-emerald-900/10",
     },
   ];
 

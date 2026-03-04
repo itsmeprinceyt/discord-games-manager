@@ -2,7 +2,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import PageWrapper from "../../../../(components)/PageWrapper";
-import { Check, X, AlertCircle, Loader2, ArrowLeft, Bot } from "lucide-react";
+import {
+  Check,
+  X,
+  AlertCircle,
+  Loader2,
+  ArrowLeft,
+  Bot,
+  Ban,
+} from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -19,13 +27,20 @@ interface BotSelection {
   currency: string;
   isSelected: boolean;
   selectedBotId?: string;
+  blacklisted?: boolean;
 }
 
 export default function BotSelectionPage() {
   const { account_id } = useParams();
   const [bots, setBots] = useState<BotSelection[]>([]);
   const [selectedBots, setSelectedBots] = useState<string[]>([]);
+  const [blacklistedBots, setBlacklistedBots] = useState<
+    Record<string, boolean>
+  >({});
   const [initialSelectedBots, setInitialSelectedBots] = useState<string[]>([]);
+  const [initialBlacklistedBots, setInitialBlacklistedBots] = useState<
+    Record<string, boolean>
+  >({});
   const [loading, setLoading] = useState<boolean>(true);
   const [updating, setUpdating] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
@@ -48,6 +63,16 @@ export default function BotSelectionPage() {
 
         setSelectedBots(preSelected);
         setInitialSelectedBots(preSelected);
+
+        // Initialize blacklist status for selected bots only
+        const blacklistState: Record<string, boolean> = {};
+        botsData.forEach((bot: BotSelection) => {
+          if (bot.isSelected && bot.selectedBotId) {
+            blacklistState[bot.selectedBotId] = bot.blacklisted || false;
+          }
+        });
+        setBlacklistedBots(blacklistState);
+        setInitialBlacklistedBots(blacklistState);
       }
     } catch (error: unknown) {
       toast.error(getAxiosErrorMessage(error, "Error fetching bots"));
@@ -63,10 +88,21 @@ export default function BotSelectionPage() {
   useEffect(() => {
     const sortedSelected = [...selectedBots].sort();
     const sortedInitial = [...initialSelectedBots].sort();
-    const hasChanged =
+    const selectionChanged =
       JSON.stringify(sortedSelected) !== JSON.stringify(sortedInitial);
-    setHasChanges(hasChanged);
-  }, [selectedBots, initialSelectedBots]);
+
+    // Check if blacklist status changed for any bot
+    const blacklistChanged = Object.keys(blacklistedBots).some(
+      (botId) => blacklistedBots[botId] !== initialBlacklistedBots[botId]
+    );
+
+    setHasChanges(selectionChanged || blacklistChanged);
+  }, [
+    selectedBots,
+    initialSelectedBots,
+    blacklistedBots,
+    initialBlacklistedBots,
+  ]);
 
   const toggleBotSelection = (botId: string) => {
     setSelectedBots((prev) => {
@@ -76,6 +112,19 @@ export default function BotSelectionPage() {
         return [...prev, botId];
       }
     });
+  };
+
+  const toggleBlacklist = (
+    selectedBotId: string,
+    currentStatus: boolean,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation(); // Prevent triggering the parent div's onClick
+
+    setBlacklistedBots((prev) => ({
+      ...prev,
+      [selectedBotId]: !currentStatus,
+    }));
   };
 
   const handleSelectAll = () => {
@@ -88,6 +137,7 @@ export default function BotSelectionPage() {
 
   const handleResetChanges = () => {
     setSelectedBots([...initialSelectedBots]);
+    setBlacklistedBots({ ...initialBlacklistedBots });
   };
 
   const handleUpdate = async () => {
@@ -98,19 +148,36 @@ export default function BotSelectionPage() {
 
     setUpdating(true);
     try {
+      // Prepare blacklist updates for existing bots only
+      const blacklistUpdates = Object.keys(blacklistedBots)
+        .filter((selectedBotId) => {
+          // Only include if status changed AND bot is still selected
+          const wasChanged =
+            blacklistedBots[selectedBotId] !==
+            initialBlacklistedBots[selectedBotId];
+          const bot = bots.find((b) => b.selectedBotId === selectedBotId);
+          return wasChanged && bot && selectedBots.includes(bot.id);
+        })
+        .map((selectedBotId) => ({
+          selectedBotId,
+          blacklisted: blacklistedBots[selectedBotId],
+        }));
+
       const response = await axios.post(
         `/api/dashboard/account/${account_id}/bot-manage/update`,
         {
           botIds: selectedBots,
           botAccountId: account_id,
+          ...(blacklistUpdates.length > 0 && { blacklistUpdates }),
         }
       );
 
       if (response.data.success) {
-        toast.success(response.data.message || "Bots updated successfully!");
+        toast.success(response.data.message || "Changes saved successfully!");
         setInitialSelectedBots([...selectedBots]);
+        setInitialBlacklistedBots({ ...blacklistedBots });
         setHasChanges(false);
-        await fetchAvailableBots();
+        await fetchAvailableBots(); // Refresh to get latest data
       }
     } catch (error: unknown) {
       toast.error(getAxiosErrorMessage(error, "Failed to update bots"));
@@ -121,6 +188,9 @@ export default function BotSelectionPage() {
 
   const selectedCount = selectedBots.length;
   const totalCount = bots.length;
+  const blacklistedCount = Object.values(blacklistedBots).filter(
+    (v) => v
+  ).length;
 
   return (
     <PageWrapper withSidebar sidebarRole="user">
@@ -136,16 +206,17 @@ export default function BotSelectionPage() {
                 <ArrowLeft className="h-5 w-5 text-stone-400" />
               </Link>
               <div>
-                <h1 className="text-2xl md:text-3xl font-medium text-white flex flex-wrap gap-2 ">
+                <h1 className="text-2xl md:text-3xl font-medium text-white">
                   Manage Bots
                   {hasChanges && (
-                    <p className="text-yellow-400 text-xs mt-1">
-                      You have unsaved changes
-                    </p>
+                    <span className="ml-2 text-yellow-400 text-sm">
+                      (Unsaved changes)
+                    </span>
                   )}
                 </h1>
                 <p className="text-stone-400 text-sm">
-                  Select bots to associate with this account
+                  Select bots to associate with this account and manage
+                  blacklist status
                 </p>
               </div>
             </div>
@@ -171,7 +242,7 @@ export default function BotSelectionPage() {
 
           {/* Stats Card */}
           <div className="bg-black/30 border border-stone-800 rounded-lg p-6 mb-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-lg bg-blue-600/20">
                   <Bot className="h-6 w-6 text-blue-400" />
@@ -192,6 +263,17 @@ export default function BotSelectionPage() {
                   </p>
                 </div>
               </div>
+
+              {blacklistedCount > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-red-900/20 border border-red-800 rounded-lg">
+                  <Ban className="h-4 w-4 text-red-400" />
+                  <span className="text-sm text-red-400">
+                    {blacklistedCount} blacklisted bot
+                    {blacklistedCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
                   onClick={handleSelectAll}
@@ -221,19 +303,38 @@ export default function BotSelectionPage() {
                   const wasInitiallySelected = initialSelectedBots.includes(
                     bot.id
                   );
+                  const isBlacklisted = bot.selectedBotId
+                    ? blacklistedBots[bot.selectedBotId]
+                    : false;
+
+                  // Determine card border color based on state
+                  let borderColor = "border-stone-800";
+                  let bgColor = "";
+                  if (isSelected) {
+                    if (wasInitiallySelected) {
+                      borderColor = isBlacklisted
+                        ? "border-red-600"
+                        : "border-green-600";
+                      bgColor = isBlacklisted
+                        ? "bg-red-900/10"
+                        : "bg-green-900/10";
+                    } else {
+                      borderColor = isBlacklisted
+                        ? "border-red-600"
+                        : "border-blue-600";
+                      bgColor = isBlacklisted
+                        ? "bg-red-900/10"
+                        : "bg-blue-900/10";
+                    }
+                  } else if (wasInitiallySelected) {
+                    borderColor = "border-red-600";
+                    bgColor = "bg-red-900/10";
+                  }
 
                   return (
                     <div
                       key={bot.id}
-                      className={`bg-stone-950 border rounded-xl p-5 transition-all duration-200 cursor-pointer hover:scale-[1.02] ${
-                        isSelected
-                          ? wasInitiallySelected
-                            ? "border-green-600 bg-green-900/10"
-                            : "border-blue-600 bg-blue-900/10"
-                          : wasInitiallySelected
-                          ? "border-red-600 bg-red-900/10"
-                          : "border-stone-800 hover:border-stone-700"
-                      }`}
+                      className={`bg-stone-950 border rounded-xl p-5 transition-all duration-200 cursor-pointer hover:scale-[1.02] ${borderColor} ${bgColor}`}
                       onClick={() => toggleBotSelection(bot.id)}
                     >
                       <div className="flex items-center justify-between mb-4">
@@ -242,7 +343,11 @@ export default function BotSelectionPage() {
                             className={`p-2 rounded-lg ${
                               isSelected
                                 ? wasInitiallySelected
-                                  ? "bg-green-600/30"
+                                  ? isBlacklisted
+                                    ? "bg-red-600/30"
+                                    : "bg-green-600/30"
+                                  : isBlacklisted
+                                  ? "bg-red-600/30"
                                   : "bg-blue-600/30"
                                 : wasInitiallySelected
                                 ? "bg-red-600/30"
@@ -253,7 +358,11 @@ export default function BotSelectionPage() {
                               className={`h-5 w-5 ${
                                 isSelected
                                   ? wasInitiallySelected
-                                    ? "text-green-400"
+                                    ? isBlacklisted
+                                      ? "text-red-400"
+                                      : "text-green-400"
+                                    : isBlacklisted
+                                    ? "text-red-400"
                                     : "text-blue-400"
                                   : wasInitiallySelected
                                   ? "text-red-400"
@@ -265,13 +374,23 @@ export default function BotSelectionPage() {
                             <h3 className="text-lg font-medium text-white">
                               {bot.name}
                             </h3>
+                            {isBlacklisted && (
+                              <span className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                                <Ban className="h-3 w-3" />
+                                Blacklisted
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div
                           className={`p-1.5 rounded-full ${
                             isSelected
                               ? wasInitiallySelected
-                                ? "bg-green-600"
+                                ? isBlacklisted
+                                  ? "bg-red-600"
+                                  : "bg-green-600"
+                                : isBlacklisted
+                                ? "bg-red-600"
                                 : "bg-blue-600"
                               : wasInitiallySelected
                               ? "bg-red-600"
@@ -293,13 +412,18 @@ export default function BotSelectionPage() {
                             {bot.currency}
                           </span>
                         </div>
+
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-stone-400">Status:</span>
                           <span
                             className={`font-medium ${
                               isSelected
                                 ? wasInitiallySelected
-                                  ? "text-green-400"
+                                  ? isBlacklisted
+                                    ? "text-red-400"
+                                    : "text-green-400"
+                                  : isBlacklisted
+                                  ? "text-red-400"
                                   : "text-blue-400"
                                 : wasInitiallySelected
                                 ? "text-red-400"
@@ -308,13 +432,57 @@ export default function BotSelectionPage() {
                           >
                             {isSelected
                               ? wasInitiallySelected
-                                ? "Linked"
-                                : "This bot will be linked"
+                                ? isBlacklisted
+                                  ? "Blacklisted"
+                                  : "Linked"
+                                : isBlacklisted
+                                ? "Will be blacklisted"
+                                : "Will be linked"
                               : wasInitiallySelected
-                              ? "This bot will be unlinked"
+                              ? "Will be unlinked"
                               : "Not Linked"}
                           </span>
                         </div>
+
+                        {/* Blacklist Toggle - Only show for selected bots */}
+                        {isSelected && bot.selectedBotId && (
+                          <div className="pt-3 mt-3 border-t border-stone-800">
+                            <div
+                              className="flex items-center justify-between cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="text-sm text-stone-400 flex items-center gap-2">
+                                <Ban className="h-4 w-4" />
+                                Blacklisted?
+                              </span>
+                              <button
+                                onClick={(e) =>
+                                  toggleBlacklist(
+                                    bot.selectedBotId!,
+                                    isBlacklisted,
+                                    e
+                                  )
+                                }
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                                  isBlacklisted ? "bg-red-600" : "bg-stone-700"
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    isBlacklisted
+                                      ? "translate-x-6"
+                                      : "translate-x-1"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                            {isBlacklisted && (
+                              <p className="text-xs text-red-400 mt-2">
+                                Blacklisted bots won&apos;t appear in UI
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -366,12 +534,12 @@ export default function BotSelectionPage() {
                     {updating ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Updating...
+                        Saving...
                       </>
                     ) : (
                       <>
                         <Check className="h-3 w-3" />
-                        Update Selection
+                        Save Changes
                       </>
                     )}
                   </button>

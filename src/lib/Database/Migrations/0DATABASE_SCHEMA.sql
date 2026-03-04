@@ -5,6 +5,7 @@ CREATE TABLE users (
     email VARCHAR(120) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+    is_banned BOOLEAN NOT NULL DEFAULT FALSE,
     created_at VARCHAR(30) NOT NULL,
     updated_at VARCHAR(30) NULL
 );
@@ -42,6 +43,7 @@ CREATE TABLE IF NOT EXISTS selected_bot (
     name VARCHAR(30) NOT NULL,
     currency_name VARCHAR(30) NOT NULL,
     balance INT DEFAULT 0,
+    blacklisted BOOLEAN DEFAULT FALSE,
     normal_days TINYINT UNSIGNED NOT NULL,
     weekend_days TINYINT UNSIGNED NOT NULL,
     last_crosstraded_at VARCHAR(30),
