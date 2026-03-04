@@ -21,6 +21,9 @@ import {
   Loader2Icon,
   TriangleDashed,
   CircleDashed,
+  Pencil,
+  Check,
+  AlertCircle,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -59,6 +62,44 @@ interface OptionCard {
   iconColor: string;
   hoverBorderColor: string;
   hoverBgColor: string;
+}
+
+interface EditAccountFormData {
+  name: string;
+  account_uid: string;
+}
+
+function ChecklistItem({
+  checked,
+  label,
+  error = false,
+}: {
+  checked: boolean;
+  label: string;
+  error?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      {checked ? (
+        <Check className="h-3 w-3 text-green-500" />
+      ) : error ? (
+        <AlertCircle className="h-3 w-3 text-yellow-500" />
+      ) : (
+        <X className="h-3 w-3 text-stone-500" />
+      )}
+      <span
+        className={
+          checked
+            ? "text-green-400"
+            : error
+            ? "text-yellow-400"
+            : "text-stone-400"
+        }
+      >
+        {label}
+      </span>
+    </div>
+  );
 }
 
 function BotCard({ bot }: { bot: BotInfo }) {
@@ -159,6 +200,26 @@ export default function GameAccountManager() {
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
 
+  // Edit Account Modal State
+  const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [editFormData, setEditFormData] = useState<EditAccountFormData>({
+    name: "",
+    account_uid: "",
+  });
+  const [editFormErrors, setEditFormErrors] = useState<{
+    name: string;
+    account_uid: string;
+  }>({
+    name: "",
+    account_uid: "",
+  });
+  const [editFormChecks, setEditFormChecks] = useState({
+    nameMaxLength: false,
+    nameRequired: false,
+    uidValidFormat: false,
+  });
+  const [submittingEdit, setSubmittingEdit] = useState<boolean>(false);
+
   const fetchAccountData = useCallback(async () => {
     if (!account_id) return;
 
@@ -216,6 +277,155 @@ export default function GameAccountManager() {
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
     setDeleting(false);
+  };
+
+  // Edit Account Handlers
+  const handleEditClick = () => {
+    if (account) {
+      setEditFormData({
+        name: account.name || "",
+        account_uid: account.account_uid || "",
+      });
+      // Trigger validation for prefilled values
+      validateName(account.name || "");
+      validateUid(account.account_uid || "");
+      setShowEditModal(true);
+    }
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditFormData({ name: "", account_uid: "" });
+    setEditFormErrors({ name: "", account_uid: "" });
+    setEditFormChecks({
+      nameMaxLength: false,
+      nameRequired: false,
+      uidValidFormat: false,
+    });
+    setSubmittingEdit(false);
+  };
+
+  const validateName = (value: string) => {
+    const trimmed = value.trim();
+
+    setEditFormChecks((prev) => ({
+      ...prev,
+      nameRequired: trimmed.length > 0,
+      nameMaxLength: trimmed.length <= 30,
+    }));
+
+    if (!trimmed) {
+      setEditFormErrors((prev) => ({
+        ...prev,
+        name: "Account name is required",
+      }));
+    } else if (trimmed.length > 30) {
+      setEditFormErrors((prev) => ({
+        ...prev,
+        name: "Account name must be 30 characters or less",
+      }));
+    } else {
+      setEditFormErrors((prev) => ({ ...prev, name: "" }));
+    }
+  };
+
+  const validateUid = (value: string) => {
+    const trimmed = value.trim();
+
+    setEditFormChecks((prev) => ({
+      ...prev,
+      uidValidFormat: trimmed.length === 0 || trimmed.length <= 36,
+    }));
+
+    if (trimmed && trimmed.length > 36) {
+      setEditFormErrors((prev) => ({
+        ...prev,
+        account_uid: "Account UID must not be above 36 characters",
+      }));
+    } else {
+      setEditFormErrors((prev) => ({ ...prev, account_uid: "" }));
+    }
+  };
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+
+    setEditFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (name === "name") {
+      validateName(value);
+    } else if (name === "account_uid") {
+      validateUid(value);
+    }
+  };
+
+  const isEditFormValid = () => {
+    const trimmedName = editFormData.name.trim();
+    const trimmedUid = editFormData.account_uid.trim();
+
+    if (!trimmedName || trimmedName.length > 30) {
+      return false;
+    }
+
+    if (trimmedUid && trimmedUid.length > 36) {
+      return false;
+    }
+
+    return !editFormErrors.name && !editFormErrors.account_uid;
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    validateName(editFormData.name);
+    validateUid(editFormData.account_uid);
+
+    const trimmedName = editFormData.name.trim();
+    const trimmedUid = editFormData.account_uid.trim();
+
+    if (!trimmedName || trimmedName.length > 30) {
+      toast.error("Please fix the account name errors");
+      return;
+    }
+
+    if (trimmedUid && trimmedUid.length > 36) {
+      toast.error("Please fix the account UID errors");
+      return;
+    }
+
+    setSubmittingEdit(true);
+
+    try {
+      const response = await axios.put(
+        `/api/dashboard/account/${account_id}/update`,
+        {
+          name: trimmedName,
+          account_uid: trimmedUid || null,
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setAccount((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: trimmedName,
+                account_uid: trimmedUid || null,
+              }
+            : null
+        );
+        closeEditModal();
+      }
+    } catch (err: unknown) {
+      const message = getAxiosErrorMessage(err, "Error updating account");
+      toast.error(message);
+    } finally {
+      setSubmittingEdit(false);
+    }
   };
 
   if (loading) {
@@ -330,7 +540,7 @@ export default function GameAccountManager() {
       text: "Edit Account",
       bgColor: "hover:bg-blue-950",
       textColor: "text-blue-400",
-      onClick: () => toast("Edit feature coming soon"),
+      onClick: handleEditClick,
     },
     {
       text: "Delete Account",
@@ -621,6 +831,153 @@ export default function GameAccountManager() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Account Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
+          <div className="bg-black/90 border border-stone-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-900/20 rounded-lg">
+                  <Pencil className="h-5 w-5 text-blue-400" />
+                </div>
+                <h2 className="text-xl font-medium text-white">Edit Account</h2>
+              </div>
+              <button
+                onClick={closeEditModal}
+                className="p-2 hover:bg-stone-900 rounded-lg transition-colors cursor-pointer"
+                disabled={submittingEdit}
+              >
+                <X className="h-5 w-5 text-stone-400" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              {/* Account Name */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-stone-300 mb-2">
+                  Account Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={editFormData.name}
+                  onChange={handleEditInputChange}
+                  className={`w-full p-3 bg-stone-900/50 border ${
+                    editFormErrors.name ? "border-red-600" : "border-stone-700"
+                  } rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600`}
+                  placeholder="Enter account name"
+                  maxLength={30}
+                />
+
+                {editFormErrors.name && (
+                  <p className="text-xs text-red-500">{editFormErrors.name}</p>
+                )}
+
+                {editFormData.name.trim() && (
+                  <div className="mt-2 p-3 bg-stone-900/30 rounded space-y-1">
+                    <p className="text-xs text-stone-400 mb-2">
+                      Account name requirements:
+                    </p>
+                    <div className="grid grid-cols-1 gap-1">
+                      <ChecklistItem
+                        checked={editFormChecks.nameMaxLength}
+                        label="Maximum 30 characters"
+                        error={editFormData.name.trim().length > 30}
+                      />
+                      <ChecklistItem
+                        checked={editFormChecks.nameRequired}
+                        label="Required field"
+                        error={false}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Account UID (Optional) */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-stone-300 mb-2">
+                  Account UID (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="account_uid"
+                  value={editFormData.account_uid}
+                  onChange={handleEditInputChange}
+                  className={`w-full p-3 bg-stone-900/50 border ${
+                    editFormErrors.account_uid
+                      ? "border-red-600"
+                      : "border-stone-700"
+                  } rounded text-white placeholder-stone-500 focus:outline-none focus:border-blue-600`}
+                  placeholder="Enter 36-character UUID (optional)"
+                  maxLength={36}
+                />
+
+                {editFormErrors.account_uid && (
+                  <p className="text-xs text-red-500">
+                    {editFormErrors.account_uid}
+                  </p>
+                )}
+
+                {editFormData.account_uid.trim() && (
+                  <div className="mt-2 p-3 bg-stone-900/30 rounded space-y-1">
+                    <p className="text-xs text-stone-400 mb-2">
+                      Account UID requirements:
+                    </p>
+                    <div className="grid grid-cols-1 gap-1">
+                      <ChecklistItem
+                        checked={editFormChecks.uidValidFormat}
+                        label="Must not exceed 36 characters"
+                        error={
+                          editFormData.account_uid.trim().length > 0 &&
+                          !editFormChecks.uidValidFormat
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-stone-500 mt-1">
+                  Leave empty if you don&apos;t have an account UID
+                </p>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="flex-1 p-3 border border-stone-700 text-stone-300 rounded hover:bg-stone-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  disabled={submittingEdit}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEdit || !isEditFormValid()}
+                  className={`flex-1 p-3 ${
+                    submittingEdit || !isEditFormValid()
+                      ? "bg-blue-900/50 cursor-not-allowed"
+                      : `${BLUE_Button} cursor-pointer`
+                  } text-white rounded font-medium flex items-center justify-center gap-2`}
+                >
+                  {submittingEdit ? (
+                    <>
+                      <Loader2Icon size={16} className="animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
