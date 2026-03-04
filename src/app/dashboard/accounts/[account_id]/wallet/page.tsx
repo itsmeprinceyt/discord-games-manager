@@ -10,6 +10,7 @@ import {
   CoinsIcon,
   Edit,
   Plus,
+  Edit3,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -21,6 +22,7 @@ import {
 import EditBalanceModal from "../../../../(components)/Balance/EditBalanceModal";
 import Loader from "../../../../(components)/Loader";
 import CurrencyCrossTradeModal from "../../../../(components)/Crosstrade/CurrencyCrossTradeModal";
+import BulkEditBalanceModal from "../../../../(components)/Balance/EditBulkBalanceMode";
 
 interface BotBalance {
   id: string;
@@ -51,6 +53,8 @@ export default function AccountWalletPage() {
   const [walletData, setWalletData] = useState<BotBalance[]>([]);
   const [selectedBot, setSelectedBot] = useState<BotBalance | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] =
+    useState<boolean>(false);
   const [isCurrencyTradeModalOpen, setIsCurrencyTradeModalOpen] =
     useState<boolean>(false);
   const [accountName, setAccountName] = useState<string>("");
@@ -120,6 +124,11 @@ export default function AccountWalletPage() {
     fetchWalletData();
   };
 
+  const handleBulkUpdateSuccess = async () => {
+    await fetchWalletData(false);
+    toast.success("All balances updated successfully!");
+  };
+
   const handleVotedClick = async (botId: string) => {
     try {
       const response = await axios.post(
@@ -167,6 +176,15 @@ export default function AccountWalletPage() {
           onUpdate={handleUpdateBalance}
         />
 
+        {/* Bulk Edit Balance Modal */}
+        <BulkEditBalanceModal
+          account_id={String(account_id)}
+          isOpen={isBulkEditModalOpen}
+          onClose={() => setIsBulkEditModalOpen(false)}
+          bots={walletData}
+          onUpdate={handleBulkUpdateSuccess}
+        />
+
         {/* Currency Crosstrade Modal */}
         <CurrencyCrossTradeModal
           isOpen={isCurrencyTradeModalOpen}
@@ -209,6 +227,19 @@ export default function AccountWalletPage() {
                 />
                 Refresh
               </button>
+
+              {/* New Bulk Edit Button */}
+              <button
+                onClick={() => setIsBulkEditModalOpen(true)}
+                disabled={walletData.length === 0}
+                className={`px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2 ${
+                  walletData.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                <Edit3 className="h-4 w-4" />
+                Edit Mode
+              </button>
+
               <button
                 onClick={() => setIsCurrencyTradeModalOpen(true)}
                 className={`px-4 py-2 ${ORANGE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
