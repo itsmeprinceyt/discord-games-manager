@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   LayoutDashboard,
   Users,
-  BarChart3,
+  //BarChart3,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -20,12 +20,11 @@ const adminNavItems = [
     href: "/admin",
     icon: <LayoutDashboard className="h-5 w-5" />,
   },
-  {
+  /*{
     title: "Analytics",
     href: "/admin/analytics",
     icon: <BarChart3 className="h-5 w-5" />,
-  },
-
+  },*/
   {
     title: "Audit Logs",
     href: "/admin/audit-logs",
@@ -86,7 +85,7 @@ export default function AdminSidebar() {
         </button>
 
         {/* Navigation */}
-        <nav className="space-y-1">
+        <nav className="space-y-2">
           {adminNavItems.map((item) => {
             const isActive =
               item.href === "/admin"

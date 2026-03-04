@@ -97,7 +97,7 @@ export default function UserSidebar() {
         </button>
 
         {/* Navigation */}
-        <nav className="space-y-1">
+        <nav className="space-y-2">
           {userNavItems.map((item) => {
             const isActive =
               item.href === "/dashboard"

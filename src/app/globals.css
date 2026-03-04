@@ -15,3 +15,26 @@
 .animate-slideDown {
     animation: slideDown 0.2s ease-out;
 }
+
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #313131;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #313131;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #313131 #000000;
+}
