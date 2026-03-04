@@ -31,6 +31,7 @@ declare module "next-auth" {
       username: string;
       email: string;
       is_admin?: boolean;
+      is_banned?: boolean;
       created_at?: Date;
       updated_at?: Date | null;
     } & DefaultSession["user"];
@@ -41,6 +42,7 @@ declare module "next-auth" {
     username: string;
     email: string;
     is_admin?: boolean;
+    is_banned?: boolean;
     created_at?: Date;
     updated_at?: Date | null;
   }
@@ -88,7 +90,7 @@ const authOptions: NextAuthOptions = {
             }
           } else {
             const [rowsByUsername] = await pool.execute<any[]>(
-              "SELECT id, username, email, password_hash, is_admin, created_at, updated_at FROM users WHERE username = ?",
+              "SELECT id, username, email, password_hash, is_admin, is_banned, created_at, updated_at FROM users WHERE username = ?",
               [identifier]
             );
 
@@ -120,6 +122,7 @@ const authOptions: NextAuthOptions = {
             username: user.username,
             email: user.email,
             is_admin: user.is_admin,
+            is_banned: user.is_banned,
             created_at: user.created_at,
             updated_at: user.updated_at,
           };
@@ -149,6 +152,7 @@ const authOptions: NextAuthOptions = {
         t.username = user.username;
         t.email = user.email;
         t.is_admin = user.is_admin;
+        t.is_banned = user.is_banned;
         t.created_at = user.created_at;
         t.updated_at = user.updated_at;
       }
@@ -183,6 +187,7 @@ const authOptions: NextAuthOptions = {
         session.user.username = t.username;
         session.user.email = t.email;
         session.user.is_admin = t.is_admin;
+        session.user.is_banned = t.is_banned;
         session.user.created_at = t.created_at;
         session.user.updated_at = t.updated_at;
       }

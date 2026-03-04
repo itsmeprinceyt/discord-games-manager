@@ -6,6 +6,7 @@ import { authOptions } from "../../../../../auth/[...nextauth]/route";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
+import { isUserBanned } from "../../../../../../../utils/Variables/getUserBanned";
 
 interface UpdateBalanceRequest {
   bot_id: string;
@@ -29,6 +30,14 @@ export async function PUT(
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 

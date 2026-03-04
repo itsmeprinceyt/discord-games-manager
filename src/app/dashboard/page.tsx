@@ -8,6 +8,7 @@ import {
   TrendingUp,
   History,
   CoinsIcon,
+  AlertTriangle,
 } from "lucide-react";
 import axios from "axios";
 import PageWrapper from "../(components)/PageWrapper";
@@ -16,6 +17,7 @@ import toast from "react-hot-toast";
 import { formatDate, formatDateTime } from "../../utils/main.util";
 import Loader from "../(components)/Loader";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 interface AuditLog {
   id: string;
@@ -41,6 +43,7 @@ interface UserDashboardResponse {
 }
 
 export default function UserDashboard() {
+  const { data: session } = useSession();
   const [stats, setStats] = useState({
     total_accounts: 0,
     total_trades: 0,
@@ -149,6 +152,8 @@ export default function UserDashboard() {
       .join(" ");
   };
 
+  const isBanned = session?.user.is_banned;
+
   return (
     <PageWrapper withSidebar sidebarRole="user">
       <div className="min-h-screen p-4 md:p-6">
@@ -181,6 +186,35 @@ export default function UserDashboard() {
         {/* Stats Grid */}
         {!loading && !error && (
           <>
+            {/* Ban Warning Card - Show only if user is banned */}
+            {isBanned ? (
+              <div className="mb-8 p-4 bg-red-900/20 border border-red-800 rounded-lg">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-red-600/20 rounded-full">
+                    <AlertTriangle className="h-6 w-6 text-red-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-red-300 mb-2">
+                      Account Banned
+                    </h3>
+                    <p className="text-red-400/90 text-sm mb-3">
+                      Your account has been banned. Many features have been
+                      restricted. Please contact an administrator to resolve
+                      this issue.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <Link
+                        href="/contact"
+                        className="px-3 py-1.5 bg-red-600/30 hover:bg-red-600/50 text-red-200 text-xs rounded-lg transition-colors"
+                      >
+                        Contact Admin
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               {/* Total Accounts Card */}
               <Link href={"accounts"} className="block h-full">
@@ -212,7 +246,7 @@ export default function UserDashboard() {
                 </div>
               </Link>
 
-              {/* Auto Vote Card - Keep as is since it already has full height */}
+              {/* Auto Vote Card */}
               <div className="bg-black/30 border border-stone-800 rounded-lg p-6 hover:border-stone-700 transition-colors h-full">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-2 rounded-lg bg-purple-600/20">
@@ -225,8 +259,12 @@ export default function UserDashboard() {
                 </p>
                 <button
                   onClick={handleAutoVote}
-                  disabled={autoVoteLoading}
-                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={autoVoteLoading || isBanned}
+                  className={`w-full px-4 py-2 ${
+                    isBanned
+                      ? "bg-red-900/50 cursor-not-allowed text-red-300"
+                      : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                  } rounded-lg text-sm transition-colors flex items-center justify-center gap-2`}
                 >
                   <CoinsIcon
                     className={`h-4 w-4 ${

@@ -9,6 +9,7 @@ import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLo
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { CrossTradeRequestAPI } from "../route";
 import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
+import { isUserBanned } from "../../../../../../../utils/Variables/getUserBanned";
 
 export async function PUT(
   request: NextRequest,
@@ -23,6 +24,14 @@ export async function PUT(
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 
@@ -370,6 +379,14 @@ export async function DELETE(
           error: "Unauthorized - Please log in",
         },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 

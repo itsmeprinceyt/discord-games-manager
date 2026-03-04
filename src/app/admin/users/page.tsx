@@ -18,6 +18,8 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Ban,
+  AlertCircle,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -39,6 +41,7 @@ export default function UsersWithBotsPage() {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [banningUserId, setBanningUserId] = useState<string | null>(null);
 
   // Modal state
   const [selectedUser, setSelectedUser] = useState<{
@@ -100,6 +103,29 @@ export default function UsersWithBotsPage() {
     setPagination({ page: 1, limit: newLimit });
   };
 
+  const handleBanToggle = async (userId: string, currentBanStatus: boolean) => {
+    try {
+      setBanningUserId(userId);
+
+      const response = await axios.post("/api/admin/user-manager/ban", {
+        user_id: userId,
+      });
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+        fetchUsers();
+      }
+    } catch (err: unknown) {
+      const message = getAxiosErrorMessage(
+        err,
+        `Failed to ${currentBanStatus ? "unban" : "ban"} user`
+      );
+      toast.error(message);
+    } finally {
+      setBanningUserId(null);
+    }
+  };
+
   const openBotAccountsModal = (user: {
     id: string;
     username: string;
@@ -135,6 +161,23 @@ export default function UsersWithBotsPage() {
     );
   };
 
+  const getBanBadge = (isBanned: boolean) => {
+    if (isBanned) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-900/30 text-red-400 rounded-full border border-red-800 text-xs">
+          <Ban className="h-3 w-3" />
+          Banned
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800 text-xs">
+        <AlertCircle className="h-3 w-3" />
+        Active
+      </span>
+    );
+  };
+
   return (
     <PageWrapper withSidebar sidebarRole="admin">
       <div className="min-h-screen p-4 md:p-6">
@@ -145,7 +188,9 @@ export default function UsersWithBotsPage() {
               <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
                 Users
               </h1>
-              <p className="text-stone-400 text-sm">View all users</p>
+              <p className="text-stone-400 text-sm">
+                View and manage all users
+              </p>
             </div>
 
             <div className="flex justify-end flex-wrap gap-3">
@@ -228,17 +273,37 @@ export default function UsersWithBotsPage() {
                   {data?.users.map((user) => (
                     <div
                       key={user.id}
-                      className="bg-stone-950 border border-stone-800 rounded-xl overflow-hidden hover:border-stone-700 transition-colors"
+                      className={`bg-stone-950 border rounded-xl overflow-hidden transition-colors ${
+                        user.is_banned
+                          ? "border-red-800/50 bg-red-950/5"
+                          : "border-stone-800 hover:border-stone-700"
+                      }`}
                     >
                       {/* User Header */}
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="p-2 bg-blue-600/20 rounded-lg">
-                              <User className="h-5 w-5 text-blue-400" />
+                            <div
+                              className={`p-2 rounded-lg ${
+                                user.is_banned
+                                  ? "bg-red-600/20"
+                                  : "bg-blue-600/20"
+                              }`}
+                            >
+                              <User
+                                className={`h-5 w-5 ${
+                                  user.is_banned
+                                    ? "text-red-400"
+                                    : "text-blue-400"
+                                }`}
+                              />
                             </div>
                             <div>
-                              <h3 className="text-white font-medium">
+                              <h3
+                                className={`font-medium ${
+                                  user.is_banned ? "text-red-300" : "text-white"
+                                }`}
+                              >
                                 @{user.username}
                               </h3>
                               <div className="flex items-center gap-1 text-xs text-stone-500 mt-0.5">
@@ -247,7 +312,10 @@ export default function UsersWithBotsPage() {
                               </div>
                             </div>
                           </div>
-                          {getAdminBadge(user.is_admin)}
+                          <div className="flex flex-col items-end gap-1">
+                            {getAdminBadge(user.is_admin)}
+                            {getBanBadge(user.is_banned)}
+                          </div>
                         </div>
 
                         {/* User Email */}
@@ -268,8 +336,8 @@ export default function UsersWithBotsPage() {
                           )}
                         </div>
 
-                        {/* View Bots Button */}
-                        <div className="mt-4">
+                        {/* Action Buttons */}
+                        <div className="mt-4 space-y-2">
                           <button
                             onClick={() =>
                               openBotAccountsModal({
@@ -282,6 +350,21 @@ export default function UsersWithBotsPage() {
                           >
                             <Bot className="h-4 w-4" />
                             View Bot Accounts ({user.bot_accounts.length})
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              handleBanToggle(user.id, user.is_banned)
+                            }
+                            disabled={banningUserId === user.id}
+                            className={`w-full px-3 py-2 ${STONE_Button} text-white text-sm rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            {banningUserId === user.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Ban className="h-4 w-4" />
+                            )}
+                            {user.is_banned ? "Unban User" : "Ban User"}
                           </button>
                         </div>
                       </div>

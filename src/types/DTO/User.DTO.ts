@@ -16,6 +16,7 @@ export interface UserWithBotStats {
   username: string;
   email: string;
   is_admin: boolean;
+  is_banned: boolean;
   created_at: string;
   updated_at: string | null;
   bot_accounts: BotAccount[];

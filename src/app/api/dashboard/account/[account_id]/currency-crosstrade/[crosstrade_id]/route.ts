@@ -8,6 +8,7 @@ import { PoolConnection } from "mysql2/promise";
 import { AuditActor } from "../../../../../../../types/Admin/AuditLogger/auditLogger.type";
 import { logAudit } from "../../../../../../../utils/Variables/AuditLogger.util";
 import { invalidateUserCache } from "../../../../../../../utils/Redis/invalidateUserRedisData";
+import { isUserBanned } from "../../../../../../../utils/Variables/getUserBanned";
 
 function isValidUrl(url: string): boolean {
   try {
@@ -49,6 +50,14 @@ export async function PUT(
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 
@@ -426,6 +435,14 @@ export async function DELETE(
           error: "Unauthorized - Please log in",
         },
         { status: 401 }
+      );
+    }
+
+    const banned = await isUserBanned();
+    if (banned) {
+      return NextResponse.json(
+        { error: "You are banned. Contact admin" },
+        { status: 403 }
       );
     }
 
