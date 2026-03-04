@@ -345,6 +345,35 @@ export default function AccountAnalyticsLogs() {
     return (
       <PageWrapper withSidebar sidebarRole="user">
         <div className="min-h-screen p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <div className="flex items-center gap-4">
+              <Link
+                href={`/dashboard/accounts/${accountId}`}
+                className="p-2 hover:bg-stone-800 rounded-lg transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="h-5 w-5 text-stone-400" />
+              </Link>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
+                  Analytics & Reports
+                </h1>
+                <p className="text-stone-400 text-sm">
+                  Track your crosstrade performance and earnings for this
+                  account
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchAnalytics}
+                className={`p-2.5 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
+                title="Refresh"
+              >
+                <RefreshCw className="h-4 w-4 text-stone-400" />
+              </button>
+            </div>
+          </div>
+
           <div className="text-center py-12 bg-black/30 border border-stone-800 rounded-lg">
             <BarChart3 className="h-12 w-12 text-stone-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">
