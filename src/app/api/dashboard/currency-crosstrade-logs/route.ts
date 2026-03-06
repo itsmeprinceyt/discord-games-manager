@@ -192,7 +192,7 @@ export async function GET(request: Request) {
        JOIN bot_accounts from_ba ON cct.from_bot_account_id = from_ba.id
        JOIN bot_accounts to_ba ON cct.to_bot_account_id = to_ba.id
        ${whereClause}
-       ORDER BY cct.created_at DESC
+       ORDER BY cct.crosstrade_date DESC
        LIMIT ? OFFSET ?`,
       [...queryParams, limit.toString(), offset.toString()]
     );
