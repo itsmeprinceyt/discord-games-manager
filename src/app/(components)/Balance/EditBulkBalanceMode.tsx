@@ -1,6 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { X, Loader2, Save } from "lucide-react";
+import {
+  X,
+  Loader2,
+  Save,
+  RotateCcw,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
 import axios from "axios";
 
@@ -168,11 +175,14 @@ export default function BulkEditBalanceModal({
 
   if (!isOpen) return null;
 
+  const editedCount = getEditedCount();
+  const hasChanges = editedCount > 0;
+
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
-      <div className="bg-black/90 border border-stone-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-800">
+      <div className="bg-black/90 border border-stone-800 rounded-xl max-w-4xl w-full flex flex-col max-h-[90vh]">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-800 shrink-0">
           <div>
             <h2 className="text-xl font-medium text-white">
               Bulk Edit Balances
@@ -190,10 +200,10 @@ export default function BulkEditBalanceModal({
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        {/* Form - Takes remaining height with proper scrolling */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           {/* Bots List - Scrollable */}
-          <div className="overflow-y-auto p-6 max-h-[60vh]">
+          <div className="overflow-y-auto px-6 py-4 flex-1 min-h-0">
             <div className="space-y-4">
               {bots.map((bot) => {
                 const edited = editedBalances[bot.id];
@@ -272,62 +282,80 @@ export default function BulkEditBalanceModal({
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-stone-800 p-6 space-y-4">
+          {/* Footer - Fixed at bottom */}
+          <div className="border-t border-stone-800 bg-stone-900/50 shrink-0">
+            {/* Summary Bar - Shows when changes exist */}
+            {hasChanges && (
+              <div className="px-6 py-3 border-b border-stone-800 bg-stone-900/30 text-blue-400 text-[12px] italic">
+                {editedCount} bot(s) edited
+              </div>
+            )}
+
             {/* Status Messages */}
-            {error && (
-              <div className="p-3 bg-red-900/20 border border-red-800 rounded-lg">
-                <p className="text-sm text-red-400">{error}</p>
-              </div>
-            )}
-            {success && (
-              <div className="p-3 bg-green-900/20 border border-green-800 rounded-lg">
-                <p className="text-sm text-green-400">{success}</p>
-              </div>
-            )}
+            <div className="px-6 pt-4">
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-900/20 border border-red-800 rounded-lg mb-4">
+                  <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              )}
+              {success && (
+                <div className="flex items-center gap-2 p-3 bg-green-900/20 border border-green-800 rounded-lg mb-4">
+                  <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+                  <p className="text-sm text-green-400">{success}</p>
+                </div>
+              )}
+            </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleResetAll}
-                  disabled={loading || getEditedCount() === 0}
-                  className={`px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
-                >
-                  Reset All Changes
-                </button>
-                <span className="text-sm text-stone-400">
-                  {getEditedCount()} bot(s) edited
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  disabled={loading}
-                  className={`px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || getEditedCount() === 0}
-                  className={`px-6 py-2 ${BLUE_Button} text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      Save All Changes ({getEditedCount()})
-                    </>
+            <div className="px-6 pb-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                {/* Left Section - Reset and Info */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={handleResetAll}
+                    disabled={loading || !hasChanges}
+                    className={`inline-flex items-center justify-center gap-2 px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-full sm:w-auto`}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    <span>Reset All</span>
+                  </button>
+                  {!hasChanges && (
+                    <span className="text-xs text-stone-500 italic">
+                      No changes to save
+                    </span>
                   )}
-                </button>
+                </div>
+
+                {/* Right Section - Cancel and Save */}
+                <div className="flex flex-col-reverse sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    disabled={loading}
+                    className={`inline-flex items-center justify-center px-5 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-full sm:w-auto`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || !hasChanges}
+                    className={`inline-flex items-center justify-center gap-2 px-6 py-2 ${BLUE_Button} text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-full sm:w-auto min-w-35`}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
