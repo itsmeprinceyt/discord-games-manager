@@ -18,29 +18,30 @@ export default function Footer() {
             </p>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4 text-sm">
-            {/*<Link
-              href="/privacy"
-              className={`text-stone-400 ${BLUE_Text_Hover} transition-colors`}
+          <div className="flex flex-wrap justify-center gap-4 text-sm text-stone-400">
+            <Link
+              href="/privacy-policy"
+              className={`${BLUE_Text_Hover} transition-colors`}
             >
               Privacy Policy
             </Link>
             <Link
-              href="/terms"
-              className={`text-stone-400 ${BLUE_Text_Hover} transition-colors`}
+              href="/terms-and-conditions"
+              className={`${BLUE_Text_Hover} transition-colors`}
             >
               Terms of Service
             </Link>
-            */}
+            <span>|</span>
             <Link
               href="/contact"
-              className={`text-stone-400 ${BLUE_Text_Hover} transition-colors`}
+              className={`${BLUE_Text_Hover} transition-colors`}
             >
               Contact
             </Link>
             <Link
               href={YouTubeLink}
-              className={`text-stone-400 ${BLUE_Text_Hover} transition-colors`}
+              target="_blank"
+              className={`${BLUE_Text_Hover} transition-colors`}
             >
               YouTube
             </Link>
@@ -48,7 +49,7 @@ export default function Footer() {
               href={RepoLink}
               target="_blank"
               rel="noopener noreferrer"
-              className={`text-stone-400 ${BLUE_Text_Hover} transition-colors`}
+              className={`${BLUE_Text_Hover} transition-colors`}
             >
               GitHub
             </Link>
