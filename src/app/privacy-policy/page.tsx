@@ -280,7 +280,7 @@ export default function PrivacyPolicy() {
             </div>
 
             {/* Section 9 - Contact */}
-            <div className="bg-linear-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 border border-stone-800 rounded-xl p-6 hover:border-stone-700 transition-colors">
+            <div className="bg-linear-to-br from-blue-500/5 via-blue-500/10 to-blue-500/15 border border-stone-800 rounded-xl p-6 hover:border-stone-700 transition-colors">
               <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-sm">
                   9
