@@ -55,6 +55,28 @@ export default function MinimalHero() {
           </Link>
         </div>
       </div>
+
+      <section className="relative min-h-screen flex flex-col justify-center items-center px-4 py-12">
+        <div className="w-full max-w-7xl mx-auto text-center space-y-8">
+          <div className="space-y-6">
+            <h2 className="text-stone-400 text-xl sm:text-2xl border-b border-white/30 pb-4 inline-block">
+              Watch the project explanation
+            </h2>
+
+            {/* Bigger video container - using full width with max-w-6xl */}
+            <div className="relative aspect-video w-full max-w-6xl mx-auto rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+              <iframe
+                src="https://www.youtube.com/embed/eDXwfjrHNUI?si=SmoCJpJf9J8WSMkT"
+                title="Project Explanation Video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
     </PageWrapper>
   );
 }
