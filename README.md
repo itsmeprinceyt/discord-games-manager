@@ -102,4 +102,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 # Links
 
 1. Website: https://games-manager-pro.vercel.app/
-2. YouTube Video: TBA
+2. YouTube Video: https://youtu.be/eDXwfjrHNUI
