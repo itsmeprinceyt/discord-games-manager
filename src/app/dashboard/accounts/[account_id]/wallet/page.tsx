@@ -58,6 +58,7 @@ export default function AccountWalletPage() {
   const [isCurrencyTradeModalOpen, setIsCurrencyTradeModalOpen] =
     useState<boolean>(false);
   const [accountName, setAccountName] = useState<string>("");
+  const [votingBots, setVotingBots] = useState<Set<string>>(new Set());
 
   const fetchWalletData = useCallback(
     async (showLoading = true) => {
@@ -130,6 +131,8 @@ export default function AccountWalletPage() {
   };
 
   const handleVotedClick = async (botId: string) => {
+    setVotingBots((prev) => new Set(prev).add(botId));
+
     try {
       const response = await axios.post(
         `/api/dashboard/account/${account_id}/wallet/manual-vote`,
@@ -148,6 +151,12 @@ export default function AccountWalletPage() {
       const message = getAxiosErrorMessage(err, "Error adding daily reward");
       toast.error(message);
       console.error("Error adding daily reward:", err);
+    } finally {
+      setVotingBots((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(botId);
+        return newSet;
+      });
     }
   };
 
@@ -293,10 +302,24 @@ export default function AccountWalletPage() {
                   </button>
                   <button
                     onClick={() => handleVotedClick(bot.id)}
-                    className={`w-full px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-2`}
+                    disabled={votingBots.has(bot.id)}
+                    className={`w-full px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                      votingBots.has(bot.id)
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                   >
-                    <CoinsIcon size={14} />
-                    I&apos;ve Voted
+                    {votingBots.has(bot.id) ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Voting...
+                      </>
+                    ) : (
+                      <>
+                        <CoinsIcon size={14} />
+                        I&apos;ve Voted
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

@@ -19,6 +19,7 @@ import {
   ChevronsRight,
   ChevronLeft,
   ChevronRight,
+  Search,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -67,6 +68,8 @@ export default function UserCrossTradeLogs() {
   const [data, setData] = useState<UserCrossTradesResponse | null>(null);
   const [expandedTradeId, setExpandedTradeId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
 
   const [filters, setFilters] = useState({
     bot_account_id: "",
@@ -75,9 +78,28 @@ export default function UserCrossTradeLogs() {
     currency: "",
     crosstrade_via: "",
     bot_name: "",
+    search: "",
     page: 1,
     limit: 20,
   });
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Update filters when debounced search changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      search: debouncedSearch,
+      page: 1,
+    }));
+  }, [debouncedSearch]);
 
   const buildQueryString = useCallback(() => {
     const params = new URLSearchParams();
@@ -90,6 +112,7 @@ export default function UserCrossTradeLogs() {
     if (filters.crosstrade_via)
       params.append("crosstrade_via", filters.crosstrade_via);
     if (filters.bot_name) params.append("bot_name", filters.bot_name);
+    if (filters.search) params.append("search", filters.search);
     params.append("page", filters.page.toString());
     params.append("limit", filters.limit.toString());
 
@@ -127,11 +150,15 @@ export default function UserCrossTradeLogs() {
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value,
-      page: 1,
-    }));
+    if (key === "search") {
+      setSearchInput(value);
+    } else {
+      setFilters((prev) => ({
+        ...prev,
+        [key]: value,
+        page: 1,
+      }));
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -146,9 +173,11 @@ export default function UserCrossTradeLogs() {
       currency: "",
       crosstrade_via: "",
       bot_name: "",
+      search: "",
       page: 1,
       limit: 20,
     });
+    setSearchInput("");
   };
 
   const formatCurrency = (amount: number, currency: "inr" | "usd") => {
@@ -237,6 +266,31 @@ export default function UserCrossTradeLogs() {
                 )}
                 Refresh
               </button>
+            </div>
+          </div>
+
+          {/* Search Bar - Always Visible */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-stone-500" />
+              <input
+                type="text"
+                placeholder="Search by Buyer ID or Buyer Name..."
+                value={searchInput}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
+                className="w-full bg-stone-950 border border-stone-800 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
+              />
+              {searchInput && (
+                <button
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-500 hover:text-stone-300"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -399,8 +453,9 @@ export default function UserCrossTradeLogs() {
                   No cross trades found
                 </h3>
                 <p className="text-stone-500 max-w-md mx-auto mb-6">
-                  Start by creating your first cross trade record or adjust your
-                  filters.
+                  {filters.search
+                    ? `No results found for "${filters.search}". Try different search terms or clear filters.`
+                    : "Start by creating your first cross trade record or adjust your filters."}
                 </p>
                 <div className="flex gap-3 justify-center">
                   {hasActiveFilters() && (
@@ -424,6 +479,11 @@ export default function UserCrossTradeLogs() {
                       data?.total_count || 0
                     )}{" "}
                     of {data?.total_count} trades
+                    {filters.search && (
+                      <span className="ml-2 text-blue-400">
+                        (filtered by: &quot;{filters.search}&quot;)
+                      </span>
+                    )}
                   </div>
 
                   {data && data.total_pages > 1 && (

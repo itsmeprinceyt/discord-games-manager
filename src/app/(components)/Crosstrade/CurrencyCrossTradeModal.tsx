@@ -112,7 +112,7 @@ export default function CurrencyCrossTradeModal({
 
   // Date field
   const [crosstradeDate, setCrosstradeDate] = useState<string>(
-    getLocalDateTimeString(),
+    getLocalDateTimeString()
   );
   const [dateError, setDateError] = useState<string>("");
 
@@ -131,7 +131,7 @@ export default function CurrencyCrossTradeModal({
       setFetchingAccounts(true);
       try {
         const res = await axios.get(
-          `/api/dashboard/account/${currentAccountId}/currency-crosstrade/accounts`,
+          `/api/dashboard/account/${currentAccountId}/currency-crosstrade/accounts`
         );
         if (res.data.success) setAccounts(res.data.data);
       } catch (err) {
@@ -266,16 +266,16 @@ export default function CurrencyCrossTradeModal({
   const bypassToNum = bypassToBalance !== "" ? parseInt(bypassToBalance) : null;
 
   const newFromBalance = isBypassingFrom
-    ? (bypassFromNum ?? 0)
+    ? bypassFromNum ?? 0
     : selectedFromBot
-      ? selectedFromBot.balance - fromAmountNum
-      : 0;
+    ? selectedFromBot.balance - fromAmountNum
+    : 0;
 
   const newToBalance = isBypassingTo
-    ? (bypassToNum ?? 0)
+    ? bypassToNum ?? 0
     : selectedToBot
-      ? selectedToBot.balance + toAmountNum
-      : 0;
+    ? selectedToBot.balance + toAmountNum
+    : 0;
 
   const canSubmit =
     selectedFromBot &&
@@ -321,7 +321,7 @@ export default function CurrencyCrossTradeModal({
           trade_link: tradeLink.trim() || null,
           trade_link_second: tradeLinkSecond.trim() || null,
           note: note.trim() || null,
-        },
+        }
       );
 
       if (res.data.success) {
@@ -460,11 +460,14 @@ export default function CurrencyCrossTradeModal({
                         .filter((bot) =>
                           fromAccountId === toAccountId
                             ? bot.id !== selectedToBot?.id
-                            : true,
+                            : true
                         )
                         .map((bot) => (
                           <option key={bot.id} value={bot.id}>
-                            {bot.name} — {bot.balance} {bot.currency_name}
+                            {bot.name} — {bot.balance}{" "}
+                            {bot.balance > 1
+                              ? `${bot.currency_name}s`
+                              : `${bot.currency_name}`}
                           </option>
                         ))}
                     </select>
@@ -620,11 +623,14 @@ export default function CurrencyCrossTradeModal({
                         .filter((bot) =>
                           fromAccountId === toAccountId
                             ? bot.id !== selectedFromBot?.id
-                            : true,
+                            : true
                         )
                         .map((bot) => (
                           <option key={bot.id} value={bot.id}>
-                            {bot.name} — {bot.balance} {bot.currency_name}
+                            {bot.name} — {bot.balance}{" "}
+                            {bot.balance > 1
+                              ? `${bot.currency_name}s`
+                              : `${bot.currency_name}`}
                           </option>
                         ))}
                     </select>
@@ -698,9 +704,13 @@ export default function CurrencyCrossTradeModal({
               <p className="text-xs text-orange-400">
                 <span className="font-medium">Bypass mode active.</span>{" "}
                 {isBypassingFrom &&
-                  `Giving bot balance will be set directly to ${bypassFromNum ?? 0} instead of auto-computed. `}
+                  `Giving bot balance will be set directly to ${
+                    bypassFromNum ?? 0
+                  } instead of auto-computed. `}
                 {isBypassingTo &&
-                  `Receiving bot balance will be set directly to ${bypassToNum ?? 0} instead of auto-computed.`}
+                  `Receiving bot balance will be set directly to ${
+                    bypassToNum ?? 0
+                  } instead of auto-computed.`}
               </p>
             </div>
           )}

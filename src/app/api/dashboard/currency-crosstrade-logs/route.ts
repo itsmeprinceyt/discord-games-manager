@@ -85,6 +85,7 @@ export async function GET(request: Request) {
     const to_bot_name = searchParams.get("to_bot_name");
     const start_date = searchParams.get("start_date");
     const end_date = searchParams.get("end_date");
+    const search = searchParams.get("search");
 
     const cacheKey = `${getCurrencyCrosstradeLogsRedisKeyAll()}:${targetUserId}:p${page}:l${limit}:${
       from_bot_account_id || ""
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
       to_currency_name || ""
     }:${from_bot_name || ""}:${to_bot_name || ""}:${start_date || ""}:${
       end_date || ""
-    }`;
+    }:${search || ""}`;
 
     const cached = await redis.get<UserCurrencyCrossTradesResponse>(cacheKey);
     if (cached) {
@@ -145,6 +146,13 @@ export async function GET(request: Request) {
     if (end_date) {
       whereClause += " AND cct.created_at <= ?";
       queryParams.push(end_date);
+    }
+
+    if (search && search.trim() !== "") {
+      whereClause +=
+        " AND (cct.traded_with LIKE ? OR cct.trade_with_name LIKE ?)";
+      const searchPattern = `%${search}%`;
+      queryParams.push(searchPattern, searchPattern);
     }
 
     const [countResult] = await pool.execute<any[]>(

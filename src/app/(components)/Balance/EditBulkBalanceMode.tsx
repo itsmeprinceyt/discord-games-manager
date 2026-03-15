@@ -105,7 +105,6 @@ export default function BulkEditBalanceModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Get only edited balances
     const editedBots = Object.values(editedBalances).filter((b) => b.isEdited);
 
     if (editedBots.length === 0) {
@@ -113,7 +112,6 @@ export default function BulkEditBalanceModal({
       return;
     }
 
-    // Validate all edited balances
     for (const bot of editedBots) {
       if (bot.newBalance < 0) {
         const botName = bots.find((b) => b.id === bot.botId)?.name || "Bot";
@@ -138,13 +136,10 @@ export default function BulkEditBalanceModal({
       );
 
       if (response.data.success) {
-        setSuccess(`Successfully updated ${editedBots.length} balance(s)!`);
         if (onUpdate) {
           await onUpdate();
         }
-        setTimeout(() => {
-          onClose();
-        }, 1500);
+        onClose();
       }
     } catch (error) {
       console.error("Error updating balances:", error);

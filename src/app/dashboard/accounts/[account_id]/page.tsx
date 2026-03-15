@@ -118,7 +118,7 @@ function BotCard({ bot }: { bot: BotInfo }) {
             {bot.balance.toLocaleString()}
           </span>
           <span className="text-[10px] text-stone-500 leading-tight">
-            {bot.balance === 1 ? bot.currency : `${bot.currency}s`}
+            {bot.balance > 1 ? `${bot.currency}s` : `${bot.currency}`}
           </span>
         </div>
       </div>

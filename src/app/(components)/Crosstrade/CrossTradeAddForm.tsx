@@ -9,6 +9,7 @@ import {
   Loader2,
   AlertCircle,
   Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -67,6 +68,7 @@ interface CrossTradeFormData {
   selected_bot_id?: string;
   deduct_from_wallet?: boolean;
   deducted_amount?: number;
+  bypass_wallet_balance?: number | null;
 }
 
 const getLocalDateTimeString = () => {
@@ -114,7 +116,6 @@ export default function CrossTradeForm({
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // State for wallet deduction
   const [showWalletDeduction, setShowWalletDeduction] =
     useState<boolean>(false);
   const [walletInfo, setWalletInfo] = useState<SingleBotWalletResponse | null>(
@@ -122,6 +123,9 @@ export default function CrossTradeForm({
   );
   const [loadingWalletInfo, setLoadingWalletInfo] = useState<boolean>(false);
   const [deductAmount, setDeductAmount] = useState<string>("");
+
+  const [bypassWalletBalance, setBypassWalletBalance] = useState<string>("");
+  const isBypassingWallet = bypassWalletBalance !== "";
 
   const [amountChecks, setAmountChecks] = useState({
     required: false,
@@ -188,6 +192,7 @@ export default function CrossTradeForm({
         selected_bot_id: selectedBotId,
         deduct_from_wallet: false,
         deducted_amount: 0,
+        bypass_wallet_balance: null,
       };
     }
 
@@ -208,6 +213,7 @@ export default function CrossTradeForm({
       selected_bot_id: bot_associated.length > 0 ? bot_associated[0].id : "",
       deduct_from_wallet: false,
       deducted_amount: 0,
+      bypass_wallet_balance: null,
     };
   };
 
@@ -215,12 +221,12 @@ export default function CrossTradeForm({
     getInitialFormData()
   );
 
-  // Fetch wallet info when toggle is enabled and bot is selected
   useEffect(() => {
     const fetchWalletInfo = async () => {
       if (!showWalletDeduction || !formData.selected_bot_id || isEditing) {
         setWalletInfo(null);
         setDeductAmount("");
+        setBypassWalletBalance("");
         return;
       }
 
@@ -255,19 +261,26 @@ export default function CrossTradeForm({
     if (value === "" || /^\d+$/.test(value)) {
       const numValue = value === "" ? 0 : parseInt(value, 10);
 
-      if (walletInfo && numValue > walletInfo.balance) {
-        setDeductAmount(walletInfo.balance.toString());
-        setFormData((prev) => ({
-          ...prev,
-          deducted_amount: walletInfo.balance,
-        }));
-      } else {
-        setDeductAmount(value);
-        setFormData((prev) => ({
-          ...prev,
-          deducted_amount: numValue,
-        }));
+      setDeductAmount(value);
+      setFormData((prev) => ({
+        ...prev,
+        deducted_amount: numValue,
+      }));
+
+      if (numValue === 0) {
+        // You could optionally focus the bypass input here
       }
+    }
+  };
+
+  // NEW: Handler for bypass wallet balance
+  const handleBypassWalletChange = (val: string) => {
+    if (val === "" || /^\d+$/.test(val)) {
+      setBypassWalletBalance(val);
+      setFormData((prev) => ({
+        ...prev,
+        bypass_wallet_balance: val === "" ? null : parseInt(val, 10),
+      }));
     }
   };
 
@@ -505,12 +518,13 @@ export default function CrossTradeForm({
         (bot_associated.length > 0 ? bot_associated[0].id : ""),
       deduct_from_wallet: false,
       deducted_amount: 0,
+      bypass_wallet_balance: null,
     });
 
-    // Reset wallet deduction state
     setShowWalletDeduction(false);
     setWalletInfo(null);
     setDeductAmount("");
+    setBypassWalletBalance("");
 
     setAmountChecks({ required: false, positive: false });
     setNetAmountChecks({ required: false, positive: false });
@@ -559,6 +573,7 @@ export default function CrossTradeForm({
         setShowWalletDeduction(checkbox.checked);
         if (!checkbox.checked) {
           setDeductAmount("");
+          setBypassWalletBalance("");
         }
       }
     } else if (type === "number" && name !== "conversion_rate") {
@@ -625,13 +640,14 @@ export default function CrossTradeForm({
 
     if (showWalletDeduction && walletInfo) {
       const amount = parseInt(deductAmount, 10);
-      if (!amount || amount <= 0) {
-        toast.error("Please enter a valid positive amount to deduct");
+      if (deductAmount !== "" && (isNaN(amount) || amount < 0)) {
+        toast.error("Please enter a valid non-negative amount to deduct");
         return;
       }
-      if (amount > walletInfo.balance) {
+
+      if (!isBypassingWallet && amount > 0 && amount > walletInfo.balance) {
         toast.error(
-          `Insufficient balance. Available: ${walletInfo.balance} ${walletInfo.currency_name}`
+          `Insufficient balance. Available: ${walletInfo.balance} ${walletInfo.currency_name}. Use bypass to override or set amount to 0.`
         );
         return;
       }
@@ -695,6 +711,9 @@ export default function CrossTradeForm({
         note: formData.note.trim() || null,
         deduct_from_wallet: showWalletDeduction,
         deducted_amount: deductAmount ? parseInt(deductAmount, 10) : null,
+        bypass_wallet_balance: isBypassingWallet
+          ? parseInt(bypassWalletBalance, 10)
+          : null,
       };
 
       if (formData.selected_bot_id) {
@@ -904,6 +923,7 @@ export default function CrossTradeForm({
                     }));
                     if (!showWalletDeduction) {
                       setDeductAmount("");
+                      setBypassWalletBalance("");
                     }
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
@@ -940,13 +960,8 @@ export default function CrossTradeForm({
                         </span>
                       </div>
 
-                      {walletInfo.balance === 0 ? (
-                        <div>
-                          <p className="text-xs text-red-500">
-                            Insufficient balance.
-                          </p>
-                        </div>
-                      ) : (
+                      <>
+                        {/* Deduct Amount Input */}
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-stone-300">
                             Amount to deduct
@@ -958,21 +973,82 @@ export default function CrossTradeForm({
                             className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600"
                             placeholder="Enter amount"
                           />
+
+                          {/* Show different messages based on deduct amount */}
                           {deductAmount && walletInfo && (
-                            <p className="text-xs text-blue-500">
-                              New Wallet Balance:{" "}
-                              {parseInt(deductAmount, 10) > walletInfo.balance
-                                ? "0"
-                                : `${
-                                    walletInfo.balance - Number(deductAmount)
-                                  }`}{" "}
-                              {walletInfo.balance > 1
-                                ? `${walletInfo.currency_name}s`
-                                : walletInfo.currency_name}
-                            </p>
+                            <>
+                              {parseInt(deductAmount, 10) === 0 ? (
+                                <p className="text-xs text-yellow-500 flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Amount is 0. Use bypass to set final balance.
+                                </p>
+                              ) : parseInt(deductAmount, 10) >
+                                walletInfo.balance ? (
+                                <>
+                                  <p className="text-xs text-orange-500 flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Amount exceeds available balance. New
+                                    balance will be 0. Use bypass to override.
+                                  </p>
+                                  <p className="text-xs text-stone-400">
+                                    Available: {walletInfo.balance}{" "}
+                                    {walletInfo.currency_name}
+                                    {walletInfo.balance > 1 ? "s" : ""}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="text-xs text-blue-500">
+                                  New Wallet Balance:{" "}
+                                  {walletInfo.balance - Number(deductAmount)}{" "}
+                                  {walletInfo.currency_name}
+                                  {walletInfo.balance - Number(deductAmount) > 1
+                                    ? "s"
+                                    : ""}
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
-                      )}
+
+                        {/* Bypass Wallet Balance - Always show when deduct amount is entered */}
+                        {deductAmount && (
+                          <div className="pt-2 border-t border-stone-800 space-y-1.5">
+                            <label className="text-xs text-orange-500 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              Override end balance (bypass)
+                            </label>
+                            <input
+                              type="text"
+                              value={bypassWalletBalance}
+                              onChange={(e) =>
+                                handleBypassWalletChange(e.target.value)
+                              }
+                              placeholder="Enter final balance to override"
+                              className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm placeholder-stone-600 focus:outline-none focus:border-orange-600"
+                            />
+                            {isBypassingWallet && (
+                              <div className="flex justify-between text-xs">
+                                <span className="text-orange-600">
+                                  Bypassing to:
+                                </span>
+                                <span className="text-orange-400 font-medium">
+                                  {parseInt(bypassWalletBalance, 10) || 0}{" "}
+                                  {walletInfo.currency_name}
+                                  {parseInt(bypassWalletBalance, 10) > 1
+                                    ? "s"
+                                    : ""}
+                                </span>
+                              </div>
+                            )}
+                            {!isBypassingWallet &&
+                              parseInt(deductAmount, 10) > 0 && (
+                                <p className="text-xs text-stone-500">
+                                  Leave empty to auto-compute from deduction
+                                </p>
+                              )}
+                          </div>
+                        )}
+                      </>
                     </>
                   ) : (
                     <p className="text-sm text-yellow-500">
@@ -981,6 +1057,21 @@ export default function CrossTradeForm({
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Bypass warning banner for wallet */}
+          {showWalletDeduction && isBypassingWallet && (
+            <div className="p-3 bg-orange-950/30 border border-orange-700/50 rounded-lg flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-orange-400">
+                <span className="font-medium">
+                  Bypass mode active for wallet.
+                </span>{" "}
+                Wallet balance will be set directly to{" "}
+                {parseInt(bypassWalletBalance, 10) || 0} instead of
+                auto-computed.
+              </p>
             </div>
           )}
 
@@ -1001,10 +1092,9 @@ export default function CrossTradeForm({
                   dateError ? "border-red-600" : "border-stone-700"
                 } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-pointer`}
                 required
-                // Set min and max attributes to help with validation
                 min="2020-01-01T00:00"
                 max="2100-12-31T23:59"
-                step="60" // Only allow minutes in steps of 1 minute (or use 900 for 15 minutes)
+                step="60"
               />
             </div>
             {dateError && <p className="text-xs text-red-500">{dateError}</p>}
