@@ -263,15 +263,22 @@ export default function UserDashboard() {
                   className={`w-full px-4 py-2 ${
                     isBanned
                       ? "bg-red-900/50 cursor-not-allowed text-red-300"
+                      : autoVoteLoading
+                      ? "bg-purple-600/50 cursor-not-allowed text-purple-300"
                       : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
                   } rounded-lg text-sm transition-colors flex items-center justify-center gap-2`}
                 >
-                  <CoinsIcon
-                    className={`h-4 w-4 ${
-                      autoVoteLoading ? "animate-spin" : ""
-                    }`}
-                  />
-                  {autoVoteLoading ? "Processing..." : "I've Voted"}
+                  {autoVoteLoading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Processing Vote...
+                    </>
+                  ) : (
+                    <>
+                      <CoinsIcon className="h-4 w-4" />
+                      I&apos;ve Voted
+                    </>
+                  )}
                 </button>
               </div>
             </div>

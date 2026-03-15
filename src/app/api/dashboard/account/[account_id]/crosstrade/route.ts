@@ -193,6 +193,7 @@ export interface CrossTradeRequestAPI {
   note: string | null;
   deduct_from_wallet?: boolean;
   deducted_amount?: number | null;
+  bypass_wallet_balance?: number | null;
   bot_id?: string;
   bot_account_id?: string;
 }
@@ -237,7 +238,10 @@ export async function POST(request: NextRequest) {
       bot_account_id,
       deduct_from_wallet,
       deducted_amount,
-    } = body as CrossTradeRequestAPI;
+      bypass_wallet_balance,
+    } = body as CrossTradeRequestAPI & {
+      bypass_wallet_balance?: number | null;
+    };
 
     const requiredFields = [
       "crosstrade_date",
@@ -304,17 +308,39 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      if (
+        bypass_wallet_balance !== undefined &&
+        bypass_wallet_balance !== null
+      ) {
+        if (
+          !Number.isInteger(bypass_wallet_balance) ||
+          bypass_wallet_balance < 0
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Bypass wallet balance must be a non-negative integer",
+            },
+            { status: 400 }
+          );
+        }
+      }
+
       const currentBalance = botValidation[0].balance || 0;
 
-      // Check if there's sufficient balance
-      if (currentBalance < deducted_amount) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Insufficient balance. Available: ${currentBalance}, Requested: ${deducted_amount}`,
-          },
-          { status: 400 }
-        );
+      if (
+        bypass_wallet_balance === undefined ||
+        bypass_wallet_balance === null
+      ) {
+        if (currentBalance < deducted_amount) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Insufficient balance. Available: ${currentBalance}, Requested: ${deducted_amount}`,
+            },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -457,28 +483,56 @@ export async function POST(request: NextRequest) {
 
       // Update wallet balance if deduction is enabled
       if (deduct_from_wallet && deducted_amount) {
-        const [updateResult] = await connection.execute(
-          `
-          UPDATE selected_bot 
-          SET balance = GREATEST(balance - ?, 0),
-              updated_at = ?
-          WHERE id = ? AND bot_account_id = ? AND balance >= ?
-          `,
-          [deducted_amount, now, bot_id, bot_account_id, deducted_amount]
-        );
+        // NEW: Check if bypass wallet balance is provided
+        if (
+          bypass_wallet_balance !== undefined &&
+          bypass_wallet_balance !== null
+        ) {
+          // Use bypass balance directly instead of deducting
+          const [updateResult] = await connection.execute(
+            `
+            UPDATE selected_bot 
+            SET balance = ?,
+                updated_at = ?
+            WHERE id = ? AND bot_account_id = ?
+            `,
+            [bypass_wallet_balance, now, bot_id, bot_account_id]
+          );
 
-        // Check if the update was successful
-        const result = updateResult as any;
-        if (result.affectedRows === 0) {
-          throw new Error(
-            `Failed to deduct from wallet. The balance might have changed or insufficient funds.`
+          const result = updateResult as any;
+          if (result.affectedRows === 0) {
+            throw new Error(
+              `Failed to update wallet balance with bypass value.`
+            );
+          }
+
+          console.log(
+            `Wallet bypass successful: Balance set to ${bypass_wallet_balance} for bot ${bot_id}`
+          );
+        } else {
+          // Normal deduction logic
+          const [updateResult] = await connection.execute(
+            `
+            UPDATE selected_bot 
+            SET balance = GREATEST(balance - ?, 0),
+                updated_at = ?
+            WHERE id = ? AND bot_account_id = ? AND balance >= ?
+            `,
+            [deducted_amount, now, bot_id, bot_account_id, deducted_amount]
+          );
+
+          // Check if the update was successful
+          const result = updateResult as any;
+          if (result.affectedRows === 0) {
+            throw new Error(
+              `Failed to deduct from wallet. The balance might have changed or insufficient funds.`
+            );
+          }
+
+          console.log(
+            `Wallet deduction successful: ${deducted_amount} deducted from bot ${bot_id}`
           );
         }
-
-        // Optional: Log the wallet deduction
-        console.log(
-          `Wallet deduction successful: ${deducted_amount} deducted from bot ${bot_id}`
-        );
       }
 
       // Find the latest crosstrade date for this bot
@@ -535,12 +589,16 @@ export async function POST(request: NextRequest) {
           actor.name
         } inserted a new crosstrade in account (${accountName} - #${bot_account_id})${
           deduct_from_wallet
-            ? ` with wallet deduction of ${deducted_amount}`
+            ? bypass_wallet_balance !== undefined &&
+              bypass_wallet_balance !== null
+              ? ` with wallet bypass to ${bypass_wallet_balance}`
+              : ` with wallet deduction of ${deducted_amount}`
             : ""
         }`,
         {
           crosstrade_id: crosstradeId,
           wallet_deduction: deduct_from_wallet ? deducted_amount : null,
+          wallet_bypass: deduct_from_wallet ? bypass_wallet_balance : null,
         }
       );
 

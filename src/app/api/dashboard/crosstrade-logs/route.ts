@@ -78,12 +78,13 @@ export async function GET(request: Request) {
     const currency = searchParams.get("currency");
     const crosstrade_via = searchParams.get("crosstrade_via");
     const bot_name = searchParams.get("bot_name");
+    const search = searchParams.get("search");
 
     const cacheKey = `${getCrosstradeLogsRedisKey()}:${targetUserId}:p${page}:l${limit}:${
       bot_account_id || ""
     }:${start_date || ""}:${end_date || ""}:${currency || ""}:${
       crosstrade_via || ""
-    }:${bot_name || ""}`;
+    }:${bot_name || ""}:${search || ""}`;
 
     const cached = await redis.get<UserCrossTradesResponse>(cacheKey);
     if (cached) {
@@ -126,6 +127,13 @@ export async function GET(request: Request) {
     if (bot_name) {
       whereClause += " AND sb.name = ?";
       queryParams.push(bot_name);
+    }
+
+    if (search && search.trim() !== "") {
+      whereClause +=
+        " AND (ct.traded_with LIKE ? OR ct.trade_with_name LIKE ?)";
+      const searchPattern = `%${search}%`;
+      queryParams.push(searchPattern, searchPattern);
     }
 
     const [countResult] = await pool.execute<any[]>(

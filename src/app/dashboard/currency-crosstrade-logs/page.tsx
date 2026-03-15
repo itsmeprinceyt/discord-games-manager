@@ -18,6 +18,7 @@ import {
   ChevronsRight,
   ChevronLeft,
   ChevronRight,
+  Search,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -36,6 +37,7 @@ interface Filters {
   to_bot_name: string;
   start_date: string;
   end_date: string;
+  search: string;
   page: number;
   limit: number;
 }
@@ -48,6 +50,8 @@ export default function CurrencyCrossTradeLogsPage() {
   );
   const [expandedTradeId, setExpandedTradeId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
 
   const [filters, setFilters] = useState<Filters>({
     from_bot_account_id: "",
@@ -58,9 +62,26 @@ export default function CurrencyCrossTradeLogsPage() {
     to_bot_name: "",
     start_date: "",
     end_date: "",
+    search: "",
     page: 1,
     limit: 20,
   });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      search: debouncedSearch,
+      page: 1,
+    }));
+  }, [debouncedSearch]);
 
   const buildQueryString = useCallback(() => {
     const params = new URLSearchParams();
@@ -77,6 +98,7 @@ export default function CurrencyCrossTradeLogsPage() {
     if (filters.to_bot_name) params.append("to_bot_name", filters.to_bot_name);
     if (filters.start_date) params.append("start_date", filters.start_date);
     if (filters.end_date) params.append("end_date", filters.end_date);
+    if (filters.search) params.append("search", filters.search);
     params.append("page", filters.page.toString());
     params.append("limit", filters.limit.toString());
     return params.toString();
@@ -112,7 +134,11 @@ export default function CurrencyCrossTradeLogsPage() {
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+    if (key === "search") {
+      setSearchInput(value);
+    } else {
+      setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -129,9 +155,11 @@ export default function CurrencyCrossTradeLogsPage() {
       to_bot_name: "",
       start_date: "",
       end_date: "",
+      search: "",
       page: 1,
       limit: 20,
     });
+    setSearchInput("");
   };
 
   const toggleExpand = (tradeId: string) => {
@@ -186,6 +214,31 @@ export default function CurrencyCrossTradeLogsPage() {
                 )}
                 Refresh
               </button>
+            </div>
+          </div>
+
+          {/* Search Bar - Always Visible */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-stone-500" />
+              <input
+                type="text"
+                placeholder="Search by Buyer ID or Buyer Name..."
+                value={searchInput}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
+                className="w-full bg-stone-950 border border-stone-800 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
+              />
+              {searchInput && (
+                <button
+                  onClick={() => {
+                    setSearchInput("");
+                    handleFilterChange("search", "");
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-stone-500 hover:text-stone-300"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -403,8 +456,9 @@ export default function CurrencyCrossTradeLogsPage() {
                   No currency crosstrades found
                 </h3>
                 <p className="text-stone-500 max-w-md mx-auto mb-6">
-                  Start by creating your first currency crosstrade or adjust
-                  your filters.
+                  {filters.search
+                    ? `No results found for "${filters.search}". Try different search terms or clear filters.`
+                    : "Start by creating your first currency crosstrade or adjust your filters."}
                 </p>
                 {hasActiveFilters() && (
                   <button
@@ -426,6 +480,11 @@ export default function CurrencyCrossTradeLogsPage() {
                       data?.total_count || 0
                     )}{" "}
                     of {data?.total_count} trades
+                    {filters.search && (
+                      <span className="ml-2 text-blue-400">
+                        (filtered by: &quot;{filters.search}&quot;)
+                      </span>
+                    )}
                   </div>
 
                   {data && data.total_pages > 1 && (

@@ -952,9 +952,9 @@ const AccountCard = ({
                       <span className="text-green-400 font-bold text-sm">
                         {bot.balance.toLocaleString()}{" "}
                         <span className="text-[11px] font-normal">
-                          {bot.balance === 1
-                            ? bot.currency_name
-                            : `${bot.currency_name}s`}
+                          {bot.balance > 1
+                            ? `${bot.currency_name}s`
+                            : `${bot.currency_name}`}
                         </span>
                       </span>
                     )}
@@ -992,7 +992,7 @@ const AccountCard = ({
                     {hasCurrencyCooldown && (
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] text-stone-500">
-                          Currency Cooldown
+                          Currency Crosstrade Cooldown
                         </span>
                         <span className="text-[11px] font-medium">
                           <CountdownTimer
