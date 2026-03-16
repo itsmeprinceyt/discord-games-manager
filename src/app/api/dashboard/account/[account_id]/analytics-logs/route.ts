@@ -98,16 +98,49 @@ export async function GET(
       return NextResponse.json({ success: true, data: emptyData });
     }
 
+    const processedTrades = crosstrades.map((trade: any) => {
+      const netAmount = parseFloat(trade.net_amount) || 0;
+      const conversionRate = trade.conversion_rate
+        ? parseFloat(trade.conversion_rate)
+        : null;
+
+      let usdAmount = 0;
+      let inrAmount = 0;
+      let usdConvertedToINR = 0;
+
+      if (trade.currency === "usd") {
+        usdAmount = netAmount;
+        if (conversionRate) {
+          usdConvertedToINR = Number((usdAmount * conversionRate).toFixed(2));
+        }
+      } else if (trade.currency === "inr") {
+        inrAmount = netAmount;
+      }
+
+      const combinedINR = Number((inrAmount + usdConvertedToINR).toFixed(2));
+
+      return {
+        ...trade,
+        net_amount_parsed: netAmount,
+        conversion_rate_parsed: conversionRate,
+        usd_amount: usdAmount,
+        inr_amount: inrAmount,
+        usd_converted_to_inr: usdConvertedToINR,
+        combined_inr_value: combinedINR,
+      };
+    });
+
     const monthlyData: Record<string, any> = {};
     const yearlyData: Record<string, any> = {};
     let totalUSD = 0;
     let totalINR = 0;
     let totalUSDConvertedToINR = 0;
+    let totalCombinedINR = 0;
     let totalTrades = 0;
     let usdTradesCount = 0;
     let inrTradesCount = 0;
 
-    crosstrades.forEach((trade: any) => {
+    processedTrades.forEach((trade: any) => {
       const date = new Date(trade.crosstrade_date);
       const monthYear = `${date.getFullYear()}-${String(
         date.getMonth() + 1
@@ -144,84 +177,95 @@ export async function GET(
         };
       }
 
-      let usdAmount = 0;
-      let inrAmount = 0;
-      let usdConvertedToINR = 0;
-
       if (trade.currency === "usd") {
         usdTradesCount++;
-        usdAmount = parseFloat(trade.net_amount) || 0;
-        totalUSD += usdAmount;
-        monthlyData[monthYear].total_usd_amount += usdAmount;
-        yearlyData[yearKey].total_usd_amount += usdAmount;
+        totalUSD += trade.usd_amount;
+        monthlyData[monthYear].total_usd_amount += trade.usd_amount;
+        yearlyData[yearKey].total_usd_amount += trade.usd_amount;
         yearlyData[yearKey].usd_trades_count++;
 
-        if (
-          trade.conversion_rate &&
-          !isNaN(parseFloat(trade.conversion_rate))
-        ) {
-          const conversionRate = parseFloat(trade.conversion_rate);
-          usdConvertedToINR = usdAmount * conversionRate;
-          totalUSDConvertedToINR += usdConvertedToINR;
-          monthlyData[monthYear].total_usd_converted_to_inr +=
-            usdConvertedToINR;
-          yearlyData[yearKey].total_usd_converted_to_inr += usdConvertedToINR;
-        }
+        totalUSDConvertedToINR += trade.usd_converted_to_inr;
+        monthlyData[monthYear].total_usd_converted_to_inr +=
+          trade.usd_converted_to_inr;
+        yearlyData[yearKey].total_usd_converted_to_inr +=
+          trade.usd_converted_to_inr;
       } else if (trade.currency === "inr") {
         inrTradesCount++;
-        inrAmount = parseFloat(trade.net_amount) || 0;
-        totalINR += inrAmount;
-        monthlyData[monthYear].total_inr_amount += inrAmount;
-        yearlyData[yearKey].total_inr_amount += inrAmount;
+        totalINR += trade.inr_amount;
+        monthlyData[monthYear].total_inr_amount += trade.inr_amount;
+        yearlyData[yearKey].total_inr_amount += trade.inr_amount;
         yearlyData[yearKey].inr_trades_count++;
       }
 
-      const combinedINR = inrAmount + usdConvertedToINR;
-      monthlyData[monthYear].total_combined_inr += combinedINR;
+      totalCombinedINR += trade.combined_inr_value;
+      monthlyData[monthYear].total_combined_inr += trade.combined_inr_value;
       monthlyData[monthYear].trade_count++;
-      yearlyData[yearKey].total_combined_inr += combinedINR;
+      yearlyData[yearKey].total_combined_inr += trade.combined_inr_value;
       yearlyData[yearKey].trade_count++;
 
       monthlyData[monthYear].trades.push({
         id: trade.id,
         date: trade.crosstrade_date,
         currency: trade.currency,
-        amount_received: parseFloat(trade.amount_received) || 0,
-        net_amount: parseFloat(trade.net_amount) || 0,
-        conversion_rate: trade.conversion_rate
-          ? parseFloat(trade.conversion_rate)
-          : null,
-        usd_converted_to_inr: usdConvertedToINR > 0 ? usdConvertedToINR : null,
-        combined_inr_value: combinedINR > 0 ? combinedINR : null,
+        amount_received: Number(
+          (parseFloat(trade.amount_received) || 0).toFixed(2)
+        ),
+        net_amount: trade.net_amount_parsed,
+        conversion_rate: trade.conversion_rate_parsed,
+        usd_converted_to_inr:
+          trade.usd_converted_to_inr > 0 ? trade.usd_converted_to_inr : null,
+        combined_inr_value:
+          trade.combined_inr_value > 0 ? trade.combined_inr_value : null,
         traded_with: trade.traded_with,
-        rate: trade.rate,
+        rate: trade.rate
+          ? Number((parseFloat(trade.rate) || 0).toFixed(2))
+          : null,
         note: trade.note,
       });
 
       totalTrades++;
     });
 
-    const monthlyAnalytics = Object.values(monthlyData).sort((a: any, b: any) =>
-      b.month_code.localeCompare(a.month_code)
-    );
+    const monthlyAnalytics = Object.values(monthlyData)
+      .map((month: any) => ({
+        ...month,
+        total_usd_amount: Number(month.total_usd_amount.toFixed(2)),
+        total_inr_amount: Number(month.total_inr_amount.toFixed(2)),
+        total_usd_converted_to_inr: Number(
+          month.total_usd_converted_to_inr.toFixed(2)
+        ),
+        total_combined_inr: Number(month.total_combined_inr.toFixed(2)),
+        trades: month.trades.map((trade: any) => ({
+          ...trade,
+          amount_received: Number(trade.amount_received.toFixed(2)),
+          net_amount: Number(trade.net_amount.toFixed(2)),
+          rate: trade.rate ? Number(trade.rate.toFixed(2)) : null,
+          usd_converted_to_inr: trade.usd_converted_to_inr
+            ? Number(trade.usd_converted_to_inr.toFixed(2))
+            : null,
+          combined_inr_value: trade.combined_inr_value
+            ? Number(trade.combined_inr_value.toFixed(2))
+            : null,
+        })),
+      }))
+      .sort((a: any, b: any) => b.month_code.localeCompare(a.month_code));
 
     const yearlyAnalytics = Object.values(yearlyData)
-      .map((y: any) => ({
-        ...y,
-        total_usd_amount: parseFloat(y.total_usd_amount.toFixed(2)),
-        total_inr_amount: parseFloat(y.total_inr_amount.toFixed(2)),
-        total_usd_converted_to_inr: parseFloat(
-          y.total_usd_converted_to_inr.toFixed(2)
+      .map((year: any) => ({
+        ...year,
+        total_usd_amount: Number(year.total_usd_amount.toFixed(2)),
+        total_inr_amount: Number(year.total_inr_amount.toFixed(2)),
+        total_usd_converted_to_inr: Number(
+          year.total_usd_converted_to_inr.toFixed(2)
         ),
-        total_combined_inr: parseFloat(y.total_combined_inr.toFixed(2)),
+        total_combined_inr: Number(year.total_combined_inr.toFixed(2)),
         average_trade_value_inr:
-          y.trade_count > 0
-            ? parseFloat((y.total_combined_inr / y.trade_count).toFixed(2))
+          year.trade_count > 0
+            ? Number((year.total_combined_inr / year.trade_count).toFixed(2))
             : 0,
       }))
       .sort((a: any, b: any) => b.year - a.year);
 
-    const totalCombinedINR = totalINR + totalUSDConvertedToINR;
     const averageTradeValue =
       totalTrades > 0 ? totalCombinedINR / totalTrades : 0;
 
@@ -230,28 +274,26 @@ export async function GET(
       monthly_analytics: monthlyAnalytics,
       summary: {
         total_trades: totalTrades,
-        total_usd_amount: parseFloat(totalUSD.toFixed(2)),
-        total_inr_amount: parseFloat(totalINR.toFixed(2)),
-        total_usd_converted_to_inr: parseFloat(
-          totalUSDConvertedToINR.toFixed(2)
-        ),
-        total_combined_inr: parseFloat(totalCombinedINR.toFixed(2)),
-        average_trade_value_inr: parseFloat(averageTradeValue.toFixed(2)),
+        total_usd_amount: Number(totalUSD.toFixed(2)),
+        total_inr_amount: Number(totalINR.toFixed(2)),
+        total_usd_converted_to_inr: Number(totalUSDConvertedToINR.toFixed(2)),
+        total_combined_inr: Number(totalCombinedINR.toFixed(2)),
+        average_trade_value_inr: Number(averageTradeValue.toFixed(2)),
         currency_breakdown: {
           usd: {
             count: usdTradesCount,
-            total: parseFloat(totalUSD.toFixed(2)),
+            total: Number(totalUSD.toFixed(2)),
             percentage:
               totalTrades > 0
-                ? ((usdTradesCount / totalTrades) * 100).toFixed(1)
+                ? Number(((usdTradesCount / totalTrades) * 100).toFixed(1))
                 : 0,
           },
           inr: {
             count: inrTradesCount,
-            total: parseFloat(totalINR.toFixed(2)),
+            total: Number(totalINR.toFixed(2)),
             percentage:
               totalTrades > 0
-                ? ((inrTradesCount / totalTrades) * 100).toFixed(1)
+                ? Number(((inrTradesCount / totalTrades) * 100).toFixed(1))
                 : 0,
           },
         },
