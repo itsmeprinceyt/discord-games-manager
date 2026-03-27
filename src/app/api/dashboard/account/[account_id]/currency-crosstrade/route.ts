@@ -589,6 +589,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const [fromAccountDetails] = await pool.execute<any[]>(
+        `SELECT name FROM bot_accounts WHERE id = ?`,
+        [from_bot_account_id]
+      );
+
+      const [toAccountDetails] = await pool.execute<any[]>(
+        `SELECT name FROM bot_accounts WHERE id = ?`,
+        [to_bot_account_id]
+      );
+
+      const fromAccountName = fromAccountDetails[0]?.name || "Unknown";
+      const toAccountName = toAccountDetails[0]?.name || "Unknown";
+
       await connection.commit();
       await invalidateUserCache(session.user.id);
 
@@ -601,13 +614,25 @@ export async function POST(request: NextRequest) {
       await logAudit(
         actor,
         "crosstrade_entry",
-        `@${actor.name} inserted a new currency crosstrade`,
+        `@${
+          actor.name
+        } inserted a new currency crosstrade from account (${fromAccountName} - #${from_bot_account_id}) to account (${toAccountName} - #${to_bot_account_id})${
+          bypass_from_balance !== null && bypass_from_balance !== undefined
+            ? ` with from balance bypass to ${bypass_from_balance}`
+            : ""
+        }${
+          bypass_to_balance !== null && bypass_to_balance !== undefined
+            ? ` with to balance bypass to ${bypass_to_balance}`
+            : ""
+        }`,
         {
           trade_id: tradeId,
-          from_amount,
-          from_currency: fromBotCheck[0].currency_name,
-          to_amount,
-          to_currency: toBotCheck[0].currency_name,
+          from_bot_account_id: from_bot_account_id,
+          from_bot_name: fromBotCheck[0].currency_name,
+          from_amount: from_amount,
+          to_bot_account_id: to_bot_account_id,
+          to_bot_name: toBotCheck[0].currency_name,
+          to_amount: to_amount,
           crosstrade_date: storedCrossTradeDate,
           bypass_from_balance: bypass_from_balance ?? null,
           bypass_to_balance: bypass_to_balance ?? null,
