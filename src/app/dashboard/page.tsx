@@ -18,6 +18,7 @@ import { formatDate, formatDateTime } from "../../utils/main.util";
 import Loader from "../(components)/Loader";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import CustomVoteModal from "../(components)/CustomVoteModal";
 
 interface AuditLog {
   id: string;
@@ -52,6 +53,7 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [autoVoteLoading, setAutoVoteLoading] = useState<boolean>(false);
+  const [customVoteOpen, setCustomVoteOpen] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -257,29 +259,45 @@ export default function UserDashboard() {
                 <p className="text-stone-400 text-sm mb-3">
                   Add rewards to all bots
                 </p>
-                <button
-                  onClick={handleAutoVote}
-                  disabled={autoVoteLoading || isBanned}
-                  className={`w-full px-4 py-2 ${
-                    isBanned
-                      ? "bg-red-900/50 cursor-not-allowed text-red-300"
-                      : autoVoteLoading
-                      ? "bg-purple-600/50 cursor-not-allowed text-purple-300"
-                      : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
-                  } rounded-lg text-sm transition-colors flex items-center justify-center gap-2`}
-                >
-                  {autoVoteLoading ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Processing Vote...
-                    </>
-                  ) : (
-                    <>
-                      <CoinsIcon className="h-4 w-4" />
-                      I&apos;ve Voted
-                    </>
-                  )}
-                </button>
+                <div className="flex gap-5">
+                  <button
+                    onClick={handleAutoVote}
+                    disabled={autoVoteLoading || isBanned}
+                    className={`w-full px-4 py-2 ${
+                      isBanned
+                        ? "bg-red-900/50 cursor-not-allowed text-red-300"
+                        : autoVoteLoading
+                        ? "bg-purple-600/50 cursor-not-allowed text-purple-300"
+                        : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                    } rounded-lg text-sm transition-colors flex items-center justify-center gap-2`}
+                  >
+                    {autoVoteLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Processing Vote...
+                      </>
+                    ) : (
+                      <>
+                        <CoinsIcon className="h-4 w-4" />
+                        Vote All
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setCustomVoteOpen(true)}
+                    disabled={autoVoteLoading || isBanned}
+                    className={`w-full px-4 py-2 ${
+                      isBanned
+                        ? "bg-red-900/50 cursor-not-allowed text-red-300"
+                        : autoVoteLoading
+                        ? "bg-purple-600/50 cursor-not-allowed text-purple-300"
+                        : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                    } rounded-lg text-sm transition-colors flex items-center justify-center gap-2`}
+                  >
+                    <CoinsIcon className="h-4 w-4" />
+                    Custom Vote
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -389,6 +407,13 @@ export default function UserDashboard() {
           </>
         )}
       </div>
+
+      {/* Custom Vote Modal */}
+      <CustomVoteModal
+        isOpen={customVoteOpen}
+        onClose={() => setCustomVoteOpen(false)}
+        onSuccess={fetchDashboardData}
+      />
     </PageWrapper>
   );
 }
