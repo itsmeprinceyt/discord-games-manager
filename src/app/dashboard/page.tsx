@@ -259,11 +259,11 @@ export default function UserDashboard() {
                 <p className="text-stone-400 text-sm mb-3">
                   Add rewards to all bots
                 </p>
-                <div className="flex gap-5">
+                <div className="flex flex-wrap gap-5">
                   <button
                     onClick={handleAutoVote}
                     disabled={autoVoteLoading || isBanned}
-                    className={`w-full px-4 py-2 ${
+                    className={`flex-1 px-4 py-2 ${
                       isBanned
                         ? "bg-red-900/50 cursor-not-allowed text-red-300"
                         : autoVoteLoading
@@ -286,7 +286,7 @@ export default function UserDashboard() {
                   <button
                     onClick={() => setCustomVoteOpen(true)}
                     disabled={autoVoteLoading || isBanned}
-                    className={`w-full px-4 py-2 ${
+                    className={`flex-1 px-4 py-2 ${
                       isBanned
                         ? "bg-red-900/50 cursor-not-allowed text-red-300"
                         : autoVoteLoading
