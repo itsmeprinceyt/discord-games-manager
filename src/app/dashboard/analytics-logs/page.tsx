@@ -153,7 +153,7 @@ export default function AnalyticsLogs() {
       setLoading(true);
       setError(null);
       const response = await axios.get<AnalyticsResponse>(
-        "/api/dashboard/analytics-logs"
+        "/api/dashboard/analytics-logs",
       );
       if (response.data.success) {
         setAnalytics(response.data.data);
@@ -167,7 +167,7 @@ export default function AnalyticsLogs() {
     } catch (err: unknown) {
       const message = getAxiosErrorMessage(
         err,
-        "Error fetching analytics data"
+        "Error fetching analytics data",
       );
       toast.error(message);
       setError(message);
@@ -194,7 +194,7 @@ export default function AnalyticsLogs() {
 
   const formatCurrency = (
     amount: number,
-    currency: "USD" | "INR" = "INR"
+    currency: "USD" | "INR" = "INR",
   ): string => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -206,7 +206,7 @@ export default function AnalyticsLogs() {
 
   const formatCompactCurrency = (
     amount: number,
-    currency: "USD" | "INR" = "INR"
+    currency: "USD" | "INR" = "INR",
   ): string => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -224,7 +224,7 @@ export default function AnalyticsLogs() {
   const exportToCSV = (): void => {
     if (!analytics) return;
     const allTrades = analytics.monthly_analytics.flatMap(
-      (month) => month.trades
+      (month) => month.trades,
     );
     const csvData = allTrades.map((trade) => ({
       Date: formatDateTime(trade.date),
@@ -262,7 +262,7 @@ export default function AnalyticsLogs() {
         name: "USD Trades (Converted to INR)",
         value: totalUSD,
         percentage: (totalUSD / analytics.summary.total_combined_inr) * 100,
-        currency: "USD",
+        currency: "INR",
         color: "#4ade80",
       },
       {
@@ -284,10 +284,13 @@ export default function AnalyticsLogs() {
     const inrCount = summary.currency_breakdown.inr.count;
     const largestTrade = analytics.monthly_analytics
       .flatMap((m) => m.trades)
-      .reduce((max, trade) => {
-        const value = trade.combined_inr_value || 0;
-        return value > (max?.value || 0) ? { value, date: trade.date } : max;
-      }, {} as { value: number; date: string } | null);
+      .reduce(
+        (max, trade) => {
+          const value = trade.combined_inr_value || 0;
+          return value > (max?.value || 0) ? { value, date: trade.date } : max;
+        },
+        {} as { value: number; date: string } | null,
+      );
     const monthlyAverage =
       analytics.monthly_analytics.length > 0
         ? totalValue / analytics.monthly_analytics.length
@@ -594,7 +597,7 @@ export default function AnalyticsLogs() {
                   <p className="text-xs text-green-400">
                     {formatCompactCurrency(
                       analytics.summary.currency_breakdown.usd.total,
-                      "USD"
+                      "USD",
                     )}
                   </p>
                 </div>
@@ -605,7 +608,7 @@ export default function AnalyticsLogs() {
                   </p>
                   <p className="text-xs text-amber-400">
                     {formatCompactCurrency(
-                      analytics.summary.currency_breakdown.inr.total
+                      analytics.summary.currency_breakdown.inr.total,
                     )}
                   </p>
                 </div>
@@ -677,7 +680,7 @@ export default function AnalyticsLogs() {
                   </span>
                   <span className="text-white font-medium">
                     {formatCurrency(
-                      selectedYearData.total_usd_converted_to_inr
+                      selectedYearData.total_usd_converted_to_inr,
                     )}
                   </span>
                 </div>
@@ -759,7 +762,7 @@ export default function AnalyticsLogs() {
                   </span>
                   <span className="text-white font-medium">
                     {formatCurrency(
-                      selectedMonthData.total_usd_converted_to_inr
+                      selectedMonthData.total_usd_converted_to_inr,
                     )}
                   </span>
                 </div>
@@ -804,7 +807,7 @@ export default function AnalyticsLogs() {
                         <span className="text-sm font-medium text-white">
                           {formatCurrency(
                             trade.net_amount,
-                            trade.currency === "usd" ? "USD" : "INR"
+                            trade.currency === "usd" ? "USD" : "INR",
                           )}
                         </span>
                       </div>
