@@ -119,7 +119,7 @@ export default function CrossTradeForm({
   const [showWalletDeduction, setShowWalletDeduction] =
     useState<boolean>(false);
   const [walletInfo, setWalletInfo] = useState<SingleBotWalletResponse | null>(
-    null
+    null,
   );
   const [loadingWalletInfo, setLoadingWalletInfo] = useState<boolean>(false);
   const [deductAmount, setDeductAmount] = useState<string>("");
@@ -166,7 +166,7 @@ export default function CrossTradeForm({
       let selectedBotId = "";
       if (tradeToEdit.bot_name && bot_associated.length > 0) {
         const foundBot = bot_associated.find(
-          (bot) => bot.name === tradeToEdit.bot_name
+          (bot) => bot.name === tradeToEdit.bot_name,
         );
         selectedBotId = foundBot ? foundBot.id : "";
       }
@@ -217,9 +217,8 @@ export default function CrossTradeForm({
     };
   };
 
-  const [formData, setFormData] = useState<CrossTradeFormData>(
-    getInitialFormData()
-  );
+  const [formData, setFormData] =
+    useState<CrossTradeFormData>(getInitialFormData());
 
   useEffect(() => {
     const fetchWalletInfo = async () => {
@@ -234,7 +233,7 @@ export default function CrossTradeForm({
       try {
         const response = await axios.post(
           `/api/dashboard/account/${accountId}/wallet/single-balance`,
-          { botAccount: formData.selected_bot_id }
+          { botAccount: formData.selected_bot_id },
         );
 
         if (response.data.success) {
@@ -318,7 +317,7 @@ export default function CrossTradeForm({
     const daysInMonth = new Date(year, month, 0).getDate();
     if (day < 1 || day > daysInMonth) {
       setDateError(
-        `Day must be between 01 and ${daysInMonth} for month ${month}`
+        `Day must be between 01 and ${daysInMonth} for month ${month}`,
       );
       return false;
     }
@@ -435,7 +434,7 @@ export default function CrossTradeForm({
         });
       }
     },
-    [formData.currency]
+    [formData.currency],
   );
 
   useEffect(() => {
@@ -558,7 +557,7 @@ export default function CrossTradeForm({
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    >,
   ) => {
     const { name, value, type } = e.target;
 
@@ -647,7 +646,7 @@ export default function CrossTradeForm({
 
       if (!isBypassingWallet && amount > 0 && amount > walletInfo.balance) {
         toast.error(
-          `Insufficient balance. Available: ${walletInfo.balance} ${walletInfo.currency_name}. Use bypass to override or set amount to 0.`
+          `Insufficient balance. Available: ${walletInfo.balance} ${walletInfo.currency_name}. Use bypass to override or set amount to 0.`,
         );
         return;
       }
@@ -725,12 +724,12 @@ export default function CrossTradeForm({
       if (isEditing && tradeToEdit) {
         response = await axios.put(
           `/api/dashboard/account/${accountId}/crosstrade/${tradeToEdit.id}`,
-          requestData
+          requestData,
         );
       } else {
         response = await axios.post(
           `/api/dashboard/account/${accountId}/crosstrade`,
-          requestData
+          requestData,
         );
       }
 
@@ -738,7 +737,7 @@ export default function CrossTradeForm({
         toast.success(
           isEditing
             ? "Cross trade updated successfully!"
-            : "Cross trade created successfully!"
+            : "Cross trade created successfully!",
         );
         onSuccess?.();
         onClose();
@@ -749,8 +748,8 @@ export default function CrossTradeForm({
           error,
           isEditing
             ? "Error updating cross trade"
-            : "Error creating cross trade"
-        )
+            : "Error creating cross trade",
+        ),
       );
     } finally {
       setLoading(false);
@@ -779,8 +778,8 @@ export default function CrossTradeForm({
           checked
             ? "text-green-400"
             : error
-            ? "text-yellow-400"
-            : "text-stone-400"
+              ? "text-yellow-400"
+              : "text-stone-400"
         }
       >
         {label}
@@ -1145,7 +1144,7 @@ export default function CrossTradeForm({
                 name="amount_received"
                 value={formData.amount_received || ""}
                 onChange={handleInputChange}
-                min="1"
+                min="0.01"
                 step="0.01"
                 className={`w-full pl-10 pr-4 py-2.5 bg-stone-900/50 border ${
                   errors.amount_received ? "border-red-600" : "border-stone-700"
@@ -1276,7 +1275,7 @@ export default function CrossTradeForm({
                 name="net_amount"
                 value={formData.net_amount || ""}
                 onChange={handleInputChange}
-                min="1"
+                min="0.01"
                 step="0.01"
                 className={`w-full pl-10 pr-4 py-2.5 bg-stone-900/50 border ${
                   errors.net_amount ? "border-red-600" : "border-stone-700"
