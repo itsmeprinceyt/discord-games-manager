@@ -3,26 +3,7 @@ import { NextResponse } from "next/server";
 import { initServer, db } from "../../../../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]/route";
-
-// TODO: put this in a file
-interface BotSelectionData {
-  id: string;
-  name: string;
-  currency: string;
-  isSelected: boolean;
-  selectedBotId?: string;
-  balance?: number;
-  blacklisted?: boolean;
-}
-
-export interface BotWithSelection {
-  id: string;
-  name: string;
-  currency_name: string;
-  selected_bot_id: string | null;
-  balance: number | null;
-  blacklisted: boolean | null;
-}
+import { BotSelection } from "../../../../../../types/DTO/Account.ManageBots.DTO";
 
 export async function GET(
   request: Request,
@@ -51,6 +32,25 @@ export async function GET(
     await initServer();
     const pool = db();
 
+    const [accountRows] = await pool.execute<any[]>(
+      `SELECT id, name FROM bot_accounts WHERE id = ? AND user_id = ?`,
+      [accountId, session.user.id]
+    );
+
+    const accountName =
+      Array.isArray(accountRows) && accountRows.length > 0
+        ? accountRows[0].name
+        : null;
+
+    if (!accountName) {
+      return NextResponse.json(
+        {
+          error: "Account not found or you don't have permission to access it",
+        },
+        { status: 404 }
+      );
+    }
+
     const [botsWithSelection] = await pool.execute<any[]>(
       `
       SELECT 
@@ -69,19 +69,29 @@ export async function GET(
     );
 
     if (!Array.isArray(botsWithSelection)) {
-      return NextResponse.json({ success: true, data: [] }, { status: 200 });
+      return NextResponse.json(
+        {
+          success: true,
+          data: [],
+          meta: {
+            total: 0,
+            selected: 0,
+            accountId,
+            accountName,
+          },
+        },
+        { status: 200 }
+      );
     }
 
-    const botSelectionData: BotSelectionData[] = botsWithSelection.map(
-      (bot) => ({
-        id: bot.id,
-        name: bot.name,
-        currency: bot.currency_name,
-        isSelected: !!bot.selected_bot_id,
-        selectedBotId: bot.selected_bot_id || undefined,
-        blacklisted: bot.blacklisted || false,
-      })
-    );
+    const botSelectionData: BotSelection[] = botsWithSelection.map((bot) => ({
+      id: bot.id,
+      name: bot.name,
+      currency: bot.currency_name,
+      isSelected: !!bot.selected_bot_id,
+      selectedBotId: bot.selected_bot_id || undefined,
+      blacklisted: bot.blacklisted || false,
+    }));
 
     const selectedCount = botSelectionData.filter(
       (bot) => bot.isSelected
@@ -95,6 +105,7 @@ export async function GET(
           total: botSelectionData.length,
           selected: selectedCount,
           accountId,
+          accountName,
         },
       },
       { status: 200 }

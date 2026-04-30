@@ -1,6 +1,7 @@
 const CURRENCY_LIMIT: number = 9999999;
 const COOLDOWN_DAYS: number = 14;
 const CURRENCY_COOLDOWN_DAYS: number = 7;
+const SIDEBAR_STATE_KEY: string = "games_manager_pro:sidebar-collapsed";
 //===================================================================================//
 
 /**
@@ -118,4 +119,5 @@ export {
   CURRENCY_LIMIT,
   COOLDOWN_DAYS,
   CURRENCY_COOLDOWN_DAYS,
+  SIDEBAR_STATE_KEY,
 };

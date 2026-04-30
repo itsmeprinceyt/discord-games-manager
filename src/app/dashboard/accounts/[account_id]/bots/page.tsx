@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Bot,
   Ban,
+  Settings,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -17,22 +18,16 @@ import Link from "next/link";
 import getAxiosErrorMessage from "../../../../../utils/Variables/getAxiosError.util";
 import {
   BLUE_Button,
+  BLUE_Text,
   STONE_Button,
 } from "../../../../../utils/CSS/Button.util";
 import Loader from "../../../../(components)/Loader";
-
-interface BotSelection {
-  id: string;
-  name: string;
-  currency: string;
-  isSelected: boolean;
-  selectedBotId?: string;
-  blacklisted?: boolean;
-}
+import { BotSelection } from "../../../../../types/DTO/Account.ManageBots.DTO";
 
 export default function BotSelectionPage() {
   const { account_id } = useParams();
   const [bots, setBots] = useState<BotSelection[]>([]);
+  const [accountName, setAccountName] = useState<string>("");
   const [selectedBots, setSelectedBots] = useState<string[]>([]);
   const [blacklistedBots, setBlacklistedBots] = useState<
     Record<string, boolean>
@@ -55,6 +50,7 @@ export default function BotSelectionPage() {
 
       if (response.data.success) {
         const botsData = response.data.data;
+        setAccountName(response.data.meta.accountName);
         setBots(botsData);
 
         const preSelected = botsData
@@ -64,7 +60,6 @@ export default function BotSelectionPage() {
         setSelectedBots(preSelected);
         setInitialSelectedBots(preSelected);
 
-        // Initialize blacklist status for selected bots only
         const blacklistState: Record<string, boolean> = {};
         botsData.forEach((bot: BotSelection) => {
           if (bot.isSelected && bot.selectedBotId) {
@@ -90,8 +85,6 @@ export default function BotSelectionPage() {
     const sortedInitial = [...initialSelectedBots].sort();
     const selectionChanged =
       JSON.stringify(sortedSelected) !== JSON.stringify(sortedInitial);
-
-    // Check if blacklist status changed for any bot
     const blacklistChanged = Object.keys(blacklistedBots).some(
       (botId) => blacklistedBots[botId] !== initialBlacklistedBots[botId]
     );
@@ -119,7 +112,7 @@ export default function BotSelectionPage() {
     currentStatus: boolean,
     e: React.MouseEvent
   ) => {
-    e.stopPropagation(); // Prevent triggering the parent div's onClick
+    e.stopPropagation();
 
     setBlacklistedBots((prev) => ({
       ...prev,
@@ -148,10 +141,8 @@ export default function BotSelectionPage() {
 
     setUpdating(true);
     try {
-      // Prepare blacklist updates for existing bots only
       const blacklistUpdates = Object.keys(blacklistedBots)
         .filter((selectedBotId) => {
-          // Only include if status changed AND bot is still selected
           const wasChanged =
             blacklistedBots[selectedBotId] !==
             initialBlacklistedBots[selectedBotId];
@@ -177,7 +168,7 @@ export default function BotSelectionPage() {
         setInitialSelectedBots([...selectedBots]);
         setInitialBlacklistedBots({ ...blacklistedBots });
         setHasChanges(false);
-        await fetchAvailableBots(); // Refresh to get latest data
+        await fetchAvailableBots();
       }
     } catch (error: unknown) {
       toast.error(getAxiosErrorMessage(error, "Failed to update bots"));
@@ -207,7 +198,10 @@ export default function BotSelectionPage() {
               </Link>
               <div>
                 <h1 className="text-2xl md:text-3xl font-medium text-white">
-                  Manage Bots
+                  <span className="flex items-center gap-2">
+                    <Settings size={25} className="text-blue-400" />
+                    Manage Bots
+                  </span>
                   {hasChanges && (
                     <span className="ml-2 text-yellow-400 text-sm">
                       (Unsaved changes)
@@ -215,8 +209,8 @@ export default function BotSelectionPage() {
                   )}
                 </h1>
                 <p className="text-stone-400 text-sm">
-                  Select bots to associate with this account and manage
-                  blacklist status
+                  Select bots to associate and manage blacklist status for
+                  account: <span className={`${BLUE_Text}`}>{accountName}</span>
                 </p>
               </div>
             </div>

@@ -27,98 +27,17 @@ import Loader from "../../../../(components)/Loader";
 import PageWrapper from "../../../../(components)/PageWrapper";
 import {
   BLUE_Button,
+  BLUE_Text,
   STONE_Button,
 } from "../../../../../utils/CSS/Button.util";
-
-interface Trade {
-  id: string;
-  date: string;
-  currency: "usd" | "inr";
-  amount_received: number;
-  net_amount: number;
-  conversion_rate: number | null;
-  usd_converted_to_inr: number | null;
-  combined_inr_value: number | null;
-  traded_with: string | null;
-  rate: string | null;
-  note: string | null;
-}
-
-interface YearlyAnalytics {
-  year: number;
-  year_code: string;
-  trade_count: number;
-  total_usd_amount: number;
-  total_inr_amount: number;
-  total_usd_converted_to_inr: number;
-  total_combined_inr: number;
-  usd_trades_count: number;
-  inr_trades_count: number;
-  average_trade_value_inr: number;
-}
-
-interface MonthlyAnalytics {
-  month: string;
-  year: number;
-  month_code: string;
-  trade_count: number;
-  total_usd_amount: number;
-  total_inr_amount: number;
-  total_usd_converted_to_inr: number;
-  total_combined_inr: number;
-  trades: Trade[];
-}
-
-interface CurrencyBreakdown {
-  count: number;
-  total: number;
-  percentage: string | number;
-}
-
-interface AnalyticsSummary {
-  total_trades: number;
-  total_usd_amount: number;
-  total_inr_amount: number;
-  total_usd_converted_to_inr: number;
-  total_combined_inr: number;
-  average_trade_value_inr: number;
-  currency_breakdown: {
-    usd: CurrencyBreakdown;
-    inr: CurrencyBreakdown;
-  };
-}
-
-interface AnalyticsMeta {
-  user_id: string;
-  account_id: string;
-  total_months: number;
-  total_years: number;
-}
-
-interface AnalyticsData {
-  yearly_analytics: YearlyAnalytics[];
-  monthly_analytics: MonthlyAnalytics[];
-  summary: AnalyticsSummary;
-  meta: AnalyticsMeta;
-}
-
-interface AnalyticsResponse {
-  success: boolean;
-  data: AnalyticsData;
-}
-
-interface PieChartDataPoint {
-  name: string;
-  value: number;
-  percentage: number;
-  currency: string;
-  color: string;
-}
-
-interface TooltipProps {
-  active?: boolean;
-  payload?: Array<{ payload: PieChartDataPoint }>;
-}
+import {
+  AnalyticsData,
+  AnalyticsResponse,
+  MonthlyAnalytics,
+  PieChartDataPoint,
+  TooltipProps,
+  YearlyAnalytics,
+} from "../../../../../types/DTO/Account.Analytics.DTO";
 
 const CustomTooltip: React.FC<TooltipProps> = ({ active, payload }) => {
   if (active && payload && payload.length) {
@@ -158,7 +77,7 @@ export default function AccountAnalyticsLogs() {
       setLoading(true);
       setError(null);
       const response = await axios.get<AnalyticsResponse>(
-        `/api/dashboard/account/${accountId}/analytics-logs`,
+        `/api/dashboard/account/${accountId}/analytics-logs`
       );
       if (response.data.success) {
         setAnalytics(response.data.data);
@@ -172,7 +91,7 @@ export default function AccountAnalyticsLogs() {
     } catch (err: unknown) {
       const message = getAxiosErrorMessage(
         err,
-        "Error fetching analytics data",
+        "Error fetching analytics data"
       );
       toast.error(message);
       setError(message);
@@ -203,7 +122,7 @@ export default function AccountAnalyticsLogs() {
 
   const formatCurrency = (
     amount: number,
-    currency: "USD" | "INR" = "INR",
+    currency: "USD" | "INR" = "INR"
   ): string => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -215,7 +134,7 @@ export default function AccountAnalyticsLogs() {
 
   const formatCompactCurrency = (
     amount: number,
-    currency: "USD" | "INR" = "INR",
+    currency: "USD" | "INR" = "INR"
   ): string => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -233,7 +152,7 @@ export default function AccountAnalyticsLogs() {
   const exportToCSV = (): void => {
     if (!analytics) return;
     const allTrades = analytics.monthly_analytics.flatMap(
-      (month) => month.trades,
+      (month) => month.trades
     );
     const csvData = allTrades.map((trade) => ({
       Date: formatDateTime(trade.date),
@@ -293,13 +212,10 @@ export default function AccountAnalyticsLogs() {
     const inrCount = summary.currency_breakdown.inr.count;
     const largestTrade = analytics.monthly_analytics
       .flatMap((m) => m.trades)
-      .reduce(
-        (max, trade) => {
-          const value = trade.combined_inr_value || 0;
-          return value > (max?.value || 0) ? { value, date: trade.date } : max;
-        },
-        {} as { value: number; date: string } | null,
-      );
+      .reduce((max, trade) => {
+        const value = trade.combined_inr_value || 0;
+        return value > (max?.value || 0) ? { value, date: trade.date } : max;
+      }, {} as { value: number; date: string } | null);
     const monthlyAverage =
       analytics.monthly_analytics.length > 0
         ? totalValue / analytics.monthly_analytics.length
@@ -357,12 +273,15 @@ export default function AccountAnalyticsLogs() {
                 <ArrowLeft className="h-5 w-5 text-stone-400" />
               </Link>
               <div>
-                <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
+                <h1 className="text-2xl md:text-3xl font-medium text-white mb-2 flex items-center gap-2">
+                  <BarChart3 size={25} className="text-amber-400" />
                   Analytics & Reports
                 </h1>
                 <p className="text-stone-400 text-sm">
-                  Track your crosstrade performance and earnings for this
-                  account
+                  Track your crosstrade performance and earnings for account:{" "}
+                  <span className={`${BLUE_Text}`}>
+                    {analytics?.meta.username}
+                  </span>
                 </p>
               </div>
             </div>
@@ -409,11 +328,15 @@ export default function AccountAnalyticsLogs() {
               <ArrowLeft className="h-5 w-5 text-stone-400" />
             </Link>
             <div>
-              <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
+              <h1 className="text-2xl md:text-3xl font-medium text-white mb-2 flex items-center gap-2">
+                <BarChart3 size={25} className="text-amber-400" />
                 Analytics & Reports
               </h1>
               <p className="text-stone-400 text-sm">
-                Track your crosstrade performance and earnings for this account
+                Track your crosstrade performance and earnings for account:{" "}
+                <span className={`${BLUE_Text}`}>
+                  {analytics?.meta.username}
+                </span>
               </p>
             </div>
           </div>
@@ -642,7 +565,7 @@ export default function AccountAnalyticsLogs() {
                   <p className="text-xs text-green-400">
                     {formatCompactCurrency(
                       analytics.summary.currency_breakdown.usd.total,
-                      "USD",
+                      "USD"
                     )}
                   </p>
                 </div>
@@ -653,7 +576,7 @@ export default function AccountAnalyticsLogs() {
                   </p>
                   <p className="text-xs text-amber-400">
                     {formatCompactCurrency(
-                      analytics.summary.currency_breakdown.inr.total,
+                      analytics.summary.currency_breakdown.inr.total
                     )}
                   </p>
                 </div>
@@ -725,7 +648,7 @@ export default function AccountAnalyticsLogs() {
                   </span>
                   <span className="text-white font-medium">
                     {formatCurrency(
-                      selectedYearData.total_usd_converted_to_inr,
+                      selectedYearData.total_usd_converted_to_inr
                     )}
                   </span>
                 </div>
@@ -807,7 +730,7 @@ export default function AccountAnalyticsLogs() {
                   </span>
                   <span className="text-white font-medium">
                     {formatCurrency(
-                      selectedMonthData.total_usd_converted_to_inr,
+                      selectedMonthData.total_usd_converted_to_inr
                     )}
                   </span>
                 </div>
@@ -852,7 +775,7 @@ export default function AccountAnalyticsLogs() {
                         <span className="text-sm font-medium text-white">
                           {formatCurrency(
                             trade.net_amount,
-                            trade.currency === "usd" ? "USD" : "INR",
+                            trade.currency === "usd" ? "USD" : "INR"
                           )}
                         </span>
                       </div>

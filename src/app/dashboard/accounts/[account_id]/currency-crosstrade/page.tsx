@@ -17,6 +17,7 @@ import {
   X,
   Calendar,
   Edit,
+  CircleDashed,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -24,6 +25,7 @@ import getAxiosErrorMessage from "../../../../../utils/Variables/getAxiosError.u
 import { formatDateTime } from "../../../../../utils/main.util";
 import {
   BLUE_Button,
+  BLUE_Text,
   ORANGE_Button,
   RED_Button,
   STONE_Button,
@@ -36,6 +38,7 @@ import CurrencyCrossTradeEditModal from "../../../../(components)/Crosstrade/Cur
 interface ApiResponse {
   success: boolean;
   data: CurrencyCrossTrade[];
+  bot_account_name: string;
 }
 
 export default function CurrencyCrossTradeManager() {
@@ -49,8 +52,6 @@ export default function CurrencyCrossTradeManager() {
   const [isCurrencyTradeModalOpen, setIsCurrencyTradeModalOpen] =
     useState<boolean>(false);
   const [accountName, setAccountName] = useState<string>("");
-
-  // Edit modal state
   const [editingTrade, setEditingTrade] = useState<CurrencyCrossTrade | null>(
     null
   );
@@ -168,11 +169,13 @@ export default function CurrencyCrossTradeManager() {
                 <ArrowLeft className="h-5 w-5 text-stone-400" />
               </Link>
               <div>
-                <h1 className="text-2xl md:text-3xl font-medium text-white">
+                <h1 className="text-2xl md:text-3xl font-medium text-white flex items-center gap-2">
+                  <CircleDashed size={25} className="text-orange-400" />
                   Currency Crosstrade Manager
                 </h1>
                 <p className="text-stone-400 text-sm">
-                  Track in-game currency exchanges between bots
+                  Track in-game currency exchanges between bots for account:{" "}
+                  <span className={`${BLUE_Text}`}>{accountName}</span>
                 </p>
               </div>
             </div>

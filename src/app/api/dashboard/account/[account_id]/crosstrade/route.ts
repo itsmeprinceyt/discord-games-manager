@@ -41,6 +41,7 @@ interface CrossTradeLog {
 
 export interface CombinedResponse {
   bot_associated: BotAssociated[];
+  bot_account_name: string;
   cross_trade_logs: CrossTradeLog[];
 }
 
@@ -76,7 +77,7 @@ export async function GET(
     const pool = db();
 
     const [accountOwnership] = await pool.execute<any[]>(
-      `SELECT id FROM bot_accounts WHERE id = ? AND user_id = ?`,
+      `SELECT id, name FROM bot_accounts WHERE id = ? AND user_id = ?`,
       [accountId, session.user.id]
     );
 
@@ -152,6 +153,7 @@ export async function GET(
 
     const responseData: CombinedResponse = {
       bot_associated: botAssociated,
+      bot_account_name: accountOwnership[0].name,
       cross_trade_logs: crossTradeLogs,
     };
 
