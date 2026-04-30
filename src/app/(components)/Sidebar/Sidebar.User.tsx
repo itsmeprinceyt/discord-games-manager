@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -15,6 +14,7 @@ import {
   Database,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useSidebarStateCustom } from "../../../hooks/useSideBarStateCustom";
 
 const userNavItems = [
   {
@@ -56,8 +56,18 @@ const userNavItems = [
 
 export default function UserSidebar() {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
+  const {
+    isCollapsed,
+    setIsCollapsed,
+    isMobileOpen,
+    setIsMobileOpen,
+    isInitialized,
+  } = useSidebarStateCustom();
+
+  // Prevent flash of incorrect state
+  if (!isInitialized) {
+    return null; // Or return a loading skeleton
+  }
 
   return (
     <>
@@ -65,6 +75,7 @@ export default function UserSidebar() {
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         className="lg:hidden fixed bottom-4 left-4 z-50 p-2 bg-black border border-stone-800 rounded text-white cursor-pointer"
+        aria-label={isMobileOpen ? "Close sidebar" : "Open sidebar"}
       >
         {isMobileOpen ? (
           <X className="h-5 w-5" />
@@ -86,8 +97,9 @@ export default function UserSidebar() {
       >
         {/* Toggle Button */}
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute top-4 -right-3 bg-black border border-stone-800 rounded-full p-1 text-stone-400 hover:text-white hover:border-stone-700 transition-colors cursor-pointer"
+          onClick={setIsCollapsed}
+          className="hidden lg:flex absolute top-4 -right-3 bg-black border border-stone-800 rounded-full p-1 text-stone-400 hover:text-white transition-colors cursor-pointer"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -116,6 +128,7 @@ export default function UserSidebar() {
                     ? "bg-blue-600/20 text-blue-400 border border-blue-800/50"
                     : "text-stone-400 hover:text-white hover:bg-stone-800/30"
                 }`}
+                onClick={() => setIsMobileOpen(false)}
               >
                 {item.icon}
 
