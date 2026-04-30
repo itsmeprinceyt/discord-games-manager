@@ -11,11 +11,13 @@ import {
   Edit,
   Plus,
   Edit3,
+  CreditCard,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../../../utils/Variables/getAxiosError.util";
 import {
+  BLUE_Text,
   ORANGE_Button,
   STONE_Button,
 } from "../../../../../utils/CSS/Button.util";
@@ -23,19 +25,10 @@ import EditBalanceModal from "../../../../(components)/Balance/EditBalanceModal"
 import Loader from "../../../../(components)/Loader";
 import CurrencyCrossTradeModal from "../../../../(components)/Crosstrade/CurrencyCrossTradeModal";
 import BulkEditBalanceModal from "../../../../(components)/Balance/EditBulkBalanceMode";
-
-interface BotBalance {
-  id: string;
-  name: string;
-  currency_name: string;
-  balance: number;
-}
-
-interface WalletResponse {
-  success: boolean;
-  data: BotBalance[];
-  message?: string;
-}
+import {
+  BotInfoResponse,
+  BotWalletResponse,
+} from "../../../../../types/DTO/Account.Wallet.DTO";
 
 const getCurrencyColor = (currencyName: string) => {
   const colorMap: Record<string, string> = {
@@ -50,8 +43,8 @@ export default function AccountWalletPage() {
   const { account_id } = useParams();
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [walletData, setWalletData] = useState<BotBalance[]>([]);
-  const [selectedBot, setSelectedBot] = useState<BotBalance | null>(null);
+  const [walletData, setWalletData] = useState<BotInfoResponse[]>([]);
+  const [selectedBot, setSelectedBot] = useState<BotInfoResponse | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] =
     useState<boolean>(false);
@@ -67,7 +60,7 @@ export default function AccountWalletPage() {
         if (showLoading) setLoading(true);
         else setRefreshing(true);
 
-        const response = await axios.get<WalletResponse>(
+        const response = await axios.get<BotWalletResponse>(
           `/api/dashboard/account/${account_id}/wallet`
         );
 
@@ -110,7 +103,7 @@ export default function AccountWalletPage() {
 
   const handleRefresh = () => fetchWalletData(false);
 
-  const handleEditClick = (bot: BotBalance) => {
+  const handleEditClick = (bot: BotInfoResponse) => {
     setSelectedBot(bot);
     setIsEditModalOpen(true);
   };
@@ -148,9 +141,7 @@ export default function AccountWalletPage() {
         toast.success(response.data.message);
       }
     } catch (err: unknown) {
-      const message = getAxiosErrorMessage(err, "Error adding daily reward");
-      toast.error(message);
-      console.error("Error adding daily reward:", err);
+      toast.error(getAxiosErrorMessage(err, "Error adding daily reward"));
     } finally {
       setVotingBots((prev) => {
         const newSet = new Set(prev);
@@ -215,11 +206,13 @@ export default function AccountWalletPage() {
               </Link>
               <div className="flex items-center gap-3">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-medium text-white">
+                  <h1 className="text-2xl md:text-3xl font-medium text-white flex items-center gap-2">
+                    <CreditCard size={25} className="text-red-400" />
                     Wallet
                   </h1>
                   <p className="text-stone-400 text-sm">
-                    View balances for all bots
+                    View balances for all bot(s) for account:{" "}
+                    <span className={`${BLUE_Text}`}>{accountName}</span>
                   </p>
                 </div>
               </div>
@@ -238,16 +231,20 @@ export default function AccountWalletPage() {
               </button>
 
               {/* New Bulk Edit Button */}
-              <button
-                onClick={() => setIsBulkEditModalOpen(true)}
-                disabled={walletData.length === 0}
-                className={`px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2 ${
-                  walletData.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              >
-                <Edit3 className="h-4 w-4" />
-                Edit Mode
-              </button>
+              {walletData.length > 1 && (
+                <button
+                  onClick={() => setIsBulkEditModalOpen(true)}
+                  disabled={walletData.length === 0}
+                  className={`px-4 py-2 ${STONE_Button} text-stone-300 rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2 ${
+                    walletData.length === 0
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  <Edit3 className="h-4 w-4" />
+                  Edit Mode
+                </button>
+              )}
 
               <button
                 onClick={() => setIsCurrencyTradeModalOpen(true)}

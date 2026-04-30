@@ -45,7 +45,7 @@ export async function GET(
     const pool = db();
 
     const [accountOwnership] = await pool.execute<any[]>(
-      `SELECT id FROM bot_accounts WHERE id = ? AND user_id = ?`,
+      `SELECT id,name FROM bot_accounts WHERE id = ? AND user_id = ?`,
       [accountId, session.user.id]
     );
 
@@ -300,6 +300,7 @@ export async function GET(
       },
       meta: {
         user_id: session.user.id,
+        username: accountOwnership[0].name,
         account_id: accountId,
         total_months: monthlyAnalytics.length,
         total_years: yearlyAnalytics.length,

@@ -19,6 +19,7 @@ import {
   ChevronUp,
   X,
   Link as LinkIcon,
+  TriangleDashed,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -26,6 +27,7 @@ import getAxiosErrorMessage from "../../../../../utils/Variables/getAxiosError.u
 import { formatDateTime } from "../../../../../utils/main.util";
 import {
   BLUE_Button,
+  BLUE_Text,
   RED_Button,
   STONE_Button,
 } from "../../../../../utils/CSS/Button.util";
@@ -48,7 +50,6 @@ export default function CrossTradeManager() {
   const [expandedTradeId, setExpandedTradeId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // Add state for editing
   const [editingTrade, setEditingTrade] = useState<any>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
@@ -173,11 +174,15 @@ export default function CrossTradeManager() {
                 <ArrowLeft className="h-5 w-5 text-stone-400" />
               </Link>
               <div>
-                <h1 className="text-2xl md:text-3xl font-medium text-white">
+                <h1 className="text-2xl md:text-3xl font-medium text-white flex items-center gap-2">
+                  <TriangleDashed size={25} className="text-purple-400" />
                   Crosstrade Manager
                 </h1>
                 <p className="text-stone-400 text-sm">
-                  Manage all cross trades for this account
+                  Manage all cross trades for account:{" "}
+                  <span className={`${BLUE_Text}`}>
+                    {data?.bot_account_name}
+                  </span>
                 </p>
               </div>
             </div>

@@ -6,13 +6,7 @@ import { authOptions } from "../../../../auth/[...nextauth]/route";
 import { getRedis } from "../../../../../../lib/Redis/redis";
 import getWalletInfo from "../../../../../../utils/Redis/getWalletInfo";
 import { GET_WALLET_INFO_TTL } from "../../../../../../utils/Redis/redisTTL";
-
-export interface BotInfoResponse {
-  id: string;
-  name: string;
-  currency_name: string;
-  balance: number;
-}
+import { BotInfoResponse } from "../../../../../../types/DTO/Account.Wallet.DTO";
 
 export async function GET(
   req: Request,
