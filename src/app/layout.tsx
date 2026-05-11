@@ -8,6 +8,7 @@ import HomePageHeartbeat from "../hooks/HeartBeat";
 import ClientNavbarWrapper from "./(components)/DynamicNavbar";
 import Footer from "./(components)/Footer";
 import LoaderFullscreen from "./(components)/LoaderFullscreen";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://games-manager-pro.vercel.app/"),
@@ -96,6 +97,7 @@ export default function RootLayout({
               }}
             />
             <Footer />
+            <Analytics />
           </Suspense>
         </SessionProviderNextAuth>
       </body>
