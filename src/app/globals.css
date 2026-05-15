@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    text-rendering: optimizeLegibility;
+}
+
 @keyframes slideDown {
     from {
         opacity: 0;
