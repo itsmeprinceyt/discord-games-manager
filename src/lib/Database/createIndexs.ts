@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 import type { Pool } from "mysql2/promise";
 import { createIndexStatements, dropIndexStatements } from "./Index/Indexing";
+import { getProduction } from "../../utils/Variables/getProduction.util";
+
+const manualSkipIndexing: boolean = true;
 
 /**
  * @brief Checks if a specific index exists in the current database schema.
@@ -19,8 +21,8 @@ async function indexExists(
     `SELECT COUNT(*) as count
      FROM information_schema.statistics
      WHERE table_schema = DATABASE()
-       AND table_name = ?
-       AND index_name = ?`,
+     AND table_name = ?
+     AND index_name = ?`,
     [tableName, indexName]
   );
   return (rows as any)[0].count > 0;
@@ -39,19 +41,19 @@ async function logUnusedIndexes(connection: Pool) {
   try {
     const [unusedRows] = await connection.query(
       `
-    SELECT 
+      SELECT 
       s.TABLE_NAME AS table_name,
       s.INDEX_NAME AS index_name,
       COALESCE(stat.COUNT_STAR, 0) AS usage_count
-    FROM information_schema.statistics s
-    LEFT JOIN performance_schema.table_io_waits_summary_by_index_usage stat
+      FROM information_schema.statistics s
+      LEFT JOIN performance_schema.table_io_waits_summary_by_index_usage stat
       ON stat.OBJECT_SCHEMA = s.TABLE_SCHEMA
       AND stat.OBJECT_NAME = s.TABLE_NAME
       AND stat.INDEX_NAME = s.INDEX_NAME
-    WHERE s.TABLE_SCHEMA = DATABASE()
+      WHERE s.TABLE_SCHEMA = DATABASE()
       AND s.INDEX_NAME != 'PRIMARY'
-    ORDER BY s.TABLE_NAME, s.INDEX_NAME;
-    `
+      ORDER BY s.TABLE_NAME, s.INDEX_NAME;
+      `
     );
 
     const unusedIndexes = (unusedRows as any[]).filter(
@@ -85,6 +87,14 @@ async function logUnusedIndexes(connection: Pool) {
  * @param {boolean} isProduction - If true, indexes are only created (not dropped); if false, all are dropped and recreated.
  */
 export async function setupIndexes(connection: Pool, isProduction: boolean) {
+  const skipIndexing = getProduction() ? false : manualSkipIndexing;
+  if (skipIndexing) {
+    console.log(
+      "[INDEX - SKIPPED] Indexing is disabled via 'manualSkipIndexing' flag."
+    );
+    return;
+  }
+
   console.log("[INDEX] Handling indexes");
 
   if (!isProduction) {

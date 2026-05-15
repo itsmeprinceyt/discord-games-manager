@@ -25,7 +25,7 @@ export default function LoginPage() {
   const callbackUrl =
     rawCallbackUrl && rawCallbackUrl.startsWith("/")
       ? rawCallbackUrl
-      : "/dashboard";
+      : "/choose";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
