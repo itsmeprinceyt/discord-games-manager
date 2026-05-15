@@ -280,8 +280,9 @@ export default function CurrencyCrossTradeModal({
   const canSubmit =
     selectedFromBot &&
     selectedToBot &&
-    fromAmountNum > 0 &&
-    toAmountNum > 0 &&
+    (fromAmountNum > 0 || toAmountNum > 0) &&
+    fromAmountNum >= 0 &&
+    toAmountNum >= 0 &&
     (isBypassingFrom || fromAmountNum <= CURRENCY_LIMIT) &&
     !dateError &&
     !loading;

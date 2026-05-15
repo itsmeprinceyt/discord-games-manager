@@ -88,16 +88,31 @@ export async function PUT(
       );
     }
 
-    if (!Number.isInteger(from_amount) || from_amount <= 0) {
+    if (
+      typeof from_amount !== "number" ||
+      !Number.isInteger(from_amount) ||
+      from_amount < 0
+    ) {
       return NextResponse.json(
-        { success: false, error: "from_amount must be a positive integer" },
+        { success: false, error: "From amount must be a non-negative integer" },
         { status: 400 }
       );
     }
 
-    if (!Number.isInteger(to_amount) || to_amount <= 0) {
+    if (
+      typeof to_amount !== "number" ||
+      !Number.isInteger(to_amount) ||
+      to_amount < 0
+    ) {
       return NextResponse.json(
-        { success: false, error: "to_amount must be a positive integer" },
+        { success: false, error: "To amount must be a non-negative integer" },
+        { status: 400 }
+      );
+    }
+
+    if (from_amount === 0 && to_amount === 0) {
+      return NextResponse.json(
+        { success: false, error: "At least one amount must be greater than 0" },
         { status: 400 }
       );
     }

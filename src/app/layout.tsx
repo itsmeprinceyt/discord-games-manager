@@ -9,6 +9,8 @@ import ClientNavbarWrapper from "./(components)/DynamicNavbar";
 import Footer from "./(components)/Footer";
 import LoaderFullscreen from "./(components)/LoaderFullscreen";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { LazyMotion, domAnimation } from "motion/react";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://games-manager-pro.vercel.app/"),
@@ -81,25 +83,30 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="select-none">
-        <SessionProviderNextAuth>
-          <Suspense fallback={<LoaderFullscreen text={"Games Manager Pro"} />}>
-            <HomePageHeartbeat />
-            <ClientNavbarWrapper />
-            {children}
-            <Toaster
-              position="bottom-left"
-              toastOptions={{
-                style: {
-                  fontSize: "14px",
-                  background: "black",
-                  color: "white",
-                },
-              }}
-            />
-            <Footer />
-            <Analytics />
-          </Suspense>
-        </SessionProviderNextAuth>
+        <LazyMotion features={domAnimation}>
+          <SessionProviderNextAuth>
+            <Suspense
+              fallback={<LoaderFullscreen text={"Games Manager Pro"} />}
+            >
+              <HomePageHeartbeat />
+              <ClientNavbarWrapper />
+              {children}
+              <Toaster
+                position="bottom-left"
+                toastOptions={{
+                  style: {
+                    fontSize: "14px",
+                    background: "black",
+                    color: "white",
+                  },
+                }}
+              />
+              <Footer />
+              <Analytics />
+              <SpeedInsights />
+            </Suspense>
+          </SessionProviderNextAuth>
+        </LazyMotion>
       </body>
     </html>
   );

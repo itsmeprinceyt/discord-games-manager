@@ -236,10 +236,12 @@ export async function POST(request: NextRequest) {
     if (
       !from_bot_account_id ||
       !from_selected_bot_id ||
-      !from_amount ||
+      from_amount === undefined ||
+      from_amount === null ||
       !to_bot_account_id ||
       !to_selected_bot_id ||
-      !to_amount
+      to_amount === undefined ||
+      to_amount === null
     ) {
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
@@ -247,16 +249,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!Number.isInteger(from_amount) || from_amount <= 0) {
+    if (
+      typeof from_amount !== "number" ||
+      !Number.isInteger(from_amount) ||
+      from_amount < 0
+    ) {
       return NextResponse.json(
-        { success: false, error: "From amount must be a positive integer" },
+        { success: false, error: "From amount must be a non-negative integer" },
         { status: 400 }
       );
     }
 
-    if (!Number.isInteger(to_amount) || to_amount <= 0) {
+    if (
+      typeof to_amount !== "number" ||
+      !Number.isInteger(to_amount) ||
+      to_amount < 0
+    ) {
       return NextResponse.json(
-        { success: false, error: "To amount must be a positive integer" },
+        { success: false, error: "To amount must be a non-negative integer" },
+        { status: 400 }
+      );
+    }
+
+    // Prevent both amounts from being 0
+    if (from_amount === 0 && to_amount === 0) {
+      return NextResponse.json(
+        { success: false, error: "At least one amount must be greater than 0" },
         { status: 400 }
       );
     }

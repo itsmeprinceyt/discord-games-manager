@@ -205,8 +205,9 @@ export default function CurrencyCrossTradeEditModal({
   const canSubmit =
     selectedFromBotId &&
     selectedToBotId &&
-    fromAmountNum > 0 &&
-    toAmountNum > 0 &&
+    fromAmountNum >= 0 &&
+    toAmountNum >= 0 &&
+    (fromAmountNum > 0 || toAmountNum > 0) &&
     !dateError &&
     !loading;
 
