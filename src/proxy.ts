@@ -10,8 +10,7 @@ const ROUTES = {
   },
   PROTECTED: {
     DASHBOARD: ["/dashboard"],
-    ADMIN: ["/admin"],
-    CHOOSE: ["/choose"],
+    ADMIN: ["/admin", "/choose"],
   },
   API: {
     DASHBOARD: ["/api/dashboard"],
@@ -69,8 +68,7 @@ export async function proxy(req: NextRequest) {
   /* ---------------- DASHBOARD ---------------- */
   if (
     matchesRoute(path, ROUTES.PROTECTED.DASHBOARD) ||
-    matchesRoute(path, ROUTES.API.DASHBOARD) ||
-    matchesRoute(path, ROUTES.PROTECTED.CHOOSE)
+    matchesRoute(path, ROUTES.API.DASHBOARD)
   ) {
     if (!isLoggedIn) {
       return handleUnauthorized(req, url, path);
@@ -100,12 +98,12 @@ export async function proxy(req: NextRequest) {
 function handleUnauthorized(
   req: NextRequest,
   url: URL,
-  path: string
+  path: string,
 ): NextResponse {
   if (path.startsWith("/api/")) {
     return NextResponse.json(
       { error: "Authentication required" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -118,7 +116,7 @@ function handleForbidden(path: string, url: URL): NextResponse {
   if (path.startsWith("/api/")) {
     return NextResponse.json(
       { error: "Admin access required" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -132,6 +130,8 @@ export const config = {
     "/register",
     "/dashboard/:path*",
     "/admin/:path*",
+    "/choose",
+    "/choose/:path*",
     "/api/dashboard/:path*",
     "/api/admin/:path*",
   ],
