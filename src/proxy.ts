@@ -11,6 +11,7 @@ const ROUTES = {
   PROTECTED: {
     DASHBOARD: ["/dashboard"],
     ADMIN: ["/admin"],
+    CHOOSE: ["/choose"],
   },
   API: {
     DASHBOARD: ["/api/dashboard"],
