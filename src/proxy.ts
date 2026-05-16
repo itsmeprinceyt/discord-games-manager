@@ -69,7 +69,8 @@ export async function proxy(req: NextRequest) {
   /* ---------------- DASHBOARD ---------------- */
   if (
     matchesRoute(path, ROUTES.PROTECTED.DASHBOARD) ||
-    matchesRoute(path, ROUTES.API.DASHBOARD)
+    matchesRoute(path, ROUTES.API.DASHBOARD) ||
+    matchesRoute(path, ROUTES.PROTECTED.CHOOSE)
   ) {
     if (!isLoggedIn) {
       return handleUnauthorized(req, url, path);
