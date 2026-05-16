@@ -33,7 +33,7 @@ import {
   formatDateTime,
   formatDate,
   CURRENCY_COOLDOWN_DAYS,
-} from "@/utils/main.util";
+} from "../../../../utils/main.util";
 import {
   BLUE_Button,
   RED_Button,
@@ -92,8 +92,8 @@ function ChecklistItem({
           checked
             ? "text-green-400"
             : error
-            ? "text-yellow-400"
-            : "text-stone-400"
+              ? "text-yellow-400"
+              : "text-stone-400"
         }
       >
         {label}
@@ -404,7 +404,7 @@ export default function GameAccountManager() {
         {
           name: trimmedName,
           account_uid: trimmedUid || null,
-        }
+        },
       );
 
       if (response.data.success) {
@@ -416,7 +416,7 @@ export default function GameAccountManager() {
                 name: trimmedName,
                 account_uid: trimmedUid || null,
               }
-            : null
+            : null,
         );
         closeEditModal();
       }
@@ -468,7 +468,7 @@ export default function GameAccountManager() {
     currency: bot.currency_name,
     lastTrade: bot.last_crosstraded_at
       ? `${formatDateTime(bot.last_crosstraded_at)} (${formatDate(
-          bot.last_crosstraded_at
+          bot.last_crosstraded_at,
         )})`
       : "--",
     cooldown: bot.last_crosstraded_at || "",
@@ -480,7 +480,7 @@ export default function GameAccountManager() {
     {
       href: `/dashboard/accounts/${account_id}/analytics-logs`,
       icon: BarChart3,
-      title: "Account Analytics",
+      title: "Account Analytics & Reports",
       description: "Detailed performance metrics and insights",
       color: "amber",
       iconColor: "text-amber-400",

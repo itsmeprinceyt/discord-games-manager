@@ -23,7 +23,7 @@ const userNavItems = [
     icon: <LayoutDashboard className="h-5 w-5" />,
   },
   {
-    title: "Analytics Logs",
+    title: "Analytics & Reports",
     href: "/dashboard/analytics-logs",
     icon: <BarChart3 className="h-5 w-5" />,
   },
