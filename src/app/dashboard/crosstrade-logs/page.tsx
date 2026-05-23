@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Plus,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -27,6 +28,7 @@ import getAxiosErrorMessage from "../../../utils/Variables/getAxiosError.util";
 import { formatDateTime } from "../../../utils/main.util";
 import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
 import Loader from "../../(components)/Loader";
+import CrossTradeForm from "../../(components)/Crosstrade/CrossTradeAddForm";
 
 interface UserCrossTradeLog {
   id: string;
@@ -70,6 +72,11 @@ export default function UserCrossTradeLogs() {
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const [showNewTradeModal, setShowNewTradeModal] = useState<boolean>(false);
+  const [allAccounts, setAllAccounts] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
 
   const [filters, setFilters] = useState({
     bot_account_id: "",
@@ -124,7 +131,7 @@ export default function UserCrossTradeLogs() {
       setLoading(true);
       const queryString = buildQueryString();
       const response = await axios.get(
-        `/api/dashboard/crosstrade-logs?${queryString}`
+        `/api/dashboard/crosstrade-logs?${queryString}`,
       );
 
       if (response.data.success) {
@@ -132,7 +139,7 @@ export default function UserCrossTradeLogs() {
       }
     } catch (error: unknown) {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to load cross trade data")
+        getAxiosErrorMessage(error, "Failed to load cross trade data"),
       );
     } finally {
       setLoading(false);
@@ -179,6 +186,25 @@ export default function UserCrossTradeLogs() {
     });
     setSearchInput("");
   };
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const response = await axios.get("/api/dashboard/account");
+        if (response.data.success) {
+          const accounts = (response.data.data || []).map(
+            (a: { id: string; name: string }) => ({
+              id: a.id,
+              name: a.name,
+            }),
+          );
+          setAllAccounts(accounts);
+          if (accounts.length > 0) setSelectedAccountId(accounts[0].id);
+        }
+      } catch {}
+    };
+    fetchAccounts();
+  }, []);
 
   const formatCurrency = (amount: number, currency: "inr" | "usd") => {
     if (currency === "inr") {
@@ -265,6 +291,12 @@ export default function UserCrossTradeLogs() {
                   <RefreshCw className="h-4 w-4" />
                 )}
                 Refresh
+              </button>
+              <button
+                onClick={() => setShowNewTradeModal(true)}
+                className={`px-4 py-2 ${BLUE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
+              >
+                <Plus className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -476,7 +508,7 @@ export default function UserCrossTradeLogs() {
                     Showing {(filters.page - 1) * filters.limit + 1} to{" "}
                     {Math.min(
                       filters.page * filters.limit,
-                      data?.total_count || 0
+                      data?.total_count || 0,
                     )}{" "}
                     of {data?.total_count} trades
                     {filters.search && (
@@ -530,7 +562,7 @@ export default function UserCrossTradeLogs() {
                                 {pageNum}
                               </button>
                             );
-                          }
+                          },
                         )}
                       </div>
 
@@ -661,7 +693,7 @@ export default function UserCrossTradeLogs() {
                                     <div className="text-white font-medium">
                                       {formatCurrency(
                                         trade.amount_received,
-                                        trade.currency
+                                        trade.currency,
                                       )}
                                     </div>
                                   </div>
@@ -686,7 +718,7 @@ export default function UserCrossTradeLogs() {
                                     trade.net_amount !== trade.amount_received
                                       ? formatCurrency(
                                           trade.net_amount,
-                                          trade.currency
+                                          trade.currency,
                                         )
                                       : `--`}
                                   </div>
@@ -728,7 +760,7 @@ export default function UserCrossTradeLogs() {
                               <td className="p-4 text-nowrap">
                                 <div
                                   className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
-                                    trade.traded
+                                    trade.traded,
                                   )}`}
                                 >
                                   <span className="text-xs font-medium">
@@ -741,7 +773,7 @@ export default function UserCrossTradeLogs() {
                               <td className="p-4 text-nowrap">
                                 <div
                                   className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
-                                    trade.paid
+                                    trade.paid,
                                   )}`}
                                 >
                                   <span className="text-xs font-medium">
@@ -833,7 +865,7 @@ export default function UserCrossTradeLogs() {
                                               </div>
                                               <div className="text-white flex items-center gap-2">
                                                 {getPaymentMethodText(
-                                                  trade.crosstrade_via
+                                                  trade.crosstrade_via,
                                                 )}
                                               </div>
                                             </div>
@@ -857,7 +889,7 @@ export default function UserCrossTradeLogs() {
                                               </div>
                                               <div className="text-white">
                                                 {formatDateTime(
-                                                  trade.created_at
+                                                  trade.created_at,
                                                 )}
                                               </div>
                                             </div>
@@ -867,7 +899,7 @@ export default function UserCrossTradeLogs() {
                                               </div>
                                               <div className="text-white ">
                                                 {formatDateTime(
-                                                  trade.updated_at
+                                                  trade.updated_at,
                                                 )}
                                               </div>
                                             </div>
@@ -889,7 +921,7 @@ export default function UserCrossTradeLogs() {
                                               <div className="text-white font-medium">
                                                 {formatCurrency(
                                                   trade.amount_received,
-                                                  trade.currency
+                                                  trade.currency,
                                                 )}
                                               </div>
                                             </div>
@@ -901,7 +933,7 @@ export default function UserCrossTradeLogs() {
                                                 <div className="text-white font-medium">
                                                   {formatCurrency(
                                                     trade.net_amount,
-                                                    trade.currency
+                                                    trade.currency,
                                                   )}
                                                 </div>
                                               </div>
@@ -932,7 +964,7 @@ export default function UserCrossTradeLogs() {
                                                       {formatCurrency(
                                                         trade.net_amount *
                                                           trade.conversion_rate,
-                                                        "inr"
+                                                        "inr",
                                                       )}
                                                     </>
                                                   ) : (
@@ -1057,7 +1089,7 @@ export default function UserCrossTradeLogs() {
                                 {pageNum}
                               </button>
                             );
-                          }
+                          },
                         )}
                       </div>
 
@@ -1081,6 +1113,16 @@ export default function UserCrossTradeLogs() {
               </>
             )}
           </>
+        )}
+        {showNewTradeModal && selectedAccountId && (
+          <CrossTradeForm
+            accountId={selectedAccountId}
+            onClose={() => setShowNewTradeModal(false)}
+            onSuccess={fetchCrossTradeData}
+            accounts={allAccounts}
+            onAccountChange={(id) => setSelectedAccountId(id)}
+            bot_associated={[]}
+          />
         )}
       </div>
     </PageWrapper>

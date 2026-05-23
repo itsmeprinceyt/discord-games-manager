@@ -19,14 +19,20 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Plus,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "../../../utils/Variables/getAxiosError.util";
 import { formatDateTime } from "../../../utils/main.util";
-import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
+import {
+  BLUE_Button,
+  ORANGE_Button,
+  STONE_Button,
+} from "../../../utils/CSS/Button.util";
 import Loader from "../../(components)/Loader";
 import { UserCurrencyCrossTradesResponse } from "../../api/dashboard/currency-crosstrade-logs/route";
+import CurrencyCrossTradeModal from "../../(components)/Crosstrade/CurrencyCrossTradeModal";
 
 interface Filters {
   from_bot_account_id: string;
@@ -46,13 +52,17 @@ export default function CurrencyCrossTradeLogsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [data, setData] = useState<UserCurrencyCrossTradesResponse | null>(
-    null
+    null,
   );
   const [expandedTradeId, setExpandedTradeId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
-
+  const [showNewTradeModal, setShowNewTradeModal] = useState<boolean>(false);
+  const [allAccounts, setAllAccounts] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [filters, setFilters] = useState<Filters>({
     from_bot_account_id: "",
     to_bot_account_id: "",
@@ -109,14 +119,14 @@ export default function CurrencyCrossTradeLogsPage() {
       setLoading(true);
       const queryString = buildQueryString();
       const response = await axios.get(
-        `/api/dashboard/currency-crosstrade-logs?${queryString}`
+        `/api/dashboard/currency-crosstrade-logs?${queryString}`,
       );
       if (response.data.success) {
         setData(response.data.data);
       }
     } catch (error: unknown) {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to load currency crosstrade data")
+        getAxiosErrorMessage(error, "Failed to load currency crosstrade data"),
       );
     } finally {
       setLoading(false);
@@ -161,6 +171,27 @@ export default function CurrencyCrossTradeLogsPage() {
     });
     setSearchInput("");
   };
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const response = await axios.get("/api/dashboard/account");
+        if (response.data.success) {
+          const accounts = (response.data.data || []).map(
+            (a: { id: string; name: string }) => ({
+              id: a.id,
+              name: a.name,
+            }),
+          );
+          setAllAccounts(accounts);
+          if (accounts.length > 0) setSelectedAccountId(accounts[0].id);
+        }
+      } catch {
+        // silently fail
+      }
+    };
+    fetchAccounts();
+  }, []);
 
   const toggleExpand = (tradeId: string) => {
     setExpandedTradeId(expandedTradeId === tradeId ? null : tradeId);
@@ -213,6 +244,12 @@ export default function CurrencyCrossTradeLogsPage() {
                   <RefreshCw className="h-4 w-4" />
                 )}
                 Refresh
+              </button>
+              <button
+                onClick={() => setShowNewTradeModal(true)}
+                className={`px-4 py-2 ${ORANGE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
+              >
+                <Plus className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -477,7 +514,7 @@ export default function CurrencyCrossTradeLogsPage() {
                     Showing {(filters.page - 1) * filters.limit + 1} to{" "}
                     {Math.min(
                       filters.page * filters.limit,
-                      data?.total_count || 0
+                      data?.total_count || 0,
                     )}{" "}
                     of {data?.total_count} trades
                     {filters.search && (
@@ -531,7 +568,7 @@ export default function CurrencyCrossTradeLogsPage() {
                                 {pageNum}
                               </button>
                             );
-                          }
+                          },
                         )}
                       </div>
 
@@ -737,7 +774,7 @@ export default function CurrencyCrossTradeLogsPage() {
                                               </div>
                                               <div className="text-white">
                                                 {formatDateTime(
-                                                  trade.created_at
+                                                  trade.created_at,
                                                 )}
                                               </div>
                                             </div>
@@ -747,7 +784,7 @@ export default function CurrencyCrossTradeLogsPage() {
                                               </div>
                                               <div className="text-white">
                                                 {formatDateTime(
-                                                  trade.updated_at
+                                                  trade.updated_at,
                                                 )}
                                               </div>
                                             </div>
@@ -853,7 +890,7 @@ export default function CurrencyCrossTradeLogsPage() {
                                 {pageNum}
                               </button>
                             );
-                          }
+                          },
                         )}
                       </div>
 
@@ -877,6 +914,17 @@ export default function CurrencyCrossTradeLogsPage() {
               </>
             )}
           </>
+        )}
+        {showNewTradeModal && selectedAccountId && (
+          <CurrencyCrossTradeModal
+            isOpen={showNewTradeModal}
+            onClose={() => setShowNewTradeModal(false)}
+            onSuccess={fetchData}
+            currentAccountId={selectedAccountId}
+            currentAccountName={
+              allAccounts.find((a) => a.id === selectedAccountId)?.name || ""
+            }
+          />
         )}
       </div>
     </PageWrapper>

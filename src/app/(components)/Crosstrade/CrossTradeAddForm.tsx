@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   X,
   Calendar,
@@ -49,6 +49,8 @@ interface CrossTradeFormProps {
   bot_associated?: BotAssociated[];
   isEditing?: boolean;
   tradeToEdit?: CrossTrade | null;
+  accounts?: Array<{ id: string; name: string }>;
+  onAccountChange?: (accountId: string) => void;
 }
 
 interface CrossTradeFormData {
@@ -112,6 +114,8 @@ export default function CrossTradeForm({
   bot_associated = [],
   isEditing = false,
   tradeToEdit = null,
+  accounts,
+  onAccountChange,
 }: CrossTradeFormProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -126,6 +130,10 @@ export default function CrossTradeForm({
 
   const [bypassWalletBalance, setBypassWalletBalance] = useState<string>("");
   const isBypassingWallet = bypassWalletBalance !== "";
+  const hasFetchedBots = useRef<boolean>(false);
+  const [loadingBots, setLoadingBots] = useState<boolean>(false);
+  const [resolvedBots, setResolvedBots] =
+    useState<BotAssociated[]>(bot_associated);
 
   const [amountChecks, setAmountChecks] = useState({
     required: false,
@@ -144,10 +152,6 @@ export default function CrossTradeForm({
   const [conversionRateChecks, setConversionRateChecks] = useState({
     required: false,
     positive: false,
-  });
-
-  const [traderChecks, setTraderChecks] = useState({
-    required: false,
   });
 
   const [tradeLinkChecks, setTradeLinkChecks] = useState({
@@ -210,7 +214,7 @@ export default function CrossTradeForm({
       traded: true,
       paid: true,
       note: "",
-      selected_bot_id: bot_associated.length > 0 ? bot_associated[0].id : "",
+      selected_bot_id: resolvedBots.length > 0 ? resolvedBots[0].id : "",
       deduct_from_wallet: false,
       deducted_amount: 0,
       bypass_wallet_balance: null,
@@ -223,10 +227,53 @@ export default function CrossTradeForm({
   useEffect(() => {
     if (isEditing && tradeToEdit) {
       if (tradeToEdit.trade_link) validateTradeLink(tradeToEdit.trade_link);
-      if (tradeToEdit.traded_with) validateTrader(tradeToEdit.traded_with);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (
+      hasFetchedBots.current ||
+      resolvedBots.length > 0 ||
+      isEditing ||
+      !accountId
+    )
+      return;
+
+    hasFetchedBots.current = true;
+
+    const fetchBots = async () => {
+      setLoadingBots(true);
+      try {
+        const response = await axios.get(
+          `/api/dashboard/account/${accountId}/crosstrade/bots`,
+        );
+        if (response.data.success) {
+          const bots = response.data.data;
+          setResolvedBots(bots);
+          if (bots.length > 0) {
+            setFormData((prev) => ({
+              ...prev,
+              selected_bot_id: bots[0].id,
+            }));
+          }
+        }
+      } catch {
+        // silently fail — bot selection just won't show
+      } finally {
+        setLoadingBots(false);
+      }
+    };
+
+    fetchBots();
+  }, [accountId, isEditing, resolvedBots.length]);
+
+  useEffect(() => {
+    hasFetchedBots.current = false;
+    setResolvedBots([]);
+    setFormData((prev) => ({ ...prev, selected_bot_id: "" }));
+  }, [accountId]);
+
   useEffect(() => {
     const fetchWalletInfo = async () => {
       if (!showWalletDeduction || !formData.selected_bot_id || isEditing) {
@@ -466,12 +513,6 @@ export default function CrossTradeForm({
     validateConversionRate,
   ]);
 
-  const validateTrader = (value: string) => {
-    setTraderChecks({
-      required: value.trim().length > 0,
-    });
-  };
-
   const validateTradeLink = (value: string) => {
     const trimmed = value.trim();
     const isValidUrl = (url: string) => {
@@ -521,7 +562,7 @@ export default function CrossTradeForm({
       note: "",
       selected_bot_id:
         formData.selected_bot_id ||
-        (bot_associated.length > 0 ? bot_associated[0].id : ""),
+        (resolvedBots.length > 0 ? resolvedBots[0].id : ""),
       deduct_from_wallet: false,
       deducted_amount: 0,
       bypass_wallet_balance: null,
@@ -536,7 +577,6 @@ export default function CrossTradeForm({
     setNetAmountChecks({ required: false, positive: false });
     setRateChecks({ required: false });
     setConversionRateChecks({ required: false, positive: false });
-    setTraderChecks({ required: false });
     setTradeLinkChecks({ required: false, validFormat: false });
     setDateError("");
     setErrors((prev) => {
@@ -614,7 +654,6 @@ export default function CrossTradeForm({
 
         return;
       }
-      if (name === "traded_with") validateTrader(value);
       if (name === "trade_link") validateTradeLink(value);
       if (name === "conversion_rate") validateConversionRate(value);
     }
@@ -645,17 +684,12 @@ export default function CrossTradeForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate date first
     if (!validateDateTime(formData.crosstrade_date)) {
       toast.error("Please enter a valid date and time");
       return;
     }
 
-    if (
-      bot_associated &&
-      bot_associated.length > 0 &&
-      !formData.selected_bot_id
-    ) {
+    if (resolvedBots.length > 0 && !formData.selected_bot_id) {
       toast.error("Please select a bot");
       return;
     }
@@ -834,6 +868,26 @@ export default function CrossTradeForm({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Account Selection - only when accounts list is provided */}
+          {accounts && accounts.length > 0 && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-stone-300 mb-2">
+                Account <span className="text-red-400">*</span>
+              </label>
+              <select
+                value={accountId}
+                onChange={(e) => onAccountChange?.(e.target.value)}
+                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-pointer"
+              >
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Currency Selection */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
@@ -896,32 +950,39 @@ export default function CrossTradeForm({
           </div>
 
           {/* Bot Selection */}
-          {bot_associated && bot_associated.length > 0 && (
+          {(loadingBots || resolvedBots.length > 0) && (
             <div className="space-y-2">
               <label className="block text-sm font-medium text-stone-300 mb-2">
                 Select Bot <span className="text-red-400">*</span>
               </label>
-              <select
-                name="selected_bot_id"
-                value={formData.selected_bot_id || ""}
-                onChange={handleInputChange}
-                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-pointer"
-                required
-              >
-                <option value="" disabled>
-                  Select a bot
-                </option>
-                {bot_associated.map((bot) => (
-                  <option key={bot.id} value={bot.id}>
-                    {bot.name}
+              {loadingBots ? (
+                <div className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg flex items-center gap-2 text-stone-400">
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  <span className="text-sm">Loading bots...</span>
+                </div>
+              ) : (
+                <select
+                  name="selected_bot_id"
+                  value={formData.selected_bot_id || ""}
+                  onChange={handleInputChange}
+                  className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-pointer"
+                  required
+                >
+                  <option value="" disabled>
+                    Select a bot
                   </option>
-                ))}
-              </select>
+                  {resolvedBots.map((bot) => (
+                    <option key={bot.id} value={bot.id}>
+                      {bot.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 
           {/* Wallet Deduction Toggle - Only show in add mode */}
-          {!isEditing && bot_associated.length > 0 && (
+          {!isEditing && !loadingBots && resolvedBots.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-stone-900/50 border border-stone-700 rounded-lg">
                 <div className="flex items-center gap-3">
