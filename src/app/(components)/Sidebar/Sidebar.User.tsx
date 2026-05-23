@@ -12,6 +12,7 @@ import {
   TriangleDashed,
   CircleDashed,
   Database,
+  NotebookPen,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSidebarStateCustom } from "../../../hooks/useSideBarStateCustom";
@@ -41,6 +42,11 @@ const userNavItems = [
     title: "Manage Accounts",
     href: "/dashboard/accounts",
     icon: <Database className="h-5 w-5" />,
+  },
+  {
+    title: "My Notes",
+    href: "/dashboard/todo",
+    icon: <NotebookPen className="h-5 w-5" />,
   },
   {
     title: "Settings",

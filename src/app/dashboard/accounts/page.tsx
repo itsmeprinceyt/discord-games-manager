@@ -40,6 +40,7 @@ import { BotAccountResponse } from "../../api/dashboard/account/route";
 import CountdownTimer from "../../(components)/CountdownTimer";
 import TodoModal from "../../(components)/DynamicComponent/TodoModal";
 import Loader from "../../(components)/Loader";
+import MarkdownRenderer from "../../(components)/MarkdownRenderer";
 
 // TODO: add in a file
 interface AddAccountFormData {
@@ -381,8 +382,10 @@ export default function ManageAccounts() {
         {/* Header */}
         <div className="mb-4">
           <div className="flex items-center justify-between">
-            <div className="text-2xl md:text-3xl font-medium text-white mb-2">
-              Manage Accounts
+            <div>
+              <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
+                Manage Accounts
+              </h1>
               <p className="text-stone-400 text-sm">
                 View and manage all your game accounts in one place
               </p>
@@ -490,12 +493,10 @@ export default function ManageAccounts() {
                         </div>
 
                         {/* Todo Content */}
-                        <div className="mb-3">
-                          <p className="text-xs text-stone-400 mb-1">Todo:</p>
-                          <div className="bg-black/50 border border-stone-800 rounded p-2">
-                            <p className="text-white text-sm wrap-break-word">
-                              {account.todo}
-                            </p>
+                        <div className="">
+                          <p className="text-xs text-stone-400 mb-1">Notes:</p>
+                          <div className="bg-black/50 border border-stone-800 rounded p-3 max-h-32 overflow-y-auto mt-3">
+                            <MarkdownRenderer content={account.todo || ""} />
                           </div>
                         </div>
                       </div>
