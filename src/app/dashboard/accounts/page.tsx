@@ -30,6 +30,8 @@ import {
 import toast from "react-hot-toast";
 import getAxiosErrorMessage from "@/utils/Variables/getAxiosError.util";
 import {
+  ACCOUNT_BLACKLISTED_ACCOUNT_KEY,
+  ACCOUNT_NORMAL_ACCOUNT_KEY,
   CURRENCY_COOLDOWN_DAYS,
   formatDate,
   formatDateTime,
@@ -38,6 +40,7 @@ import { BotAccountResponse } from "../../api/dashboard/account/route";
 import CountdownTimer from "../../(components)/CountdownTimer";
 import TodoModal from "../../(components)/DynamicComponent/TodoModal";
 import Loader from "../../(components)/Loader";
+import MarkdownRenderer from "../../(components)/MarkdownRenderer";
 
 // TODO: add in a file
 interface AddAccountFormData {
@@ -95,13 +98,24 @@ export default function ManageAccounts() {
     name: string;
   } | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
-
   const [searchQuery, setSearchQuery] = useState<string>("");
-
-  // State for todos dropdown
   const [showTodos, setShowTodos] = useState<boolean>(false);
-
   const todoContainerRef = useRef<HTMLDivElement>(null);
+  const [showAllAccountsSection, setShowAllAccountsSection] = useState<boolean>(
+    () => {
+      if (typeof window === "undefined") return true;
+      const stored = localStorage.getItem(ACCOUNT_NORMAL_ACCOUNT_KEY);
+      return stored === null ? true : stored === "true";
+    },
+  );
+
+  const [showBlacklistedSection, setShowBlacklistedSection] = useState<boolean>(
+    () => {
+      if (typeof window === "undefined") return true;
+      const stored = localStorage.getItem(ACCOUNT_BLACKLISTED_ACCOUNT_KEY);
+      return stored === null ? true : stored === "true";
+    },
+  );
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -127,16 +141,28 @@ export default function ManageAccounts() {
   const totalAccounts = accounts.length;
 
   const filteredAccounts = accounts.filter((account) =>
-    account.name.toLowerCase().includes(searchQuery.toLowerCase())
+    account.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const accountsWithTodos = accounts.filter(
-    (account) => account.todo_exists && account.todo
+    (account) => account.todo_exists && account.todo,
   );
 
   const hasSearchResults =
     searchQuery.trim() !== "" && filteredAccounts.length > 0;
   const showAllAccounts = searchQuery.trim() === "";
+
+  const blacklistedAccounts = accounts.filter(
+    (account) =>
+      account.selected_bots.length > 0 &&
+      account.selected_bots.every((bot) => bot.blacklisted === true),
+  );
+
+  const normalAccounts = accounts.filter(
+    (account) =>
+      account.selected_bots.length === 0 ||
+      account.selected_bots.some((bot) => !bot.blacklisted),
+  );
 
   const validateName = (value: string) => {
     const trimmed = value.trim();
@@ -326,8 +352,8 @@ export default function ManageAccounts() {
           checked
             ? "text-green-400"
             : error
-            ? "text-yellow-400"
-            : "text-stone-400"
+              ? "text-yellow-400"
+              : "text-stone-400"
         }
       >
         {label}
@@ -356,8 +382,10 @@ export default function ManageAccounts() {
         {/* Header */}
         <div className="mb-4">
           <div className="flex items-center justify-between">
-            <div className="text-2xl md:text-3xl font-medium text-white mb-2">
-              Manage Accounts
+            <div>
+              <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
+                Manage Accounts
+              </h1>
               <p className="text-stone-400 text-sm">
                 View and manage all your game accounts in one place
               </p>
@@ -465,12 +493,10 @@ export default function ManageAccounts() {
                         </div>
 
                         {/* Todo Content */}
-                        <div className="mb-3">
-                          <p className="text-xs text-stone-400 mb-1">Todo:</p>
-                          <div className="bg-black/50 border border-stone-800 rounded p-2">
-                            <p className="text-white text-sm wrap-break-word">
-                              {account.todo}
-                            </p>
+                        <div className="">
+                          <p className="text-xs text-stone-400 mb-1">Notes:</p>
+                          <div className="bg-black/50 border border-stone-800 rounded p-3 max-h-32 overflow-y-auto mt-3">
+                            <MarkdownRenderer content={account.todo || ""} />
                           </div>
                         </div>
                       </div>
@@ -608,27 +634,97 @@ export default function ManageAccounts() {
                 {(showAllAccounts ||
                   (hasSearchResults && !showAllAccounts)) && (
                   <div className={hasSearchResults ? "mt-4" : ""}>
-                    {showAllAccounts && (
-                      <div className="flex items-center gap-2 mb-3">
-                        <h3 className="text-lg font-medium text-white">
-                          All Accounts
-                        </h3>
-                        <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
-                          {accounts.length}{" "}
-                          {accounts.length === 1 ? "account" : "accounts"}
-                        </span>
+                    {/* Normal Accounts Section */}
+                    <div className="mb-4">
+                      <button
+                        onClick={() =>
+                          setShowAllAccountsSection((p) => {
+                            localStorage.setItem(
+                              ACCOUNT_NORMAL_ACCOUNT_KEY,
+                              String(!p),
+                            );
+                            return !p;
+                          })
+                        }
+                        className="w-full flex items-center justify-between mb-3 group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-medium text-white">
+                            All Accounts
+                          </h3>
+                          <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-800/50 rounded-full text-xs text-blue-400">
+                            {normalAccounts.length}{" "}
+                            {normalAccounts.length === 1
+                              ? "account"
+                              : "accounts"}
+                          </span>
+                        </div>
+                        {showAllAccountsSection ? (
+                          <ChevronUp className="h-4 w-4 text-stone-500 group-hover:text-stone-300 transition-colors" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-stone-500 group-hover:text-stone-300 transition-colors" />
+                        )}
+                      </button>
+                      {showAllAccountsSection && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {normalAccounts.map((account, index) => (
+                            <AccountCard
+                              key={index}
+                              account={account}
+                              onDeleteClick={handleDeleteClick}
+                              onTodoClick={handleTodoClick}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Blacklisted Accounts Section */}
+                    {blacklistedAccounts.length > 0 && (
+                      <div className="mt-6">
+                        <button
+                          onClick={() =>
+                            setShowBlacklistedSection((p) => {
+                              localStorage.setItem(
+                                ACCOUNT_BLACKLISTED_ACCOUNT_KEY,
+                                String(!p),
+                              );
+                              return !p;
+                            })
+                          }
+                          className="w-full flex items-center justify-between mb-3 group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-medium text-white">
+                              Blacklisted Accounts
+                            </h3>
+                            <span className="px-2 py-0.5 bg-red-900/30 border border-red-800/50 rounded-full text-xs text-red-400">
+                              {blacklistedAccounts.length}{" "}
+                              {blacklistedAccounts.length === 1
+                                ? "account"
+                                : "accounts"}
+                            </span>
+                          </div>
+                          {showBlacklistedSection ? (
+                            <ChevronUp className="h-4 w-4 text-stone-500 group-hover:text-stone-300 transition-colors" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-stone-500 group-hover:text-stone-300 transition-colors" />
+                          )}
+                        </button>
+                        {showBlacklistedSection && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {blacklistedAccounts.map((account, index) => (
+                              <AccountCard
+                                key={index}
+                                account={account}
+                                onDeleteClick={handleDeleteClick}
+                                onTodoClick={handleTodoClick}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {accounts.map((account, index) => (
-                        <AccountCard
-                          key={index}
-                          account={account}
-                          onDeleteClick={handleDeleteClick}
-                          onTodoClick={handleTodoClick}
-                        />
-                      ))}
-                    </div>
                   </div>
                 )}
               </>
@@ -1015,7 +1111,7 @@ const AccountCard = ({
                       <span className="text-[10px] text-stone-500">
                         {bot.last_crosstraded_at ? (
                           `${formatDateTime(
-                            bot.last_crosstraded_at
+                            bot.last_crosstraded_at,
                           )} (${formatDate(bot.last_crosstraded_at)})`
                         ) : (
                           <span className="text-stone-700">--</span>
@@ -1029,7 +1125,7 @@ const AccountCard = ({
                       <span className="text-[10px] text-stone-500">
                         {bot.last_currency_crosstraded_at ? (
                           `${formatDateTime(
-                            bot.last_currency_crosstraded_at
+                            bot.last_currency_crosstraded_at,
                           )} (${formatDate(bot.last_currency_crosstraded_at)})`
                         ) : (
                           <span className="text-stone-700">--</span>

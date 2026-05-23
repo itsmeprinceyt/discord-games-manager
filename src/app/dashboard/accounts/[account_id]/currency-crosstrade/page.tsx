@@ -53,7 +53,7 @@ export default function CurrencyCrossTradeManager() {
     useState<boolean>(false);
   const [accountName, setAccountName] = useState<string>("");
   const [editingTrade, setEditingTrade] = useState<CurrencyCrossTrade | null>(
-    null
+    null,
   );
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
@@ -61,14 +61,14 @@ export default function CurrencyCrossTradeManager() {
     try {
       setLoading(true);
       const response = await axios.get<ApiResponse>(
-        `/api/dashboard/account/${account_id}/currency-crosstrade`
+        `/api/dashboard/account/${account_id}/currency-crosstrade`,
       );
       if (response.data.success) {
         setTrades(response.data.data);
       }
     } catch (error: unknown) {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to load currency crosstrades")
+        getAxiosErrorMessage(error, "Failed to load currency crosstrades"),
       );
     } finally {
       setLoading(false);
@@ -103,7 +103,7 @@ export default function CurrencyCrossTradeManager() {
       const loadingToast = toast.loading("Deleting currency crosstrade...");
 
       const response = await axios.delete(
-        `/api/dashboard/account/${account_id}/currency-crosstrade/${crosstrade_id}`
+        `/api/dashboard/account/${account_id}/currency-crosstrade/${crosstrade_id}`,
       );
 
       toast.dismiss(loadingToast);
@@ -117,7 +117,7 @@ export default function CurrencyCrossTradeManager() {
     } catch (error: unknown) {
       toast.dismiss();
       toast.error(
-        getAxiosErrorMessage(error, "Failed to delete currency crosstrade")
+        getAxiosErrorMessage(error, "Failed to delete currency crosstrade"),
       );
       setDeleteConfirmId(null);
     }
@@ -199,7 +199,6 @@ export default function CurrencyCrossTradeManager() {
                 className={`px-4 py-2 ${ORANGE_Button} text-white rounded-lg text-sm transition-colors cursor-pointer flex items-center gap-2`}
               >
                 <Plus className="h-4 w-4" />
-                New Crosstrade
               </button>
             </div>
           </div>

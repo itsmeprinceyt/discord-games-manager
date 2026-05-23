@@ -1,0 +1,3 @@
+ALTER TABLE users
+ADD COLUMN todo TEXT NULL
+AFTER is_banned;

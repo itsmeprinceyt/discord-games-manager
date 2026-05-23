@@ -48,7 +48,7 @@ export default function MinimalHero() {
 
           {/* CTA */}
           <Link
-            href="/login"
+            href="/choose"
             className={`inline-block px-7 py-3 text-sm font-medium text-white ${BLUE_Button} rounded-full transition-all hover:scale-105 active:scale-95`}
           >
             Get Started
