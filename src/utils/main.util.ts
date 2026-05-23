@@ -1,7 +1,11 @@
 const CURRENCY_LIMIT: number = 9999999;
-const COOLDOWN_DAYS: number = 14;
-const CURRENCY_COOLDOWN_DAYS: number = 7;
+const COOLDOWN_DAYS: number = 18;
+const CURRENCY_COOLDOWN_DAYS: number = 10;
 const SIDEBAR_STATE_KEY: string = "games_manager_pro:sidebar-collapsed";
+const ACCOUNT_NORMAL_ACCOUNT_KEY: string =
+  "games_manager_pro:accounts_section_all";
+const ACCOUNT_BLACKLISTED_ACCOUNT_KEY: string =
+  "games_manager_pro:accounts_section_blacklisted";
 //===================================================================================//
 
 /**
@@ -120,4 +124,6 @@ export {
   COOLDOWN_DAYS,
   CURRENCY_COOLDOWN_DAYS,
   SIDEBAR_STATE_KEY,
+  ACCOUNT_NORMAL_ACCOUNT_KEY,
+  ACCOUNT_BLACKLISTED_ACCOUNT_KEY,
 };

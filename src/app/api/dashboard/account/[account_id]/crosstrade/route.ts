@@ -47,7 +47,7 @@ export interface CombinedResponse {
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ account_id: string }> }
+  context: { params: Promise<{ account_id: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -55,7 +55,7 @@ export async function GET(
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -70,7 +70,7 @@ export async function GET(
     if (cached) {
       return NextResponse.json(
         { success: true, data: cached },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -78,7 +78,7 @@ export async function GET(
 
     const [accountOwnership] = await pool.execute<any[]>(
       `SELECT id, name FROM bot_accounts WHERE id = ? AND user_id = ?`,
-      [accountId, session.user.id]
+      [accountId, session.user.id],
     );
 
     if (!Array.isArray(accountOwnership) || accountOwnership.length === 0) {
@@ -88,13 +88,13 @@ export async function GET(
           error:
             "Bot account not found or you don't have permission to access it",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const [selectedBots] = await pool.execute<any[]>(
       `SELECT id, name FROM selected_bot WHERE bot_account_id = ? ORDER BY name ASC`,
-      [accountId]
+      [accountId],
     );
 
     const [crossTrades] = await pool.execute<any[]>(
@@ -120,7 +120,7 @@ export async function GET(
        JOIN selected_bot sb ON ct.selected_bot_id = sb.id
        WHERE ct.bot_account_id = ? AND ct.user_id = ?
        ORDER BY ct.crosstrade_date DESC`,
-      [accountId, session.user.id]
+      [accountId, session.user.id],
     );
 
     const botAssociated: BotAssociated[] = Array.isArray(selectedBots)
@@ -163,7 +163,7 @@ export async function GET(
 
     return NextResponse.json(
       { success: true, data: responseData },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: unknown) {
     console.error("Error fetching admin data:", error);
@@ -173,7 +173,7 @@ export async function GET(
         error: "Internal server error",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
     if (banned) {
       return NextResponse.json(
         { error: "You are banned. Contact admin" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
         console.error(`Missing required field: ${field}`);
         return NextResponse.json(
           { success: false, error: `Missing required field: ${field}` },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
       SELECT id, balance FROM selected_bot 
       WHERE id = ? AND bot_account_id = ?
     `,
-      [bot_id, bot_account_id]
+      [bot_id, bot_account_id],
     );
 
     if (!Array.isArray(botValidation) || botValidation.length === 0) {
@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Bot not found or does not belong to the specified account",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -295,7 +295,7 @@ export async function POST(request: NextRequest) {
             error:
               "Deducted amount must be a positive number when wallet deduction is enabled",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -306,7 +306,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: "Deducted amount must be a whole number (integer)",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Bypass wallet balance must be a non-negative integer",
             },
-            { status: 400 }
+            { status: 400 },
           );
         }
       }
@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: `Insufficient balance. Available: ${currentBalance}, Requested: ${deducted_amount}`,
             },
-            { status: 400 }
+            { status: 400 },
           );
         }
       }
@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
       SELECT id, name as account_name FROM bot_accounts 
       WHERE id = ? AND user_id = ?
     `,
-      [bot_account_id, session.user.id]
+      [bot_account_id, session.user.id],
     );
     const accountName = accountOwnership[0].account_name;
 
@@ -360,7 +360,7 @@ export async function POST(request: NextRequest) {
       console.error("Invalid date format:", crosstrade_date);
       return NextResponse.json(
         { success: false, error: "Invalid date format" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -368,7 +368,7 @@ export async function POST(request: NextRequest) {
       console.error("Invalid amount_received:", amount_received);
       return NextResponse.json(
         { success: false, error: "Amount received must be a positive number" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -382,7 +382,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Net amount must be a positive number or null",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -398,15 +398,26 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Conversion rate is required and must be positive for USD",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    if (rate && rate.length > 10) {
-      console.error("Rate too long:", rate.length);
+    const normalizedRate = rate
+      ? rate
+          .replace(/\s*:\s*/g, ":")
+          .replace(/\s+/g, " ")
+          .trim()
+      : null;
+
+    if (normalizedRate && normalizedRate.length > 10) {
+      console.error("Rate too long:", normalizedRate.length);
+
       return NextResponse.json(
-        { success: false, error: "Rate must be 10 characters or less" },
-        { status: 400 }
+        {
+          success: false,
+          error: "Rate must be 10 characters or less",
+        },
+        { status: 400 },
       );
     }
 
@@ -414,7 +425,7 @@ export async function POST(request: NextRequest) {
       console.error("Traded_with too long:", traded_with.length);
       return NextResponse.json(
         { success: false, error: "Trader ID must be 36 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -424,7 +435,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Trade with name must be 50 characters or less",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -432,7 +443,7 @@ export async function POST(request: NextRequest) {
       console.error("Trade link too long:", trade_link.length);
       return NextResponse.json(
         { success: false, error: "Trade link must be 100 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -440,7 +451,7 @@ export async function POST(request: NextRequest) {
       console.error("Note too long:", note.length);
       return NextResponse.json(
         { success: false, error: "Note must be 250 characters or less" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -470,7 +481,7 @@ export async function POST(request: NextRequest) {
         currency,
         crosstrade_via,
         amount_received,
-        rate,
+        normalizedRate,
         Number(conversion_rate),
         net_amount,
         traded_with,
@@ -498,18 +509,18 @@ export async function POST(request: NextRequest) {
                 updated_at = ?
             WHERE id = ? AND bot_account_id = ?
             `,
-            [bypass_wallet_balance, now, bot_id, bot_account_id]
+            [bypass_wallet_balance, now, bot_id, bot_account_id],
           );
 
           const result = updateResult as any;
           if (result.affectedRows === 0) {
             throw new Error(
-              `Failed to update wallet balance with bypass value.`
+              `Failed to update wallet balance with bypass value.`,
             );
           }
 
           console.log(
-            `Wallet bypass successful: Balance set to ${bypass_wallet_balance} for bot ${bot_id}`
+            `Wallet bypass successful: Balance set to ${bypass_wallet_balance} for bot ${bot_id}`,
           );
         } else {
           // Normal deduction logic
@@ -520,19 +531,19 @@ export async function POST(request: NextRequest) {
                 updated_at = ?
             WHERE id = ? AND bot_account_id = ? AND balance >= ?
             `,
-            [deducted_amount, now, bot_id, bot_account_id, deducted_amount]
+            [deducted_amount, now, bot_id, bot_account_id, deducted_amount],
           );
 
           // Check if the update was successful
           const result = updateResult as any;
           if (result.affectedRows === 0) {
             throw new Error(
-              `Failed to deduct from wallet. The balance might have changed or insufficient funds.`
+              `Failed to deduct from wallet. The balance might have changed or insufficient funds.`,
             );
           }
 
           console.log(
-            `Wallet deduction successful: ${deducted_amount} deducted from bot ${bot_id}`
+            `Wallet deduction successful: ${deducted_amount} deducted from bot ${bot_id}`,
           );
         }
       }
@@ -544,7 +555,7 @@ export async function POST(request: NextRequest) {
         FROM crosstrades 
         WHERE selected_bot_id = ? AND bot_account_id = ?
       `,
-        [bot_id, bot_account_id]
+        [bot_id, bot_account_id],
       );
 
       const latestDate =
@@ -562,7 +573,7 @@ export async function POST(request: NextRequest) {
             SET last_crosstraded_at = ?,
                 updated_at = ?
           WHERE id = ? AND bot_account_id = ?`,
-          [latestDate, now, bot_id, bot_account_id]
+          [latestDate, now, bot_id, bot_account_id],
         );
       } else {
         // If no crosstrades exist (shouldn't happen after insert, but for safety)
@@ -571,7 +582,7 @@ export async function POST(request: NextRequest) {
           UPDATE selected_bot 
             SET updated_at = ?
           WHERE id = ? AND bot_account_id = ?`,
-          [now, bot_id, bot_account_id]
+          [now, bot_id, bot_account_id],
         );
       }
 
@@ -601,7 +612,7 @@ export async function POST(request: NextRequest) {
           crosstrade_id: crosstradeId,
           wallet_deduction: deduct_from_wallet ? deducted_amount : null,
           wallet_bypass: deduct_from_wallet ? bypass_wallet_balance : null,
-        }
+        },
       );
 
       return NextResponse.json(
@@ -609,7 +620,7 @@ export async function POST(request: NextRequest) {
           success: true,
           message: "Cross trade created successfully",
         },
-        { status: 201 }
+        { status: 201 },
       );
     } catch (dbError: unknown) {
       if (connection) {
@@ -628,7 +639,7 @@ export async function POST(request: NextRequest) {
         message: error instanceof Error ? error.message : "Unknown error",
         details: error instanceof Error ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   } finally {
     if (connection) {

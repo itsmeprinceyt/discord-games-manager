@@ -221,6 +221,13 @@ export default function CrossTradeForm({
     useState<CrossTradeFormData>(getInitialFormData());
 
   useEffect(() => {
+    if (isEditing && tradeToEdit) {
+      if (tradeToEdit.trade_link) validateTradeLink(tradeToEdit.trade_link);
+      if (tradeToEdit.traded_with) validateTrader(tradeToEdit.traded_with);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
     const fetchWalletInfo = async () => {
       if (!showWalletDeduction || !formData.selected_bot_id || isEditing) {
         setWalletInfo(null);
@@ -585,12 +592,28 @@ export default function CrossTradeForm({
       if (name === "amount_received") validateAmountReceived(numValue);
       if (name === "net_amount") validateNetAmount(numValue);
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      if (name !== "rate") {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
 
-      if (name === "rate") validateRate(value);
+      if (name === "rate") {
+        const normalizedRate = value
+          .replace(/\s*:\s*/g, ":")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        validateRate(normalizedRate);
+
+        setFormData((prev) => ({
+          ...prev,
+          rate: normalizedRate,
+        }));
+
+        return;
+      }
       if (name === "traded_with") validateTrader(value);
       if (name === "trade_link") validateTradeLink(value);
       if (name === "conversion_rate") validateConversionRate(value);
@@ -1164,10 +1187,6 @@ export default function CrossTradeForm({
                 </p>
                 <div className="grid grid-cols-1 gap-1">
                   <ChecklistItem
-                    checked={amountChecks.required}
-                    label="Required field"
-                  />
-                  <ChecklistItem
                     checked={amountChecks.positive}
                     label="Must be greater than 0"
                     error={formData.amount_received <= 0}
@@ -1195,20 +1214,6 @@ export default function CrossTradeForm({
 
             {errors.rate && (
               <p className="text-xs text-red-500">{errors.rate}</p>
-            )}
-
-            {formData.rate.trim() && (
-              <div className="mt-2 p-3 bg-stone-900/30 rounded-lg space-y-1">
-                <p className="text-xs text-stone-400 mb-2">
-                  Rate requirements:
-                </p>
-                <div className="grid grid-cols-1 gap-1">
-                  <ChecklistItem
-                    checked={rateChecks.required}
-                    label="Required field"
-                  />
-                </div>
-              </div>
             )}
           </div>
 
@@ -1240,10 +1245,6 @@ export default function CrossTradeForm({
                       Conversion rate requirements:
                     </p>
                     <div className="grid grid-cols-1 gap-1">
-                      <ChecklistItem
-                        checked={conversionRateChecks.required}
-                        label="Required field"
-                      />
                       <ChecklistItem
                         checked={conversionRateChecks.positive}
                         label="Must be greater than 0"
@@ -1295,10 +1296,6 @@ export default function CrossTradeForm({
                 </p>
                 <div className="grid grid-cols-1 gap-1">
                   <ChecklistItem
-                    checked={netAmountChecks.required}
-                    label="Required field"
-                  />
-                  <ChecklistItem
                     checked={netAmountChecks.positive}
                     label="Must be greater than 0"
                     error={formData.net_amount <= 0}
@@ -1311,7 +1308,7 @@ export default function CrossTradeForm({
           {/* Buyer ID */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
-              Buyer ID
+              Buyer Discord ID
             </label>
             <input
               type="text"
@@ -1326,20 +1323,6 @@ export default function CrossTradeForm({
 
             {errors.traded_with && (
               <p className="text-xs text-red-500">{errors.traded_with}</p>
-            )}
-
-            {formData.traded_with.trim() && (
-              <div className="mt-2 p-3 bg-stone-900/30 rounded-lg space-y-1">
-                <p className="text-xs text-stone-400 mb-2">
-                  Trader ID requirements:
-                </p>
-                <div className="grid grid-cols-1 gap-1">
-                  <ChecklistItem
-                    checked={traderChecks.required}
-                    label="Field is optional"
-                  />
-                </div>
-              </div>
             )}
           </div>
 
@@ -1365,7 +1348,7 @@ export default function CrossTradeForm({
               Trade Link
             </label>
             <input
-              type="url"
+              type="text"
               name="trade_link"
               value={formData.trade_link}
               onChange={handleInputChange}
@@ -1385,10 +1368,6 @@ export default function CrossTradeForm({
                   Trade link requirements:
                 </p>
                 <div className="grid grid-cols-1 gap-1">
-                  <ChecklistItem
-                    checked={tradeLinkChecks.required}
-                    label="Field is optional"
-                  />
                   <ChecklistItem
                     checked={tradeLinkChecks.validFormat}
                     label="Valid URL format"

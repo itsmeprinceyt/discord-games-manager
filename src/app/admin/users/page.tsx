@@ -19,7 +19,7 @@ import {
   ChevronDown,
   ChevronUp,
   Ban,
-  AlertCircle,
+  CircleCheck,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -38,7 +38,7 @@ export default function UsersWithBotsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [data, setData] = useState<UsersWithBotStatsResponse["data"] | null>(
-    null
+    null,
   );
   const [error, setError] = useState<string | null>(null);
   const [banningUserId, setBanningUserId] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export default function UsersWithBotsPage() {
     bot_accounts: BotAccount[];
   } | null>(null);
   const [expandedAccountId, setExpandedAccountId] = useState<string | null>(
-    null
+    null,
   );
 
   // Pagination state
@@ -69,7 +69,7 @@ export default function UsersWithBotsPage() {
       params.append("limit", pagination.limit.toString());
 
       const response = await axios.get<UsersWithBotStatsResponse>(
-        `/api/admin/user-manager?${params.toString()}`
+        `/api/admin/user-manager?${params.toString()}`,
       );
 
       if (response.data.success) {
@@ -118,7 +118,7 @@ export default function UsersWithBotsPage() {
     } catch (err: unknown) {
       const message = getAxiosErrorMessage(
         err,
-        `Failed to ${currentBanStatus ? "unban" : "ban"} user`
+        `Failed to ${currentBanStatus ? "unban" : "ban"} user`,
       );
       toast.error(message);
     } finally {
@@ -148,14 +148,14 @@ export default function UsersWithBotsPage() {
     if (isAdmin) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-900/30 text-purple-400 rounded-full border border-purple-800 text-xs">
-          <Shield className="h-3 w-3" />
+          <Shield size={12} />
           Admin
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 bg-stone-900/30 text-stone-400 rounded-full border border-stone-800 text-xs">
-        <User className="h-3 w-3" />
+        <User size={12} />
         User
       </span>
     );
@@ -165,14 +165,14 @@ export default function UsersWithBotsPage() {
     if (isBanned) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-900/30 text-red-400 rounded-full border border-red-800 text-xs">
-          <Ban className="h-3 w-3" />
+          <Ban size={12} />
           Banned
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800 text-xs">
-        <AlertCircle className="h-3 w-3" />
+        <CircleCheck size={12} />
         Active
       </span>
     );
@@ -218,7 +218,7 @@ export default function UsersWithBotsPage() {
                 Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
                 {Math.min(
                   pagination.page * pagination.limit,
-                  data.pagination.total_items
+                  data.pagination.total_items,
                 )}{" "}
                 of {data.pagination.total_items} users
               </>
