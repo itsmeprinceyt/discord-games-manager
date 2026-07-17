@@ -18,7 +18,6 @@ import { CrossTradeRequestAPI } from "../../api/dashboard/account/[account_id]/c
 import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
 import { SingleBotWalletResponse } from "../../api/dashboard/account/[account_id]/wallet/single-balance/route";
 
-// TODO: put in the file
 interface BotAssociated {
   id: string;
   name: string;
@@ -84,7 +83,6 @@ const getLocalDateTimeString = () => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// Helper function to validate date string
 const isValidDateTimeString = (dateTimeString: string): boolean => {
   if (!dateTimeString) return false;
 
@@ -96,7 +94,6 @@ const isValidDateTimeString = (dateTimeString: string): boolean => {
   }
 };
 
-// Format date for display in input
 const formatDateTimeForInput = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -107,7 +104,38 @@ const formatDateTimeForInput = (date: Date): string => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-export default function CrossTradeForm({
+const ChecklistItem = ({
+  checked,
+  label,
+  error = false,
+}: {
+  checked: boolean;
+  label: string;
+  error?: boolean;
+}) => (
+  <div className="flex items-center gap-2 text-xs">
+    {checked ? (
+      <Check className="h-3 w-3 text-green-500" />
+    ) : error ? (
+      <AlertCircle className="h-3 w-3 text-yellow-500" />
+    ) : (
+      <X className="h-3 w-3 text-stone-500" />
+    )}
+    <span
+      className={
+        checked
+          ? "text-green-400"
+          : error
+          ? "text-yellow-400"
+          : "text-stone-400"
+      }
+    >
+      {label}
+    </span>
+  </div>
+);
+
+export default function CrossTradeAddEditModal({
   accountId,
   onClose,
   onSuccess,
@@ -123,7 +151,7 @@ export default function CrossTradeForm({
   const [showWalletDeduction, setShowWalletDeduction] =
     useState<boolean>(false);
   const [walletInfo, setWalletInfo] = useState<SingleBotWalletResponse | null>(
-    null,
+    null
   );
   const [loadingWalletInfo, setLoadingWalletInfo] = useState<boolean>(false);
   const [deductAmount, setDeductAmount] = useState<string>("");
@@ -134,6 +162,10 @@ export default function CrossTradeForm({
   const [loadingBots, setLoadingBots] = useState<boolean>(false);
   const [resolvedBots, setResolvedBots] =
     useState<BotAssociated[]>(bot_associated);
+
+  const [conversionSuggestion, setConversionSuggestion] = useState<number>(0);
+  const [conversionSuggestionDismissed, setConversionSuggestionDismissed] =
+    useState<boolean>(false);
 
   const [amountChecks, setAmountChecks] = useState({
     required: false,
@@ -160,6 +192,18 @@ export default function CrossTradeForm({
   });
 
   const [dateError, setDateError] = useState<string>("");
+  const [buyerIdSuggestion, setBuyerIdSuggestion] = useState<{
+    traded_with: string;
+    trade_with_name: string;
+  } | null>(null);
+  const [buyerNameSuggestions, setBuyerNameSuggestions] = useState<
+    Array<{ traded_with: string; trade_with_name: string }>
+  >([]);
+  const [buyerIdSuggestionDismissed, setBuyerIdSuggestionDismissed] =
+    useState<boolean>(false);
+  const [dismissedBuyerNameIds, setDismissedBuyerNameIds] = useState<string[]>(
+    []
+  );
 
   const getInitialFormData = (): CrossTradeFormData => {
     if (isEditing && tradeToEdit) {
@@ -170,7 +214,7 @@ export default function CrossTradeForm({
       let selectedBotId = "";
       if (tradeToEdit.bot_name && bot_associated.length > 0) {
         const foundBot = bot_associated.find(
-          (bot) => bot.name === tradeToEdit.bot_name,
+          (bot) => bot.name === tradeToEdit.bot_name
         );
         selectedBotId = foundBot ? foundBot.id : "";
       }
@@ -221,13 +265,104 @@ export default function CrossTradeForm({
     };
   };
 
-  const [formData, setFormData] =
-    useState<CrossTradeFormData>(getInitialFormData());
+  const [formData, setFormData] = useState<CrossTradeFormData>(
+    getInitialFormData()
+  );
+
+  const validateTradeLink = (value: string) => {
+    const trimmed = value.trim();
+    const isValidUrl = (url: string) => {
+      try {
+        new URL(url);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    setTradeLinkChecks({
+      required: trimmed.length > 0,
+      validFormat: trimmed.length > 0 && isValidUrl(trimmed),
+    });
+
+    if (trimmed && !isValidUrl(trimmed)) {
+      setErrors((prev) => ({
+        ...prev,
+        trade_link: "Please enter a valid URL",
+      }));
+    } else {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.trade_link;
+        return newErrors;
+      });
+    }
+  };
 
   useEffect(() => {
-    if (isEditing && tradeToEdit) {
-      if (tradeToEdit.trade_link) validateTradeLink(tradeToEdit.trade_link);
-    }
+    const func = () => {
+      setBuyerIdSuggestionDismissed(false);
+      const tradedWith = formData.traded_with.trim();
+      if (!tradedWith || !accountId) {
+        setBuyerIdSuggestion(null);
+        return;
+      }
+      const handle = setTimeout(async () => {
+        try {
+          const response = await axios.get(
+            `/api/dashboard/account/${accountId}/crosstrade/buyer-suggestion`,
+            { params: { traded_with: tradedWith } }
+          );
+          if (response.data.success && response.data.data.length > 0) {
+            setBuyerIdSuggestion(response.data.data[0]);
+          } else {
+            setBuyerIdSuggestion(null);
+          }
+        } catch {
+          setBuyerIdSuggestion(null);
+        }
+      }, 400);
+
+      return () => clearTimeout(handle);
+    };
+    func();
+  }, [formData.traded_with, accountId]);
+
+  useEffect(() => {
+    const func = () => {
+      setDismissedBuyerNameIds([]);
+      const tradeWithName = formData.trade_with_name.trim();
+      if (tradeWithName.length < 2 || !accountId) {
+        setBuyerNameSuggestions([]);
+        return;
+      }
+
+      const handle = setTimeout(async () => {
+        try {
+          const response = await axios.get(
+            `/api/dashboard/account/${accountId}/crosstrade/buyer-suggestion`,
+            { params: { trade_with_name: tradeWithName } }
+          );
+          setBuyerNameSuggestions(
+            response.data.success ? response.data.data : []
+          );
+        } catch {
+          setBuyerNameSuggestions([]);
+        }
+      }, 400);
+
+      return () => clearTimeout(handle);
+    };
+    func();
+  }, [formData.trade_with_name, accountId]);
+
+  useEffect(() => {
+    const func = () => {
+      if (isEditing && tradeToEdit) {
+        if (tradeToEdit.trade_link) validateTradeLink(tradeToEdit.trade_link);
+      }
+    };
+    func();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -246,7 +381,7 @@ export default function CrossTradeForm({
       setLoadingBots(true);
       try {
         const response = await axios.get(
-          `/api/dashboard/account/${accountId}/crosstrade/bots`,
+          `/api/dashboard/account/${accountId}/crosstrade/bots`
         );
         if (response.data.success) {
           const bots = response.data.data;
@@ -269,9 +404,12 @@ export default function CrossTradeForm({
   }, [accountId, isEditing, resolvedBots.length]);
 
   useEffect(() => {
-    hasFetchedBots.current = false;
-    setResolvedBots([]);
-    setFormData((prev) => ({ ...prev, selected_bot_id: "" }));
+    const func = () => {
+      hasFetchedBots.current = false;
+      setResolvedBots([]);
+      setFormData((prev) => ({ ...prev, selected_bot_id: "" }));
+    };
+    func();
   }, [accountId]);
 
   useEffect(() => {
@@ -287,7 +425,7 @@ export default function CrossTradeForm({
       try {
         const response = await axios.post(
           `/api/dashboard/account/${accountId}/wallet/single-balance`,
-          { botAccount: formData.selected_bot_id },
+          { botAccount: formData.selected_bot_id }
         );
 
         if (response.data.success) {
@@ -308,6 +446,33 @@ export default function CrossTradeForm({
     fetchWalletInfo();
   }, [showWalletDeduction, formData.selected_bot_id, accountId, isEditing]);
 
+  useEffect(() => {
+    const func = () => {
+      setConversionSuggestionDismissed(false);
+      if (formData.currency !== "usd" || !accountId) {
+        setConversionSuggestion(0);
+        return;
+      }
+
+      const fetchLastConversionRate = async () => {
+        try {
+          const response = await axios.get(
+            `/api/dashboard/account/${accountId}/crosstrade/last-conversion-rate`
+          );
+          if (response.data.success) {
+            const rate = response.data.data.conversion_rate;
+            setConversionSuggestion(rate > 0 ? rate : 0);
+          }
+        } catch {
+          setConversionSuggestion(0);
+        }
+      };
+
+      fetchLastConversionRate();
+    };
+    func();
+  }, [formData.currency, accountId]);
+
   const handleDeductAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
 
@@ -319,14 +484,9 @@ export default function CrossTradeForm({
         ...prev,
         deducted_amount: numValue,
       }));
-
-      if (numValue === 0) {
-        // You could optionally focus the bypass input here
-      }
     }
   };
 
-  // NEW: Handler for bypass wallet balance
   const handleBypassWalletChange = (val: string) => {
     if (val === "" || /^\d+$/.test(val)) {
       setBypassWalletBalance(val);
@@ -337,26 +497,22 @@ export default function CrossTradeForm({
     }
   };
 
-  // Validate datetime input
   const validateDateTime = (dateTimeString: string) => {
     if (!dateTimeString) {
       setDateError("Date and time are required");
       return false;
     }
 
-    // Basic pattern validation
     const dateTimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
     if (!dateTimePattern.test(dateTimeString)) {
       setDateError("Invalid date/time format");
       return false;
     }
 
-    // Extract parts
     const [datePart, timePart] = dateTimeString.split("T");
     const [year, month, day] = datePart.split("-").map(Number);
     const [hours, minutes] = timePart.split(":").map(Number);
 
-    // Validate ranges
     if (year < 1000 || year > 9999) {
       setDateError("Year must be between 1000 and 9999");
       return false;
@@ -367,11 +523,10 @@ export default function CrossTradeForm({
       return false;
     }
 
-    // Validate day based on month
     const daysInMonth = new Date(year, month, 0).getDate();
     if (day < 1 || day > daysInMonth) {
       setDateError(
-        `Day must be between 01 and ${daysInMonth} for month ${month}`,
+        `Day must be between 01 and ${daysInMonth} for month ${month}`
       );
       return false;
     }
@@ -386,7 +541,6 @@ export default function CrossTradeForm({
       return false;
     }
 
-    // Validate it's a valid date
     const date = new Date(dateTimeString);
     if (isNaN(date.getTime())) {
       setDateError("Invalid date/time");
@@ -488,22 +642,25 @@ export default function CrossTradeForm({
         });
       }
     },
-    [formData.currency],
+    [formData.currency]
   );
 
   useEffect(() => {
-    validateAmountReceived(formData.amount_received);
-    validateNetAmount(formData.net_amount);
-    validateRate(formData.rate);
-    if (formData.currency === "usd") {
-      validateConversionRate(formData.conversion_rate);
-    } else {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.conversion_rate;
-        return newErrors;
-      });
-    }
+    const func = () => {
+      validateAmountReceived(formData.amount_received);
+      validateNetAmount(formData.net_amount);
+      validateRate(formData.rate);
+      if (formData.currency === "usd") {
+        validateConversionRate(formData.conversion_rate);
+      } else {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.conversion_rate;
+          return newErrors;
+        });
+      }
+    };
+    func();
   }, [
     formData.amount_received,
     formData.conversion_rate,
@@ -512,36 +669,6 @@ export default function CrossTradeForm({
     formData.rate,
     validateConversionRate,
   ]);
-
-  const validateTradeLink = (value: string) => {
-    const trimmed = value.trim();
-    const isValidUrl = (url: string) => {
-      try {
-        new URL(url);
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    setTradeLinkChecks({
-      required: trimmed.length > 0,
-      validFormat: trimmed.length > 0 && isValidUrl(trimmed),
-    });
-
-    if (trimmed && !isValidUrl(trimmed)) {
-      setErrors((prev) => ({
-        ...prev,
-        trade_link: "Please enter a valid URL",
-      }));
-    } else {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.trade_link;
-        return newErrors;
-      });
-    }
-  };
 
   const handleCurrencyChange = (currency: "inr" | "usd") => {
     const defaultPaymentMethod = currency === "inr" ? "upi" : "paypal";
@@ -572,6 +699,12 @@ export default function CrossTradeForm({
     setWalletInfo(null);
     setDeductAmount("");
     setBypassWalletBalance("");
+    setConversionSuggestion(0);
+    setBuyerIdSuggestion(null);
+    setBuyerNameSuggestions([]);
+    setConversionSuggestionDismissed(false);
+    setBuyerIdSuggestionDismissed(false);
+    setDismissedBuyerNameIds([]);
 
     setAmountChecks({ required: false, positive: false });
     setNetAmountChecks({ required: false, positive: false });
@@ -591,20 +724,18 @@ export default function CrossTradeForm({
   const handleDateTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
 
-    // First update the form data
     setFormData((prev) => ({
       ...prev,
       crosstrade_date: value,
     }));
 
-    // Then validate it
     validateDateTime(value);
   };
 
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
+    >
   ) => {
     const { name, value, type } = e.target;
 
@@ -659,19 +790,16 @@ export default function CrossTradeForm({
     }
   };
 
-  // Format date on blur to ensure valid format
   const handleDateTimeBlur = () => {
     const date = new Date(formData.crosstrade_date);
 
     if (isNaN(date.getTime())) {
-      // If invalid, reset to current date
       setFormData((prev) => ({
         ...prev,
         crosstrade_date: getLocalDateTimeString(),
       }));
       setDateError("");
     } else {
-      // Format it properly
       const formatted = formatDateTimeForInput(date);
       setFormData((prev) => ({
         ...prev,
@@ -680,6 +808,27 @@ export default function CrossTradeForm({
       validateDateTime(formatted);
     }
   };
+
+  const handleConversionSuggestionClick = () => {
+    const rateString = conversionSuggestion.toString();
+    setFormData((prev) => ({
+      ...prev,
+      conversion_rate: rateString,
+    }));
+    validateConversionRate(rateString);
+  };
+
+  const showBuyerIdSuggestion =
+    !!buyerIdSuggestion &&
+    !buyerIdSuggestionDismissed &&
+    buyerIdSuggestion.trade_with_name.trim().toLowerCase() !==
+      formData.trade_with_name.trim().toLowerCase();
+
+  const filteredBuyerNameSuggestions = buyerNameSuggestions.filter(
+    (s) =>
+      s.traded_with !== formData.traded_with.trim() &&
+      !dismissedBuyerNameIds.includes(s.traded_with)
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -703,7 +852,7 @@ export default function CrossTradeForm({
 
       if (!isBypassingWallet && amount > 0 && amount > walletInfo.balance) {
         toast.error(
-          `Insufficient balance. Available: ${walletInfo.balance} ${walletInfo.currency_name}. Use bypass to override or set amount to 0.`,
+          `Insufficient balance. Available: ${walletInfo.balance} ${walletInfo.currency_name}. Use bypass to override or set amount to 0.`
         );
         return;
       }
@@ -781,12 +930,12 @@ export default function CrossTradeForm({
       if (isEditing && tradeToEdit) {
         response = await axios.put(
           `/api/dashboard/account/${accountId}/crosstrade/${tradeToEdit.id}`,
-          requestData,
+          requestData
         );
       } else {
         response = await axios.post(
           `/api/dashboard/account/${accountId}/crosstrade`,
-          requestData,
+          requestData
         );
       }
 
@@ -794,7 +943,7 @@ export default function CrossTradeForm({
         toast.success(
           isEditing
             ? "Cross trade updated successfully!"
-            : "Cross trade created successfully!",
+            : "Cross trade created successfully!"
         );
         onSuccess?.();
         onClose();
@@ -805,49 +954,17 @@ export default function CrossTradeForm({
           error,
           isEditing
             ? "Error updating cross trade"
-            : "Error creating cross trade",
-        ),
+            : "Error creating cross trade"
+        )
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const ChecklistItem = ({
-    checked,
-    label,
-    error = false,
-  }: {
-    checked: boolean;
-    label: string;
-    error?: boolean;
-  }) => (
-    <div className="flex items-center gap-2 text-xs">
-      {checked ? (
-        <Check className="h-3 w-3 text-green-500" />
-      ) : error ? (
-        <AlertCircle className="h-3 w-3 text-yellow-500" />
-      ) : (
-        <X className="h-3 w-3 text-stone-500" />
-      )}
-      <span
-        className={
-          checked
-            ? "text-green-400"
-            : error
-              ? "text-yellow-400"
-              : "text-stone-400"
-        }
-      >
-        {label}
-      </span>
-    </div>
-  );
-
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
       <div className="bg-black/90 border border-stone-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header - Show different title for edit */}
         <div className="flex items-center justify-between p-6 border-b border-stone-800">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-medium text-white">
@@ -868,7 +985,6 @@ export default function CrossTradeForm({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Account Selection - only when accounts list is provided */}
           {accounts && accounts.length > 0 && (
             <div className="space-y-2">
               <label className="block text-sm font-medium text-stone-300 mb-2">
@@ -877,7 +993,7 @@ export default function CrossTradeForm({
               <select
                 value={accountId}
                 onChange={(e) => onAccountChange?.(e.target.value)}
-                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-pointer"
+                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none cursor-pointer"
               >
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
@@ -888,7 +1004,6 @@ export default function CrossTradeForm({
             </div>
           )}
 
-          {/* Currency Selection */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Currency <span className="text-red-400">*</span>
@@ -949,7 +1064,6 @@ export default function CrossTradeForm({
             </div>
           </div>
 
-          {/* Bot Selection */}
           {(loadingBots || resolvedBots.length > 0) && (
             <div className="space-y-2">
               <label className="block text-sm font-medium text-stone-300 mb-2">
@@ -965,7 +1079,7 @@ export default function CrossTradeForm({
                   name="selected_bot_id"
                   value={formData.selected_bot_id || ""}
                   onChange={handleInputChange}
-                  className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-pointer"
+                  className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none cursor-pointer"
                   required
                 >
                   <option value="" disabled>
@@ -981,7 +1095,6 @@ export default function CrossTradeForm({
             </div>
           )}
 
-          {/* Wallet Deduction Toggle - Only show in add mode */}
           {!isEditing && !loadingBots && resolvedBots.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-stone-900/50 border border-stone-700 rounded-lg">
@@ -1021,7 +1134,6 @@ export default function CrossTradeForm({
                 </button>
               </div>
 
-              {/* Wallet Deduction Input - Shown when toggle is on */}
               {showWalletDeduction && (
                 <div className="space-y-3 p-3 bg-stone-900/50 border border-stone-700 rounded-lg">
                   {loadingWalletInfo ? (
@@ -1044,7 +1156,6 @@ export default function CrossTradeForm({
                       </div>
 
                       <>
-                        {/* Deduct Amount Input */}
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-stone-300">
                             Amount to deduct
@@ -1053,11 +1164,10 @@ export default function CrossTradeForm({
                             type="text"
                             value={deductAmount}
                             onChange={handleDeductAmountChange}
-                            className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600"
+                            className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none"
                             placeholder="Enter amount"
                           />
 
-                          {/* Show different messages based on deduct amount */}
                           {deductAmount && walletInfo && (
                             <>
                               {parseInt(deductAmount, 10) === 0 ? (
@@ -1093,7 +1203,6 @@ export default function CrossTradeForm({
                           )}
                         </div>
 
-                        {/* Bypass Wallet Balance - Always show when deduct amount is entered */}
                         {deductAmount && (
                           <div className="pt-2 border-t border-stone-800 space-y-1.5">
                             <label className="text-xs text-orange-500 flex items-center gap-1">
@@ -1107,7 +1216,7 @@ export default function CrossTradeForm({
                                 handleBypassWalletChange(e.target.value)
                               }
                               placeholder="Enter final balance to override"
-                              className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm placeholder-stone-600 focus:outline-none focus:border-orange-600"
+                              className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm focus:outline-none"
                             />
                             {isBypassingWallet && (
                               <div className="flex justify-between text-xs">
@@ -1143,7 +1252,6 @@ export default function CrossTradeForm({
             </div>
           )}
 
-          {/* Bypass warning banner for wallet */}
           {showWalletDeduction && isBypassingWallet && (
             <div className="p-3 bg-orange-950/30 border border-orange-700/50 rounded-lg flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
@@ -1158,7 +1266,6 @@ export default function CrossTradeForm({
             </div>
           )}
 
-          {/* Crosstrade Date - Fixed with better validation */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Crosstrade Date <span className="text-red-400">*</span>
@@ -1173,7 +1280,7 @@ export default function CrossTradeForm({
                 onBlur={handleDateTimeBlur}
                 className={`w-full pl-10 pr-4 py-2.5 bg-stone-900/50 border ${
                   dateError ? "border-red-600" : "border-stone-700"
-                } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-pointer`}
+                } rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-pointer`}
                 required
                 min="2020-01-01T00:00"
                 max="2100-12-31T23:59"
@@ -1186,7 +1293,6 @@ export default function CrossTradeForm({
             </p>
           </div>
 
-          {/* Payment Method */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Payment Method <span className="text-red-400">*</span>
@@ -1195,7 +1301,7 @@ export default function CrossTradeForm({
               name="crosstrade_via"
               value={formData.crosstrade_via}
               onChange={handleInputChange}
-              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-pointer"
+              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none cursor-pointer"
               required
             >
               {formData.currency === "inr" ? (
@@ -1212,7 +1318,6 @@ export default function CrossTradeForm({
             </select>
           </div>
 
-          {/* Amount Received */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Amount Received <span className="text-red-400">*</span>
@@ -1232,7 +1337,7 @@ export default function CrossTradeForm({
                 step="0.01"
                 className={`w-full pl-10 pr-4 py-2.5 bg-stone-900/50 border ${
                   errors.amount_received ? "border-red-600" : "border-stone-700"
-                } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
+                } rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-text`}
                 placeholder="Enter amount received"
               />
             </div>
@@ -1257,7 +1362,6 @@ export default function CrossTradeForm({
             )}
           </div>
 
-          {/* Rate */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Rate <span className="text-red-400">*</span>
@@ -1269,7 +1373,7 @@ export default function CrossTradeForm({
               onChange={handleInputChange}
               className={`w-full p-2.5 bg-stone-900/50 border ${
                 errors.rate ? "border-red-600" : "border-stone-700"
-              } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
+              } rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-text`}
               placeholder="30:1$ (Write 'N/A' if not applicable)"
             />
 
@@ -1278,12 +1382,32 @@ export default function CrossTradeForm({
             )}
           </div>
 
-          {/* Conversion Rate (Only for USD) */}
           {formData.currency === "usd" && (
             <div className="space-y-2">
               <label className="block text-sm font-medium text-stone-300 mb-2">
                 Conversion Rate <span className="text-red-400">*</span>
               </label>
+
+              {conversionSuggestion > 0 && !conversionSuggestionDismissed && (
+                <div className="mb-3 flex items-center gap-1 bg-stone-900 border border-stone-700 rounded-lg pl-3 pr-1.5 py-1.5 w-fit">
+                  <button
+                    type="button"
+                    onClick={handleConversionSuggestionClick}
+                    className="text-xs text-stone-300 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Recent Rate: {conversionSuggestion}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConversionSuggestionDismissed(true)}
+                    className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-800 transition-colors cursor-pointer"
+                    aria-label="Dismiss suggestion"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
               <input
                 type="text"
                 name="conversion_rate"
@@ -1291,7 +1415,7 @@ export default function CrossTradeForm({
                 onChange={handleInputChange}
                 className={`w-full p-2.5 bg-stone-900/50 border ${
                   errors.conversion_rate ? "border-red-600" : "border-stone-700"
-                } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
+                } rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-text`}
                 placeholder="82.4567891234567890 (up to 16 decimal places)"
               />
 
@@ -1321,7 +1445,6 @@ export default function CrossTradeForm({
             </div>
           )}
 
-          {/* Net Amount */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Net Amount <span className="text-red-400">*</span>
@@ -1341,7 +1464,7 @@ export default function CrossTradeForm({
                 step="0.01"
                 className={`w-full pl-10 pr-4 py-2.5 bg-stone-900/50 border ${
                   errors.net_amount ? "border-red-600" : "border-stone-700"
-                } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
+                } rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-text`}
                 placeholder="Amount you received after any deduction"
               />
             </div>
@@ -1366,7 +1489,6 @@ export default function CrossTradeForm({
             )}
           </div>
 
-          {/* Buyer ID */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Buyer Discord ID
@@ -1378,16 +1500,40 @@ export default function CrossTradeForm({
               onChange={handleInputChange}
               className={`w-full p-2.5 bg-stone-900/50 border ${
                 errors.traded_with ? "border-red-600" : "border-stone-700"
-              } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
+              } rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-text`}
               placeholder="User ID of the buyer (optional)"
             />
 
             {errors.traded_with && (
               <p className="text-xs text-red-500">{errors.traded_with}</p>
             )}
+
+            {showBuyerIdSuggestion && (
+              <div className="mt-2 flex items-center gap-1 bg-stone-900 border border-stone-700 rounded-lg pl-3 pr-1.5 py-1.5 w-fit">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      trade_with_name: buyerIdSuggestion!.trade_with_name,
+                    }))
+                  }
+                  className="text-xs text-stone-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  {buyerIdSuggestion!.trade_with_name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBuyerIdSuggestionDismissed(true)}
+                  className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-800 transition-colors cursor-pointer"
+                  aria-label="Dismiss suggestion"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Buyer Name */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Buyer Name
@@ -1398,12 +1544,48 @@ export default function CrossTradeForm({
               value={formData.trade_with_name}
               onChange={handleInputChange}
               maxLength={50}
-              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text"
+              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none cursor-text"
               placeholder="Display name of the buyer (optional)"
             />
+            {filteredBuyerNameSuggestions.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {filteredBuyerNameSuggestions.map((s) => (
+                  <div
+                    key={s.traded_with}
+                    className="flex items-center gap-1 bg-stone-900 border border-stone-700 rounded-lg pl-3 pr-1.5 py-1.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          traded_with: s.traded_with,
+                          trade_with_name: s.trade_with_name,
+                        }))
+                      }
+                      className="text-xs text-stone-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      {s.trade_with_name} ({s.traded_with})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDismissedBuyerNameIds((prev) => [
+                          ...prev,
+                          s.traded_with,
+                        ])
+                      }
+                      className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-800 transition-colors cursor-pointer"
+                      aria-label="Dismiss suggestion"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Trade Link */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Trade Link
@@ -1415,7 +1597,7 @@ export default function CrossTradeForm({
               onChange={handleInputChange}
               className={`w-full p-2.5 bg-stone-900/50 border ${
                 errors.trade_link ? "border-red-600" : "border-stone-700"
-              } rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 cursor-text`}
+              } rounded-lg text-white focus:outline-none focus:border-blue-600 cursor-text`}
               placeholder="Trade link (optional)"
             />
 
@@ -1442,9 +1624,7 @@ export default function CrossTradeForm({
             )}
           </div>
 
-          {/* Toggle Options */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Traded Toggle */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-stone-300 mb-2">
                 Traded
@@ -1481,7 +1661,6 @@ export default function CrossTradeForm({
               </div>
             </div>
 
-            {/* Paid Toggle */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-stone-300 mb-2">
                 Paid
@@ -1519,7 +1698,6 @@ export default function CrossTradeForm({
             </div>
           </div>
 
-          {/* Note (Optional) */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-stone-300 mb-2">
               Note (Optional)
@@ -1529,17 +1707,16 @@ export default function CrossTradeForm({
               value={formData.note}
               onChange={handleInputChange}
               rows={3}
-              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white placeholder-stone-500 focus:outline-none focus:border-blue-600 resize-none"
+              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white focus:outline-none resize-none"
               placeholder="Additional notes about this trade"
             />
           </div>
 
-          {/* Update submit button text */}
           <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className={`flex-1 p-3 ${STONE_Button} text-stone-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+              className={`flex-1 p-3 ${STONE_Button} text-stone-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
               disabled={loading}
             >
               Cancel

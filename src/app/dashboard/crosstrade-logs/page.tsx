@@ -28,7 +28,7 @@ import getAxiosErrorMessage from "../../../utils/Variables/getAxiosError.util";
 import { formatDateTime } from "../../../utils/main.util";
 import { BLUE_Button, STONE_Button } from "../../../utils/CSS/Button.util";
 import Loader from "../../(components)/Loader";
-import CrossTradeForm from "../../(components)/Crosstrade/CrossTradeAddForm";
+import CrossTradeAddEditModal from "../../(components)/Crosstrade/CrossTradeAddEditModal";
 
 interface UserCrossTradeLog {
   id: string;
@@ -101,11 +101,14 @@ export default function UserCrossTradeLogs() {
 
   // Update filters when debounced search changes
   useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      search: debouncedSearch,
-      page: 1,
-    }));
+    const func = () => {
+      setFilters((prev) => ({
+        ...prev,
+        search: debouncedSearch,
+        page: 1,
+      }));
+    };
+    func();
   }, [debouncedSearch]);
 
   const buildQueryString = useCallback(() => {
@@ -131,7 +134,7 @@ export default function UserCrossTradeLogs() {
       setLoading(true);
       const queryString = buildQueryString();
       const response = await axios.get(
-        `/api/dashboard/crosstrade-logs?${queryString}`,
+        `/api/dashboard/crosstrade-logs?${queryString}`
       );
 
       if (response.data.success) {
@@ -139,7 +142,7 @@ export default function UserCrossTradeLogs() {
       }
     } catch (error: unknown) {
       toast.error(
-        getAxiosErrorMessage(error, "Failed to load cross trade data"),
+        getAxiosErrorMessage(error, "Failed to load cross trade data")
       );
     } finally {
       setLoading(false);
@@ -148,7 +151,10 @@ export default function UserCrossTradeLogs() {
   }, [buildQueryString]);
 
   useEffect(() => {
-    fetchCrossTradeData();
+    const func = () => {
+      fetchCrossTradeData();
+    };
+    func();
   }, [fetchCrossTradeData]);
 
   const handleRefresh = () => {
@@ -196,7 +202,7 @@ export default function UserCrossTradeLogs() {
             (a: { id: string; name: string }) => ({
               id: a.id,
               name: a.name,
-            }),
+            })
           );
           setAllAccounts(accounts);
           if (accounts.length > 0) setSelectedAccountId(accounts[0].id);
@@ -310,7 +316,7 @@ export default function UserCrossTradeLogs() {
                 placeholder="Search by Buyer ID or Buyer Name..."
                 value={searchInput}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="w-full bg-stone-950 border border-stone-800 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
+                className="w-full bg-stone-950 border border-stone-800 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none transition-colors"
               />
               {searchInput && (
                 <button
@@ -508,7 +514,7 @@ export default function UserCrossTradeLogs() {
                     Showing {(filters.page - 1) * filters.limit + 1} to{" "}
                     {Math.min(
                       filters.page * filters.limit,
-                      data?.total_count || 0,
+                      data?.total_count || 0
                     )}{" "}
                     of {data?.total_count} trades
                     {filters.search && (
@@ -523,14 +529,14 @@ export default function UserCrossTradeLogs() {
                       <button
                         onClick={() => handlePageChange(1)}
                         disabled={filters.page <= 1}
-                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                       >
                         <ChevronsLeft className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handlePageChange(filters.page - 1)}
                         disabled={filters.page <= 1}
-                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </button>
@@ -562,21 +568,21 @@ export default function UserCrossTradeLogs() {
                                 {pageNum}
                               </button>
                             );
-                          },
+                          }
                         )}
                       </div>
 
                       <button
                         onClick={() => handlePageChange(filters.page + 1)}
                         disabled={filters.page >= data.total_pages}
-                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handlePageChange(data.total_pages)}
                         disabled={filters.page >= data.total_pages}
-                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                       >
                         <ChevronsRight className="h-4 w-4" />
                       </button>
@@ -693,7 +699,7 @@ export default function UserCrossTradeLogs() {
                                     <div className="text-white font-medium">
                                       {formatCurrency(
                                         trade.amount_received,
-                                        trade.currency,
+                                        trade.currency
                                       )}
                                     </div>
                                   </div>
@@ -718,7 +724,7 @@ export default function UserCrossTradeLogs() {
                                     trade.net_amount !== trade.amount_received
                                       ? formatCurrency(
                                           trade.net_amount,
-                                          trade.currency,
+                                          trade.currency
                                         )
                                       : `--`}
                                   </div>
@@ -760,7 +766,7 @@ export default function UserCrossTradeLogs() {
                               <td className="p-4 text-nowrap">
                                 <div
                                   className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
-                                    trade.traded,
+                                    trade.traded
                                   )}`}
                                 >
                                   <span className="text-xs font-medium">
@@ -773,7 +779,7 @@ export default function UserCrossTradeLogs() {
                               <td className="p-4 text-nowrap">
                                 <div
                                   className={`text-center items-center gap-2 px-3 py-1 rounded-full border ${getStatusColor(
-                                    trade.paid,
+                                    trade.paid
                                   )}`}
                                 >
                                   <span className="text-xs font-medium">
@@ -865,7 +871,7 @@ export default function UserCrossTradeLogs() {
                                               </div>
                                               <div className="text-white flex items-center gap-2">
                                                 {getPaymentMethodText(
-                                                  trade.crosstrade_via,
+                                                  trade.crosstrade_via
                                                 )}
                                               </div>
                                             </div>
@@ -889,7 +895,7 @@ export default function UserCrossTradeLogs() {
                                               </div>
                                               <div className="text-white">
                                                 {formatDateTime(
-                                                  trade.created_at,
+                                                  trade.created_at
                                                 )}
                                               </div>
                                             </div>
@@ -899,7 +905,7 @@ export default function UserCrossTradeLogs() {
                                               </div>
                                               <div className="text-white ">
                                                 {formatDateTime(
-                                                  trade.updated_at,
+                                                  trade.updated_at
                                                 )}
                                               </div>
                                             </div>
@@ -921,7 +927,7 @@ export default function UserCrossTradeLogs() {
                                               <div className="text-white font-medium">
                                                 {formatCurrency(
                                                   trade.amount_received,
-                                                  trade.currency,
+                                                  trade.currency
                                                 )}
                                               </div>
                                             </div>
@@ -933,7 +939,7 @@ export default function UserCrossTradeLogs() {
                                                 <div className="text-white font-medium">
                                                   {formatCurrency(
                                                     trade.net_amount,
-                                                    trade.currency,
+                                                    trade.currency
                                                   )}
                                                 </div>
                                               </div>
@@ -964,7 +970,7 @@ export default function UserCrossTradeLogs() {
                                                       {formatCurrency(
                                                         trade.net_amount *
                                                           trade.conversion_rate,
-                                                        "inr",
+                                                        "inr"
                                                       )}
                                                     </>
                                                   ) : (
@@ -1050,14 +1056,14 @@ export default function UserCrossTradeLogs() {
                       <button
                         onClick={() => handlePageChange(1)}
                         disabled={filters.page <= 1}
-                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                       >
                         <ChevronsLeft className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handlePageChange(filters.page - 1)}
                         disabled={filters.page <= 1}
-                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </button>
@@ -1089,21 +1095,21 @@ export default function UserCrossTradeLogs() {
                                 {pageNum}
                               </button>
                             );
-                          },
+                          }
                         )}
                       </div>
 
                       <button
                         onClick={() => handlePageChange(filters.page + 1)}
                         disabled={filters.page >= data.total_pages}
-                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handlePageChange(data.total_pages)}
                         disabled={filters.page >= data.total_pages}
-                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer`}
+                        className={`p-2 rounded-lg ${STONE_Button} text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                       >
                         <ChevronsRight className="h-4 w-4" />
                       </button>
@@ -1115,7 +1121,7 @@ export default function UserCrossTradeLogs() {
           </>
         )}
         {showNewTradeModal && selectedAccountId && (
-          <CrossTradeForm
+          <CrossTradeAddEditModal
             accountId={selectedAccountId}
             onClose={() => setShowNewTradeModal(false)}
             onSuccess={fetchCrossTradeData}
