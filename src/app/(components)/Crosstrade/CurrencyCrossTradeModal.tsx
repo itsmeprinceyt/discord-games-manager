@@ -118,6 +118,18 @@ export default function CurrencyCrossTradeModal({
 
   const [tradedWith, setTradedWith] = useState("");
   const [tradeWithName, setTradeWithName] = useState("");
+  const [buyerIdSuggestion, setBuyerIdSuggestion] = useState<{
+    traded_with: string;
+    trade_with_name: string;
+  } | null>(null);
+  const [buyerNameSuggestions, setBuyerNameSuggestions] = useState<
+    Array<{ traded_with: string; trade_with_name: string }>
+  >([]);
+  const [buyerIdSuggestionDismissed, setBuyerIdSuggestionDismissed] =
+    useState(false);
+  const [dismissedBuyerNameIds, setDismissedBuyerNameIds] = useState<string[]>(
+    []
+  );
   const [tradeLink, setTradeLink] = useState("");
   const [tradeLinkSecond, setTradeLinkSecond] = useState("");
   const [note, setNote] = useState("");
@@ -176,33 +188,100 @@ export default function CurrencyCrossTradeModal({
   }, []);
 
   useEffect(() => {
-    if (isOpen && fromAccountId) fetchFromBots(fromAccountId);
+    const func = () => {
+      if (isOpen && fromAccountId) fetchFromBots(fromAccountId);
+    };
+    func();
   }, [isOpen, fromAccountId, fetchFromBots]);
 
   useEffect(() => {
-    if (isOpen && toAccountId) fetchToBots(toAccountId);
+    const func = () => {
+      if (isOpen && toAccountId) fetchToBots(toAccountId);
+    };
+    func();
   }, [isOpen, toAccountId, fetchToBots]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setFromAccountId(currentAccountId);
-      setToAccountId(currentAccountId);
-      setFromBots([]);
-      setToBots([]);
-      setSelectedFromBot(null);
-      setSelectedToBot(null);
-      setFromAmount("");
-      setToAmount("");
-      setBypassFromBalance("");
-      setBypassToBalance("");
-      setCrosstradeDate(getLocalDateTimeString());
-      setDateError("");
-      setTradedWith("");
-      setTradeWithName("");
-      setTradeLink("");
-      setTradeLinkSecond("");
-      setNote("");
-    }
+    const func = () => {
+      setBuyerIdSuggestionDismissed(false);
+      const tw = tradedWith.trim();
+      if (!tw || !isOpen) {
+        setBuyerIdSuggestion(null);
+        return;
+      }
+      const handle = setTimeout(async () => {
+        try {
+          const response = await axios.get(
+            `/api/dashboard/account/${currentAccountId}/crosstrade/buyer-suggestion`,
+            { params: { traded_with: tw } }
+          );
+          if (response.data.success && response.data.data.length > 0) {
+            setBuyerIdSuggestion(response.data.data[0]);
+          } else {
+            setBuyerIdSuggestion(null);
+          }
+        } catch {
+          setBuyerIdSuggestion(null);
+        }
+      }, 400);
+      return () => clearTimeout(handle);
+    };
+    func();
+  }, [tradedWith, isOpen, currentAccountId]);
+
+  useEffect(() => {
+    const func = () => {
+      setDismissedBuyerNameIds([]);
+      const twn = tradeWithName.trim();
+      if (twn.length < 2 || !isOpen) {
+        setBuyerNameSuggestions([]);
+        return;
+      }
+      const handle = setTimeout(async () => {
+        try {
+          const response = await axios.get(
+            `/api/dashboard/account/${currentAccountId}/crosstrade/buyer-suggestion`,
+            { params: { trade_with_name: twn } }
+          );
+          setBuyerNameSuggestions(
+            response.data.success ? response.data.data : []
+          );
+        } catch {
+          setBuyerNameSuggestions([]);
+        }
+      }, 400);
+      return () => clearTimeout(handle);
+    };
+    func();
+  }, [tradeWithName, isOpen, currentAccountId]);
+
+  useEffect(() => {
+    const func = () => {
+      if (!isOpen) {
+        setFromAccountId(currentAccountId);
+        setToAccountId(currentAccountId);
+        setFromBots([]);
+        setToBots([]);
+        setSelectedFromBot(null);
+        setSelectedToBot(null);
+        setFromAmount("");
+        setToAmount("");
+        setBypassFromBalance("");
+        setBypassToBalance("");
+        setCrosstradeDate(getLocalDateTimeString());
+        setDateError("");
+        setTradedWith("");
+        setTradeWithName("");
+        setBuyerIdSuggestion(null);
+        setBuyerNameSuggestions([]);
+        setBuyerIdSuggestionDismissed(false);
+        setDismissedBuyerNameIds([]);
+        setTradeLink("");
+        setTradeLinkSecond("");
+        setNote("");
+      }
+    };
+    func();
   }, [isOpen, currentAccountId]);
 
   const handleFromAmountChange = (val: string) => {
@@ -258,6 +337,18 @@ export default function CurrencyCrossTradeModal({
       setDateError(validateDateTimeString(formatted));
     }
   };
+
+  const showBuyerIdSuggestion =
+    !!buyerIdSuggestion &&
+    !buyerIdSuggestionDismissed &&
+    buyerIdSuggestion.trade_with_name.trim().toLowerCase() !==
+      tradeWithName.trim().toLowerCase();
+
+  const filteredBuyerNameSuggestions = buyerNameSuggestions.filter(
+    (s) =>
+      s.traded_with !== tradedWith.trim() &&
+      !dismissedBuyerNameIds.includes(s.traded_with)
+  );
 
   const fromAmountNum = parseInt(fromAmount) || 0;
   const toAmountNum = parseInt(toAmount) || 0;
@@ -410,7 +501,7 @@ export default function CurrencyCrossTradeModal({
                         setSelectedFromBot(null);
                     }}
                     disabled={fetchingAccounts}
-                    className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer ${STONE_Button}`}
+                    className={`w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none appearance-none cursor-pointer ${STONE_Button}`}
                   >
                     {fetchingAccounts ? (
                       <option>Loading...</option>
@@ -454,7 +545,7 @@ export default function CurrencyCrossTradeModal({
                         setFromAmount("");
                         setBypassFromBalance("");
                       }}
-                      className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer"
+                      className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none appearance-none cursor-pointer"
                     >
                       <option value="">Select a bot</option>
                       {fromBots
@@ -492,7 +583,7 @@ export default function CurrencyCrossTradeModal({
                     onChange={(e) => handleFromAmountChange(e.target.value)}
                     placeholder="Enter amount"
                     maxLength={String(CURRENCY_LIMIT).length}
-                    className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-red-600"
+                    className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none"
                   />
                   <div className="flex justify-between text-xs">
                     <span className="text-stone-500">Available:</span>
@@ -530,7 +621,7 @@ export default function CurrencyCrossTradeModal({
                       value={bypassFromBalance}
                       onChange={(e) => handleBypassFromChange(e.target.value)}
                       placeholder="Leave empty to auto-compute"
-                      className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm placeholder-stone-600 focus:outline-none focus:border-orange-600"
+                      className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm focus:outline-none"
                     />
                     {isBypassingFrom && (
                       <div className="flex justify-between text-xs">
@@ -573,7 +664,7 @@ export default function CurrencyCrossTradeModal({
                         setSelectedToBot(null);
                     }}
                     disabled={fetchingAccounts}
-                    className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer"
+                    className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none appearance-none cursor-pointer"
                   >
                     {fetchingAccounts ? (
                       <option>Loading...</option>
@@ -617,7 +708,7 @@ export default function CurrencyCrossTradeModal({
                         setToAmount("");
                         setBypassToBalance("");
                       }}
-                      className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none focus:border-stone-500 appearance-none cursor-pointer"
+                      className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none appearance-none cursor-pointer"
                     >
                       <option value="">Select a bot</option>
                       {toBots
@@ -654,7 +745,7 @@ export default function CurrencyCrossTradeModal({
                     value={toAmount}
                     onChange={(e) => handleToAmountChange(e.target.value)}
                     placeholder="Enter amount"
-                    className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-green-600"
+                    className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none"
                   />
                   <div className="flex justify-between text-xs">
                     <span className="text-stone-500">Current balance:</span>
@@ -682,7 +773,7 @@ export default function CurrencyCrossTradeModal({
                       value={bypassToBalance}
                       onChange={(e) => handleBypassToChange(e.target.value)}
                       placeholder="Leave empty to auto-compute"
-                      className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm placeholder-stone-600 focus:outline-none focus:border-orange-600"
+                      className="w-full p-2.5 bg-orange-950/20 border border-orange-800/50 rounded-lg text-orange-300 text-sm focus:outline-none"
                     />
                     {isBypassingTo && (
                       <div className="flex justify-between text-xs">
@@ -771,8 +862,29 @@ export default function CurrencyCrossTradeModal({
                 onChange={(e) => setTradedWith(e.target.value)}
                 maxLength={36}
                 placeholder="User ID of the buyer"
-                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
+                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none"
               />
+              {showBuyerIdSuggestion && (
+                <div className="mt-2 flex items-center gap-1 bg-stone-900 border border-stone-700 rounded-lg pl-3 pr-1.5 py-1.5 w-fit">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTradeWithName(buyerIdSuggestion!.trade_with_name)
+                    }
+                    className="text-xs text-stone-300 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {buyerIdSuggestion!.trade_with_name}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBuyerIdSuggestionDismissed(true)}
+                    className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-800 transition-colors cursor-pointer"
+                    aria-label="Dismiss suggestion"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-stone-500">
@@ -784,8 +896,42 @@ export default function CurrencyCrossTradeModal({
                 onChange={(e) => setTradeWithName(e.target.value)}
                 maxLength={50}
                 placeholder="Display name of the buyer"
-                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
+                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none"
               />
+              {filteredBuyerNameSuggestions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {filteredBuyerNameSuggestions.map((s) => (
+                    <div
+                      key={s.traded_with}
+                      className="flex items-center gap-1 bg-stone-900 border border-stone-700 rounded-lg pl-3 pr-1.5 py-1.5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTradedWith(s.traded_with);
+                          setTradeWithName(s.trade_with_name);
+                        }}
+                        className="text-xs text-stone-300 hover:text-white transition-colors cursor-pointer"
+                      >
+                        {s.trade_with_name} ({s.traded_with})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDismissedBuyerNameIds((prev) => [
+                            ...prev,
+                            s.traded_with,
+                          ])
+                        }
+                        className="p-1 rounded text-stone-500 hover:text-stone-300 hover:bg-stone-800 transition-colors cursor-pointer"
+                        aria-label="Dismiss suggestion"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-stone-500">
@@ -797,7 +943,7 @@ export default function CurrencyCrossTradeModal({
                 onChange={(e) => setTradeLink(e.target.value)}
                 maxLength={100}
                 placeholder="Primary trade link"
-                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
+                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none"
               />
             </div>
             <div className="space-y-1.5">
@@ -810,7 +956,7 @@ export default function CurrencyCrossTradeModal({
                 onChange={(e) => setTradeLinkSecond(e.target.value)}
                 maxLength={100}
                 placeholder="Secondary trade link"
-                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
+                className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -824,7 +970,7 @@ export default function CurrencyCrossTradeModal({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               maxLength={250}
-              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm placeholder-stone-600 focus:outline-none focus:border-stone-500"
+              className="w-full p-2.5 bg-stone-900/50 border border-stone-700 rounded-lg text-white text-sm focus:outline-none"
               placeholder="Additional notes about this trade"
             />
           </div>
