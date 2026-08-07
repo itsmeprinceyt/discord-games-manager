@@ -58,7 +58,7 @@ export async function proxy(req: NextRequest) {
     matchesRoute(path, ROUTES.PUBLIC.REGISTER)
   ) {
     if (isLoggedIn) {
-      const redirectPath = isAdmin ? "/admin" : "/dashboard";
+      const redirectPath = isAdmin ? "/choose" : "/dashboard";
       url.pathname = redirectPath;
       return NextResponse.redirect(url);
     }
@@ -98,12 +98,12 @@ export async function proxy(req: NextRequest) {
 function handleUnauthorized(
   req: NextRequest,
   url: URL,
-  path: string,
+  path: string
 ): NextResponse {
   if (path.startsWith("/api/")) {
     return NextResponse.json(
       { error: "Authentication required" },
-      { status: 401 },
+      { status: 401 }
     );
   }
 
@@ -116,7 +116,7 @@ function handleForbidden(path: string, url: URL): NextResponse {
   if (path.startsWith("/api/")) {
     return NextResponse.json(
       { error: "Admin access required" },
-      { status: 403 },
+      { status: 403 }
     );
   }
 
