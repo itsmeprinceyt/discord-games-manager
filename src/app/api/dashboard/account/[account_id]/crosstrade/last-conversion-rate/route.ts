@@ -40,11 +40,16 @@ export async function GET(
     }
 
     const [rows] = await pool.execute<any[]>(
-      `SELECT conversion_rate FROM crosstrades
-       WHERE bot_account_id = ? AND currency = 'usd' AND conversion_rate IS NOT NULL AND conversion_rate > 0
-       ORDER BY crosstrade_date DESC
-       LIMIT 1`,
-      [account_id]
+      `SELECT ct.conversion_rate 
+      FROM crosstrades ct
+      INNER JOIN bot_accounts ba ON ba.id = ct.bot_account_id
+      WHERE ba.user_id = ? 
+        AND ct.currency = 'usd' 
+        AND ct.conversion_rate IS NOT NULL 
+        AND ct.conversion_rate > 0
+      ORDER BY ct.crosstrade_date DESC
+      LIMIT 1`,
+      [session.user.id]
     );
 
     const conversionRate =
