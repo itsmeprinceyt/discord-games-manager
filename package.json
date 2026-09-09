@@ -24,7 +24,7 @@
     "react-dom": "19.2.3",
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.7.0",
-    "uuid": "^13.0.0"
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

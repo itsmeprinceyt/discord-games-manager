@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Bot,
   RefreshCw,
@@ -51,36 +51,52 @@ export default function UserDashboard() {
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [autoVoteLoading, setAutoVoteLoading] = useState<boolean>(false);
   const [customVoteOpen, setCustomVoteOpen] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  const fetchDashboardData = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      try {
+        if (opts?.silent) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+        setError(null);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+        const response =
+          await axios.get<UserDashboardResponse>("/api/dashboard");
 
-      const response = await axios.get<UserDashboardResponse>("/api/dashboard");
-
-      if (response.data.success) {
-        setStats(response.data.data.stats);
-        setAuditLogs(response.data.data.auditLogs);
+        if (response.data.success) {
+          setStats(response.data.data.stats);
+          setAuditLogs(response.data.data.auditLogs);
+        }
+      } catch (err: unknown) {
+        const message = getAxiosErrorMessage(
+          err,
+          "Error fetching dashboard data",
+        );
+        toast.error(message);
+        setError(message);
+      } finally {
+        if (opts?.silent) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
       }
-    } catch (err: unknown) {
-      const message = getAxiosErrorMessage(
-        err,
-        "Error fetching dashboard data"
-      );
-      toast.error(message);
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const load = () => {
+      fetchDashboardData();
+    };
+    load();
+  }, [fetchDashboardData]);
 
   const handleAutoVote = async () => {
     try {
@@ -89,7 +105,7 @@ export default function UserDashboard() {
 
       if (response.data.success) {
         toast.success(response.data.message);
-        fetchDashboardData();
+        fetchDashboardData({ silent: true });
       } else {
         toast.error(response.data.error || "Failed to trigger auto-vote");
       }
@@ -177,7 +193,7 @@ export default function UserDashboard() {
           <div className="mb-8 p-4 bg-red-900/20 border border-red-800 rounded-lg">
             <p className="text-red-400">Error: {error}</p>
             <button
-              onClick={fetchDashboardData}
+              onClick={() => fetchDashboardData()}
               className="mt-2 px-4 py-2 bg-red-800 hover:bg-red-700 rounded text-sm transition-colors"
             >
               Retry
@@ -267,8 +283,8 @@ export default function UserDashboard() {
                       isBanned
                         ? "bg-red-900/50 cursor-not-allowed text-red-300"
                         : autoVoteLoading
-                        ? "bg-purple-600/50 cursor-not-allowed text-purple-300"
-                        : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                          ? "bg-purple-600/50 cursor-not-allowed text-purple-300"
+                          : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
                     } rounded-lg text-sm transition-colors flex items-center justify-center gap-2`}
                   >
                     {autoVoteLoading ? (
@@ -290,8 +306,8 @@ export default function UserDashboard() {
                       isBanned
                         ? "bg-red-900/50 cursor-not-allowed text-red-300"
                         : autoVoteLoading
-                        ? "bg-purple-600/50 cursor-not-allowed text-purple-300"
-                        : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                          ? "bg-purple-600/50 cursor-not-allowed text-purple-300"
+                          : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
                     } rounded-lg text-sm transition-colors flex items-center justify-center gap-2`}
                   >
                     <CoinsIcon className="h-4 w-4" />
@@ -302,10 +318,13 @@ export default function UserDashboard() {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-black/30 border border-stone-800 rounded-lg p-4 sm:p-6 select-text">
+            <div className="bg-black/30 border border-stone-800 rounded-lg p-4 sm:p-6 select-text relative">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
-                <h2 className="text-lg sm:text-xl font-medium text-white">
+                <h2 className="flex items-center gap-3 text-lg sm:text-xl font-medium text-white">
                   Recent Activity
+                  {refreshing && (
+                    <RefreshCw className="h-4 w-4 text-stone-500 animate-spin" />
+                  )}
                 </h2>
                 <span className="text-stone-400 text-xs sm:text-sm">
                   Showing your latest {auditLogs.length} activities
@@ -327,7 +346,7 @@ export default function UserDashboard() {
                         <div className="flex items-start space-x-3 w-full">
                           <div
                             className={`p-2 rounded shrink-0 ${getActionBg(
-                              log.action_type
+                              log.action_type,
                             )} ${getActionColor(log.action_type)}`}
                           >
                             {getActionIcon(log.action_type)}
@@ -347,9 +366,9 @@ export default function UserDashboard() {
                               <div className="flex items-center">
                                 <span
                                   className={`rounded p-1 px-2 text-xs ${getActionBg(
-                                    log.action_type
+                                    log.action_type,
                                   )} ${getActionColor(
-                                    log.action_type
+                                    log.action_type,
                                   )} whitespace-nowrap`}
                                 >
                                   {formatActionType(log.action_type)}
@@ -392,7 +411,7 @@ export default function UserDashboard() {
                                         {String(value)}
                                       </span>
                                     </React.Fragment>
-                                  )
+                                  ),
                                 )}
                               </div>
                             )}
@@ -412,7 +431,7 @@ export default function UserDashboard() {
       <CustomVoteModal
         isOpen={customVoteOpen}
         onClose={() => setCustomVoteOpen(false)}
-        onSuccess={fetchDashboardData}
+        onSuccess={() => fetchDashboardData({ silent: true })}
       />
     </PageWrapper>
   );
