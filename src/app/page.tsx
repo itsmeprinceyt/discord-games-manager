@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import PageWrapper from "./(components)/PageWrapper";
 import { BLUE_Button, BLUE_Text } from "../utils/CSS/Button.util";
+import LiveUserCount from "./(components)/LiveUserCount";
 
 export default function MinimalHero() {
   return (
@@ -45,6 +46,8 @@ export default function MinimalHero() {
           <p className="text-stone-400 mb-8 text-sm md:text-base">
             Manage all your gaming accounts in one place.
           </p>
+
+          <LiveUserCount />
 
           {/* CTA */}
           <Link
