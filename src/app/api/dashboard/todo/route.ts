@@ -4,6 +4,7 @@ import { initServer, db } from "../../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { isUserBanned } from "../../../../utils/Variables/getUserBanned";
+import { nanoid } from "nanoid";
 
 export async function GET() {
   try {
@@ -20,32 +21,28 @@ export async function GET() {
     const pool = db();
 
     const [results] = await pool.execute<any[]>(
-      `SELECT 
+      `SELECT
         id,
-        todo
-       FROM users
-       WHERE id = ?`,
+        title,
+        note,
+        sort_order,
+        created_at,
+        updated_at
+       FROM user_notes
+       WHERE user_id = ?
+       ORDER BY sort_order ASC`,
       [session.user.id],
     );
-
-    if (!Array.isArray(results) || results.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const user = results[0];
 
     return NextResponse.json(
       {
         success: true,
-        data: {
-          id: user.id,
-          todo: user.todo || "",
-        },
+        data: results,
       },
       { status: 200 },
     );
   } catch (error: unknown) {
-    console.error("Error fetching todo:", error);
+    console.error("Error fetching notes:", error);
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },
@@ -54,7 +51,7 @@ export async function GET() {
   }
 }
 
-export async function PUT(request: Request) {
+export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -75,12 +72,32 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { todo } = body;
+    const { title, note } = body;
 
-    // Validate todo
-    if (todo !== undefined && typeof todo !== "string") {
+    if (note !== undefined && typeof note !== "string") {
       return NextResponse.json(
-        { error: "Todo must be a string" },
+        { error: "Note must be a string" },
+        { status: 400 },
+      );
+    }
+
+    if (title !== undefined && title !== null && typeof title !== "string") {
+      return NextResponse.json(
+        { error: "Title must be a string" },
+        { status: 400 },
+      );
+    }
+
+    if (title && title.length > 100) {
+      return NextResponse.json(
+        { error: "Title cannot exceed 100 characters" },
+        { status: 400 },
+      );
+    }
+
+    if (note && note.length > 5000) {
+      return NextResponse.json(
+        { error: "Note cannot exceed 5000 characters" },
         { status: 400 },
       );
     }
@@ -88,56 +105,40 @@ export async function PUT(request: Request) {
     await initServer();
     const pool = db();
 
-    const updatedAt = new Date().toISOString();
-    const todoValue = todo !== undefined ? todo : "";
-
-    const [updateResult] = await pool.execute<any[]>(
-      `UPDATE users
-       SET todo = ?, updated_at = ?
-       WHERE id = ?`,
-      [todoValue, updatedAt, session.user.id],
-    );
-
-    if ((updateResult as any).affectedRows === 0) {
-      return NextResponse.json(
-        { error: "Failed to update todo" },
-        { status: 404 },
-      );
-    }
-
-    const [updatedResults] = await pool.execute<any[]>(
-      `SELECT
-        id,
-        todo,
-        updated_at
-       FROM users
-       WHERE id = ?`,
+    const [maxOrderResult] = await pool.execute<any[]>(
+      `SELECT COALESCE(MAX(sort_order), -1) AS max_order
+       FROM user_notes
+       WHERE user_id = ?`,
       [session.user.id],
     );
 
-    if (!Array.isArray(updatedResults) || updatedResults.length === 0) {
-      return NextResponse.json(
-        { error: "Failed to retrieve updated data" },
-        { status: 500 },
-      );
-    }
+    const nextOrder = (maxOrderResult[0]?.max_order ?? -1) + 1;
+    const id = nanoid(12);
+    const now = new Date().toISOString();
 
-    const updatedUser = updatedResults[0];
+    await pool.execute(
+      `INSERT INTO user_notes (id, user_id, title, note, sort_order, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, session.user.id, title || null, note || "", nextOrder, now],
+    );
 
     return NextResponse.json(
       {
         success: true,
-        message: "Todo updated successfully",
+        message: "Note created successfully",
         data: {
-          id: updatedUser.id,
-          todo: updatedUser.todo || "",
-          updated_at: updatedUser.updated_at,
+          id,
+          title: title || null,
+          note: note || "",
+          sort_order: nextOrder,
+          created_at: now,
+          updated_at: now,
         },
       },
-      { status: 200 },
+      { status: 201 },
     );
   } catch (error: unknown) {
-    console.error("Error updating todo:", error);
+    console.error("Error creating note:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("JSON")) {

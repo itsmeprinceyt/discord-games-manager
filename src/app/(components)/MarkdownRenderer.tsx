@@ -343,12 +343,52 @@ export default function MarkdownRenderer({ content }: { content: string }) {
 
     // Ordered list
     if (/^\d+\.\s/.test(trimmed)) {
-      const items: string[] = [];
+      const items: { num: number; text: string }[] = [];
       let i = startIndex;
       while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
-        items.push(lines[i].trim().replace(/^\d+\.\s/, ""));
+        const t = lines[i].trim();
+        const numMatch = t.match(/^(\d+)\.\s/);
+        const num = numMatch ? parseInt(numMatch[1], 10) : 1;
+        items.push({
+          num,
+          text: t.replace(/^\d+\.\s/, ""),
+        });
         i++;
       }
+
+      // Use the first item's number as the start so `start` works naturally.
+      // If numbers are non-consecutive (e.g. 1, 3, 5), render the literal
+      // number for each row instead of relying on the browser's counter.
+      const isSequential = items.every(
+        (item, idx) => item.num === items[0].num + idx,
+      );
+
+      if (isSequential) {
+        return {
+          node: (
+            <ol
+              key={`ol-${startIndex}`}
+              start={items[0].num}
+              className="my-2.5 space-y-1.5 ml-1 list-none"
+            >
+              {items.map((item, ii) => (
+                <li
+                  key={ii}
+                  className="flex items-start gap-2.5 text-stone-300 text-sm leading-relaxed"
+                >
+                  <span className="shrink-0 min-w-[1.4rem] text-right text-stone-500 font-mono text-[0.75rem] mt-[0.15rem] select-none">
+                    {items[0].num + ii}.
+                  </span>
+                  <span>{renderInline(item.text)}</span>
+                </li>
+              ))}
+            </ol>
+          ),
+          consumed: i - startIndex,
+        };
+      }
+
+      // Non-sequential numbers: honor the literal numbers written.
       return {
         node: (
           <ol
@@ -361,9 +401,9 @@ export default function MarkdownRenderer({ content }: { content: string }) {
                 className="flex items-start gap-2.5 text-stone-300 text-sm leading-relaxed"
               >
                 <span className="shrink-0 min-w-[1.4rem] text-right text-stone-500 font-mono text-[0.75rem] mt-[0.15rem] select-none">
-                  {ii + 1}.
+                  {item.num}.
                 </span>
-                <span>{renderInline(item)}</span>
+                <span>{renderInline(item.text)}</span>
               </li>
             ))}
           </ol>
