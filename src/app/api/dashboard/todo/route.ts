@@ -5,6 +5,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { isUserBanned } from "../../../../utils/Variables/getUserBanned";
 import { nanoid } from "nanoid";
+import { getRedis } from "../../../../lib/Redis/redis";
+
+import { USER_NOTES_TTL } from "../../../../utils/Redis/redisTTL";
+import { invalidateUserCache } from "../../../../utils/Redis/invalidateUserRedisData";
+import getUserNotes from "../../../../utils/Redis/getUserNotesRedisKey";
 
 export async function GET() {
   try {
@@ -18,8 +23,21 @@ export async function GET() {
     }
 
     await initServer();
-    const pool = db();
 
+    const redis = getRedis();
+    const cacheKey = `${getUserNotes()}:${session.user.id}`;
+
+    // Try cache first
+    const cached = await redis.get<any[]>(cacheKey);
+    if (cached) {
+      return NextResponse.json(
+        { success: true, data: cached },
+        { status: 200 },
+      );
+    }
+
+    // Cache miss → hit DB
+    const pool = db();
     const [results] = await pool.execute<any[]>(
       `SELECT
         id,
@@ -34,13 +52,10 @@ export async function GET() {
       [session.user.id],
     );
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: results,
-      },
-      { status: 200 },
-    );
+    // Store in Redis for next read
+    await redis.set(cacheKey, results, { ex: USER_NOTES_TTL });
+
+    return NextResponse.json({ success: true, data: results }, { status: 200 });
   } catch (error: unknown) {
     console.error("Error fetching notes:", error);
 
@@ -122,6 +137,8 @@ export async function POST(request: Request) {
       [id, session.user.id, title || null, note || "", nextOrder, now],
     );
 
+    await invalidateUserCache(session.user.id);
+
     return NextResponse.json(
       {
         success: true,
@@ -132,7 +149,6 @@ export async function POST(request: Request) {
           note: note || "",
           sort_order: nextOrder,
           created_at: now,
-          updated_at: now,
         },
       },
       { status: 201 },

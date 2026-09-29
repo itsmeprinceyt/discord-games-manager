@@ -4,6 +4,7 @@ import { initServer, db } from "../../../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { isUserBanned } from "../../../../../utils/Variables/getUserBanned";
+import { invalidateUserCache } from "../../../../../utils/Redis/invalidateUserRedisData";
 
 export async function PUT(
   request: Request,
@@ -82,6 +83,8 @@ export async function PUT(
       return NextResponse.json({ error: "Note not found" }, { status: 404 });
     }
 
+    await invalidateUserCache(session.user.id);
+
     return NextResponse.json(
       {
         success: true,
@@ -150,6 +153,8 @@ export async function DELETE(
     if ((deleteResult as any).affectedRows === 0) {
       return NextResponse.json({ error: "Note not found" }, { status: 404 });
     }
+
+    await invalidateUserCache(session.user.id);
 
     return NextResponse.json(
       { success: true, message: "Note deleted successfully" },

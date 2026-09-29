@@ -5,6 +5,7 @@ import {
   useEffect,
   useLayoutEffect,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import { X, Loader2, Plus, Trash2 } from "lucide-react";
@@ -27,9 +28,13 @@ interface Note {
 const AUTOSAVE_INTERVAL_MS = 5000;
 const TITLE_MAX_LENGTH = 100;
 const NOTE_MAX_LENGTH = 5000;
-const ROW_UNIT = 8; // px — grid track height; must match gridAutoRows below
-const MAX_CLAMP_LINES = 8; // preview content never grows past this many lines
-const FALLBACK_ROW_SPAN = 18; // used only before a card's real height is measured
+const MAX_CLAMP_LINES = 8;
+
+// Masonry layout constants
+const MIN_COLUMN_WIDTH = 240;
+const COLUMN_GAP = 16; // matches `gap-4`
+const MAX_COLUMNS = 6;
+const FALLBACK_CARD_HEIGHT = 150;
 
 function counterColor(current: number, max: number): string {
   const ratio = current / max;
@@ -53,9 +58,13 @@ function formatRelativeTime(iso: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+/** A note is considered "empty" if it has no title and no body. */
+function isDraftEmpty(title: string, note: string): boolean {
+  return title.trim().length === 0 && note.trim().length === 0;
+}
+
 interface NoteCardProps {
   note: Note;
-  rowSpan: number;
   isDragging: boolean;
   isDragOver: boolean;
   onMeasure: (id: string, height: number) => void;
@@ -70,7 +79,6 @@ interface NoteCardProps {
 
 function NoteCard({
   note,
-  rowSpan,
   isDragging,
   isDragOver,
   onMeasure,
@@ -84,10 +92,7 @@ function NoteCard({
 }: NoteCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Measure the card's real, natural height (content-driven, thanks to
-  // alignItems: 'start' on the grid so items never stretch) and report it
-  // up so the parent can turn it into an accurate grid-row span. This is
-  // what makes the bento grid actually dynamic instead of bucketed.
+  // Report card height to parent for masonry packing
   useLayoutEffect(() => {
     const el = cardRef.current;
     if (!el) return;
@@ -95,10 +100,10 @@ function NoteCard({
     const measure = () => onMeasure(note.id, el.getBoundingClientRect().height);
     measure();
 
-    const observer = new ResizeObserver(() => measure());
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [note.id, note.title, note.note, onMeasure]);
+  }, [note.id, onMeasure]);
 
   const timestampLabel =
     note.updated_at && note.updated_at !== note.created_at
@@ -115,35 +120,32 @@ function NoteCard({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       onClick={onOpen}
-      style={{
-        gridRow: `span ${rowSpan}`,
-        userSelect: "none",
-        WebkitUserSelect: "none",
-      }}
-      className={`group relative flex flex-col overflow-hidden bg-stone-900/40 border rounded-lg pt-4 pr-4 pb-7 pl-5 cursor-pointer transition-all ${
+      style={{ userSelect: "none", WebkitUserSelect: "none" }}
+      className={`group relative flex w-full flex-col overflow-hidden rounded-lg border bg-stone-900/40 pt-4 pr-4 pb-7 pl-5 cursor-pointer transition-[border-color,box-shadow,opacity] duration-150 ${
         isDragging
-          ? "opacity-40"
+          ? "opacity-40 border-stone-700"
           : isDragOver
-            ? "border-blue-600 scale-[1.02]"
-            : "border-stone-800 hover:border-stone-700"
+            ? "border-blue-500 ring-2 ring-blue-500/40"
+            : "border-stone-800 hover:border-stone-700 hover:shadow-lg hover:shadow-black/40"
       }`}
     >
       <button
         onClick={onDelete}
         draggable={false}
-        className="absolute top-2 right-2 p-1.5 rounded-md bg-stone-900/80 text-stone-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+        aria-label="Delete note"
+        className="absolute top-2 right-2 z-10 rounded-md bg-stone-900/80 p-1.5 text-stone-500 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100 cursor-pointer"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
 
       {note.title && (
-        <p className="text-white font-semibold text-lg mb-2 pr-6 truncate">
+        <p className="mb-2 pr-6 truncate text-lg font-semibold text-white">
           {note.title}
         </p>
       )}
 
       <div
-        className="flex-1 text-stone-400 text-sm **:max-w-full!"
+        className="flex-1 text-sm text-stone-400 **:max-w-full!"
         style={{
           display: "-webkit-box",
           WebkitLineClamp: MAX_CLAMP_LINES,
@@ -154,7 +156,7 @@ function NoteCard({
         {note.note.trim() ? (
           <MarkdownRenderer content={note.note} />
         ) : (
-          <p className="text-stone-600 italic">Empty note</p>
+          <p className="italic text-stone-600">Empty note</p>
         )}
       </div>
 
@@ -178,6 +180,11 @@ export default function TodoPage() {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [cardHeights, setCardHeights] = useState<Record<string, number>>({});
 
+  // Masonry measurement state
+  const [gridEl, setGridEl] = useState<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
+  // Refs to avoid stale closures inside the autosave interval
   const dirtyRef = useRef(dirty);
   const draftTitleRef = useRef(draftTitle);
   const draftNoteRef = useRef(draftNote);
@@ -196,14 +203,55 @@ export default function TodoPage() {
     openNoteIdRef.current = openNoteId;
   }, [openNoteId]);
 
+  // Track grid width to compute column count
+  useLayoutEffect(() => {
+    if (!gridEl) return;
+
+    const update = () => setContainerWidth(gridEl.clientWidth);
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(gridEl);
+    return () => observer.disconnect();
+  }, [gridEl]);
+
   const handleMeasure = useCallback((id: string, height: number) => {
     setCardHeights((prev) => {
-      // Avoid re-render storms from ResizeObserver firing on sub-pixel noise
-      if (prev[id] && Math.abs(prev[id] - height) < 1) return prev;
+      // Ignore sub-pixel noise from ResizeObserver
+      if (prev[id] !== undefined && Math.abs(prev[id] - height) < 1)
+        return prev;
       return { ...prev, [id]: height };
     });
   }, []);
 
+  const columnCount = useMemo(() => {
+    if (containerWidth <= 0) return 1;
+    const fitted = Math.floor(
+      (containerWidth + COLUMN_GAP) / (MIN_COLUMN_WIDTH + COLUMN_GAP),
+    );
+    return Math.max(1, Math.min(MAX_COLUMNS, fitted));
+  }, [containerWidth]);
+
+  // Pack notes into the shortest column (Google Keep style)
+  const columns = useMemo(() => {
+    const cols: Note[][] = Array.from({ length: columnCount }, () => []);
+    const colHeights = new Array<number>(columnCount).fill(0);
+
+    for (const note of notes) {
+      let target = 0;
+      for (let i = 1; i < columnCount; i++) {
+        if (colHeights[i] < colHeights[target] - 0.5) target = i;
+      }
+
+      cols[target].push(note);
+      colHeights[target] +=
+        (cardHeights[note.id] ?? FALLBACK_CARD_HEIGHT) + COLUMN_GAP;
+    }
+
+    return cols;
+  }, [notes, columnCount, cardHeights]);
+
+  // Data fetching
   const fetchNotes = useCallback(async () => {
     setFetching(true);
     try {
@@ -260,18 +308,55 @@ export default function TodoPage() {
     [],
   );
 
+  /**
+   * Deletes a note from the server + local state.
+   * Pass `silent = true` when discarding a note the user never wrote into,
+   * so we don't show a "deleted" toast for something they never saw.
+   */
+  const deleteNoteFromServer = useCallback(
+    async (id: string, silent = false): Promise<boolean> => {
+      try {
+        const response = await axios.delete(`/api/dashboard/todo/${id}`);
+        if (response.data.success) {
+          setNotes((prev) => prev.filter((n) => n.id !== id));
+          setCardHeights((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+          if (!silent) toast.success("Note deleted");
+          return true;
+        }
+        return false;
+      } catch (err) {
+        if (!silent) toast.error("Failed to delete note");
+        console.error(err);
+        return false;
+      }
+    },
+    [],
+  );
+
+  // Periodic autosave while a note is open.
+  // Only runs when there's real content — empty drafts are never persisted.
   useEffect(() => {
     if (!openNoteId) return;
 
     const interval = setInterval(() => {
-      if (dirtyRef.current && openNoteIdRef.current) {
-        persistNote(
-          openNoteIdRef.current,
-          draftTitleRef.current,
-          draftNoteRef.current,
-          true,
-        );
-      }
+      if (!dirtyRef.current || !openNoteIdRef.current) return;
+
+      const hasContent = !isDraftEmpty(
+        draftTitleRef.current,
+        draftNoteRef.current,
+      );
+      if (!hasContent) return;
+
+      persistNote(
+        openNoteIdRef.current,
+        draftTitleRef.current,
+        draftNoteRef.current,
+        true,
+      );
     }, AUTOSAVE_INTERVAL_MS);
 
     return () => clearInterval(interval);
@@ -285,9 +370,18 @@ export default function TodoPage() {
   };
 
   const handleCloseNote = async () => {
-    if (dirty && openNoteId) {
+    if (!openNoteId) return;
+
+    const hasContent = !isDraftEmpty(draftTitle, draftNote);
+
+    if (!hasContent) {
+      // User opened a fresh note and closed it without typing anything.
+      // Discard it so we don't leave an empty ghost note behind.
+      await deleteNoteFromServer(openNoteId, true);
+    } else if (dirty) {
       await persistNote(openNoteId, draftTitle, draftNote, true);
     }
+
     setOpenNoteId(null);
     setDraftTitle("");
     setDraftNote("");
@@ -315,26 +409,12 @@ export default function TodoPage() {
   };
 
   const handleDeleteNote = async (id: string) => {
-    try {
-      const response = await axios.delete(`/api/dashboard/todo/${id}`);
-      if (response.data.success) {
-        setNotes((prev) => prev.filter((n) => n.id !== id));
-        setCardHeights((prev) => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-        if (openNoteId === id) {
-          setOpenNoteId(null);
-          setDraftTitle("");
-          setDraftNote("");
-          setDirty(false);
-        }
-        toast.success("Note deleted");
-      }
-    } catch (err) {
-      toast.error("Failed to delete note");
-      console.error(err);
+    const ok = await deleteNoteFromServer(id);
+    if (ok && openNoteId === id) {
+      setOpenNoteId(null);
+      setDraftTitle("");
+      setDraftNote("");
+      setDirty(false);
     }
   };
 
@@ -347,7 +427,7 @@ export default function TodoPage() {
     }
   }, []);
 
-  // --- Drag and drop ---------------------------------------------------
+  // Drag and drop handlers — reorders the flat array, packer re-flows
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
     setDraggingId(id);
     e.dataTransfer.effectAllowed = "move";
@@ -403,10 +483,7 @@ export default function TodoPage() {
       <div className="min-h-screen p-4 md:p-6">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-medium text-white mb-2">
-            My Notes{" "}
-            <span className="animate-pulse font-normal text-xs text-green-600">
-              (work in progress)
-            </span>
+            My Notes
           </h1>
           <p className="text-stone-400 text-sm">
             Your personal notes and todos. Drag to reorder.
@@ -433,43 +510,33 @@ export default function TodoPage() {
             <p className="text-stone-500 text-center">No notes yet.</p>
           </div>
         ) : (
-          <div
-            className="grid gap-4"
-            style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-              gridAutoFlow: "dense",
-              gridAutoRows: `${ROW_UNIT}px`,
-              alignItems: "start", // critical: stops items stretching to track height,
-              // so each card keeps its true natural height
-            }}
-          >
-            {notes.map((n) => {
-              const measured = cardHeights[n.id];
-              const rowSpan = measured
-                ? Math.ceil(measured / ROW_UNIT) + 1 // +1 row buffer against overlap
-                : FALLBACK_ROW_SPAN;
-
-              return (
-                <NoteCard
-                  key={n.id}
-                  note={n}
-                  rowSpan={rowSpan}
-                  isDragging={draggingId === n.id}
-                  isDragOver={dragOverId === n.id}
-                  onMeasure={handleMeasure}
-                  onOpen={() => handleOpenNote(n)}
-                  onDelete={(e) => {
-                    e.stopPropagation();
-                    handleDeleteNote(n.id);
-                  }}
-                  onDragStart={(e) => handleDragStart(e, n.id)}
-                  onDragOver={(e) => handleDragOver(e, n.id)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, n.id)}
-                  onDragEnd={handleDragEnd}
-                />
-              );
-            })}
+          <div ref={setGridEl} className="flex items-start gap-4">
+            {columns.map((columnNotes, columnIndex) => (
+              <div
+                key={columnIndex}
+                className="flex min-w-0 flex-1 flex-col gap-4"
+              >
+                {columnNotes.map((n) => (
+                  <NoteCard
+                    key={n.id}
+                    note={n}
+                    isDragging={draggingId === n.id}
+                    isDragOver={dragOverId === n.id}
+                    onMeasure={handleMeasure}
+                    onOpen={() => handleOpenNote(n)}
+                    onDelete={(e) => {
+                      e.stopPropagation();
+                      handleDeleteNote(n.id);
+                    }}
+                    onDragStart={(e) => handleDragStart(e, n.id)}
+                    onDragOver={(e) => handleDragOver(e, n.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, n.id)}
+                    onDragEnd={handleDragEnd}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
         )}
 

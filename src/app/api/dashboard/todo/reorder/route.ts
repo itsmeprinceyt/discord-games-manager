@@ -3,6 +3,7 @@ import { initServer, db } from "../../../../../lib/initServer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { isUserBanned } from "../../../../../utils/Variables/getUserBanned";
+import { invalidateUserCache } from "../../../../../utils/Redis/invalidateUserRedisData";
 
 export async function PUT(request: Request) {
   try {
@@ -56,6 +57,8 @@ export async function PUT(request: Request) {
     } finally {
       connection.release();
     }
+
+    await invalidateUserCache(session.user.id);
 
     return NextResponse.json(
       { success: true, message: "Notes reordered successfully" },
