@@ -6,6 +6,7 @@ import getCurrencyCrosstradeLogsRedisKey from "./getCurrencyCrosstradeLogsRedisK
 import getCurrencyCrosstradeLogsRedisKeyAll from "./getCurrencyCrosstradeLogsRedisKeyAll";
 import getSingleAnalyticsLogsRedisKey from "./getSingleAnalyticsLogsRedisKey";
 import getUserDashboardRedisKey from "./getUserDashboardRedisKey";
+import getUserNotes from "./getUserNotesRedisKey";
 import getUserSingleAccountDashboardRedisKey from "./getUserSingleAccountDashboardRedisKey";
 import getWalletInfo from "./getWalletInfo";
 
@@ -15,14 +16,15 @@ export async function invalidateUserCache(userId: string): Promise<void> {
   const keys = [
     `${getAnalyticsLogsRedisKey()}:${userId}`,
     `${getUserDashboardRedisKey()}:${userId}`,
+    `${getUserNotes()}:${userId}`,
   ];
 
   const crosstradeKeys = await redis.keys(
-    `${getCrosstradeLogsRedisKey()}:${userId}:*`
+    `${getCrosstradeLogsRedisKey()}:${userId}:*`,
   );
 
   const botAccountKeys = await redis.keys(
-    `${getUserSingleAccountDashboardRedisKey()}:${userId}:*`
+    `${getUserSingleAccountDashboardRedisKey()}:${userId}:*`,
   );
 
   const accountTradeKeys = await redis.keys(`${getCrosstrades()}:${userId}:*`);
@@ -30,15 +32,15 @@ export async function invalidateUserCache(userId: string): Promise<void> {
   const botWalletInfoKeys = await redis.keys(`${getWalletInfo()}:${userId}:*`);
 
   const analyticsAccountKeys = await redis.keys(
-    `${getSingleAnalyticsLogsRedisKey()}:${userId}:*`
+    `${getSingleAnalyticsLogsRedisKey()}:${userId}:*`,
   );
 
   const currencyLogs = await redis.keys(
-    `${getCurrencyCrosstradeLogsRedisKey()}:${userId}:*`
+    `${getCurrencyCrosstradeLogsRedisKey()}:${userId}:*`,
   );
 
   const currencyLogsAll = await redis.keys(
-    `${getCurrencyCrosstradeLogsRedisKeyAll()}:${userId}:*`
+    `${getCurrencyCrosstradeLogsRedisKeyAll()}:${userId}:*`,
   );
 
   const allKeys = [

@@ -9,3 +9,4 @@ export const SINGLE_USER_CROSSTRADES_TTL = ONE_MINUTE * 2;
 export const GET_WALLET_INFO_TTL = ONE_MINUTE * 2;
 export const SINGLE_USER_ANALYTICS_LOGS = ONE_MINUTE * 2;
 export const PUBLIC_STATS_TTL = 60 * 60 * 24;
+export const USER_NOTES_TTL = 60 * 5;

@@ -135,7 +135,10 @@ export default function ManageAccounts() {
   }, []);
 
   useEffect(() => {
-    fetchAccounts();
+    const load = () => {
+      fetchAccounts();
+    };
+    load();
   }, [fetchAccounts]);
 
   const totalAccounts = accounts.length;

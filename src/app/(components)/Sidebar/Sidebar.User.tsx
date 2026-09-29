@@ -13,6 +13,7 @@ import {
   CircleDashed,
   Database,
   NotebookPen,
+  Lightbulb,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSidebarStateCustom } from "../../../hooks/useSideBarStateCustom";
@@ -47,6 +48,11 @@ const userNavItems = [
     title: "My Notes",
     href: "/dashboard/todo",
     icon: <NotebookPen className="h-5 w-5" />,
+  },
+  {
+    title: "Suggestions",
+    href: "/dashboard/suggestions",
+    icon: <Lightbulb className="h-5 w-5" />,
   },
   {
     title: "Settings",
