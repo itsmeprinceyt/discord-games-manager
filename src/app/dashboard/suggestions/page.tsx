@@ -229,7 +229,7 @@ function AccountRow({
         <div className="min-w-0">
           <Link
             href={`/dashboard/accounts/${account.account_id}/`}
-            className="text-white font-medium text-base leading-tight truncate hover:text-blue-400 hover:underline transition-colors inline-block max-w-60"
+            className="text-white font-medium text-base leading-tight truncate hover:text-blue-400 transition-colors inline-block max-w-60"
             title={account.account_name}
           >
             {account.account_name}

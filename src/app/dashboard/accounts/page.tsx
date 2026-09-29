@@ -575,7 +575,7 @@ export default function ManageAccounts() {
               </p>
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-blue-400 hover:text-blue-300 text-sm underline underline-offset-4 cursor-pointer"
+                className="text-blue-400 hover:text-blue-300 text-sm cursor-pointer"
               >
                 Clear search
               </button>
